@@ -17,7 +17,21 @@ const inviteRoutes = require("./routes/inviteRoutes");
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://voryapp.com",
+  "https://www.voryapp.com",
+  "https://vory-app.vercel.app",
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
@@ -30,7 +44,11 @@ app.use(express.static("public"));
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: { origin: "*" },
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
 });
 
 function createRoomCode() {
@@ -117,8 +135,6 @@ io.on("connection", (socket) => {
       "system-message",
       `${username || "Misafir"} odayı oluşturdu.`
     );
-
-    console.log(`Oda oluşturuldu: ${roomCode}`);
   });
 
   socket.on("join-room", ({ roomCode, username, avatar }) => {
@@ -154,8 +170,6 @@ io.on("connection", (socket) => {
       socket.emit("video-updated", room.videoUrl);
       socket.emit("video-sync", room.videoState);
     }
-
-    console.log(`${username || "Misafir"} -> ${roomCode} odasına katıldı`);
   });
 
   socket.on("leave-room", ({ roomCode }) => {
@@ -184,8 +198,6 @@ io.on("connection", (socket) => {
     io.to(roomCode).emit("video-updated", videoUrl);
     io.to(roomCode).emit("video-sync", room.videoState);
     io.to(roomCode).emit("system-message", "Host yeni video ekledi.");
-
-    console.log(`${roomCode} odasında video ayarlandı: ${videoUrl}`);
   });
 
   socket.on("video-control", ({ roomCode, action, currentTime }) => {
