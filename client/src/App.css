@@ -1,0 +1,100 @@
+body {
+  margin: 0;
+  background: #08080b;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+header {
+  height: 64px;
+  background: #12121c;
+  border-bottom: 1px solid #25253a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 28px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 20px;
+  padding: 20px;
+}
+
+.video,
+.card {
+  background: #141420;
+  border: 1px solid #25253a;
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.player {
+  height: 560px;
+  background: black;
+  border-radius: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #777;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 10px;
+  background: #0b0b12;
+  color: white;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 10px;
+  background: #6c5ce7;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.user {
+  background: #0b0b12;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  color: #00ff88;
+}
+
+.messages {
+  height: 220px;
+  overflow-y: auto;
+}
+
+.message {
+  background: #1d1d2b;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 10px;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .player {
+    height: 320px;
+  }
+}
