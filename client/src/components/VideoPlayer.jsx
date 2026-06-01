@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { PlayCircle, RefreshCw, ShieldCheck } from "lucide-react";
+import { PlayCircle, RefreshCw, ShieldCheck, Maximize2 } from "lucide-react";
 import YouTube from "react-youtube";
 import toast from "react-hot-toast";
 import { socket } from "../services/socket";
@@ -16,6 +16,7 @@ export default function VideoPlayer({
   isHost,
 }) {
   const heartbeatRef = useRef(null);
+  const videoBoxRef = useRef(null);
 
   function getYouTubeVideoId(url) {
     try {
@@ -69,8 +70,12 @@ export default function VideoPlayer({
   }
 
   function handleStateChange(event) {
-    if (!isHost) return;
     if (!playerRef.current || ignoreEventRef.current) return;
+
+    if (!isHost) {
+      requestForceSync();
+      return;
+    }
 
     const currentTime = playerRef.current.getCurrentTime();
 
@@ -88,6 +93,20 @@ export default function VideoPlayer({
     }
 
     toast.error("Video yüklenemedi. Farklı bir YouTube linki dene.");
+  }
+
+  function openFullscreen() {
+    const element = videoBoxRef.current;
+
+    if (!element) return;
+
+    if (element.requestFullscreen) {
+      element.requestFullscreen();
+    } else if (element.webkitRequestFullscreen) {
+      element.webkitRequestFullscreen();
+    } else if (element.msRequestFullscreen) {
+      element.msRequestFullscreen();
+    }
   }
 
   function syncTime() {
@@ -183,7 +202,7 @@ export default function VideoPlayer({
         </p>
       )}
 
-      <div className="relative mt-5 flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl">
+      <div ref={videoBoxRef} className="relative mt-5 flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl">
         {videoId ? (
           <YouTube
             key={videoId}
@@ -207,7 +226,14 @@ export default function VideoPlayer({
           />
 
           {!isHost && (
-            <div className="absolute inset-0 z-10 cursor-not-allowed bg-transparent" />
+            <button
+              type="button"
+              onClick={openFullscreen}
+              className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded-2xl bg-black/60 px-4 py-2 text-sm font-bold text-white backdrop-blur transition hover:bg-black/80"
+            >
+              <Maximize2 size={16} />
+              Tam Ekran
+            </button>
           )}
         ) : (
           <div className="text-center">
