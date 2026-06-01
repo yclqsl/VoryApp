@@ -10,7 +10,7 @@ router.post("/room-link", protect, async (req, res) => {
     return res.status(400).json({ message: "Oda kodu gerekli." });
   }
 
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const frontendUrl = process.env.FRONTEND_URL || "https://voryapp.com";
   const inviteLink = `${frontendUrl}/?room=${roomCode}`;
 
   res.json({
