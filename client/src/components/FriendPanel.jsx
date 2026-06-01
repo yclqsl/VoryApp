@@ -191,7 +191,27 @@ export default function FriendPanel() {
             {friends.map((friend) => (
               <div key={friend._id} className="rounded-2xl bg-black/35 p-3">
                 <p className="font-bold">{friend.username}</p>
-                <p className="text-xs text-white/35">Odaya davet yakında</p>
+                <button
+  className="btn-secondary mt-2 w-full"
+  onClick={() => {
+    const roomCode = window.currentRoomCode;
+
+    if (!roomCode) {
+      toast.error("Önce bir odaya gir.");
+      return;
+    }
+
+    const inviteLink = `https://voryapp.com/?room=${roomCode}`;
+
+    navigator.clipboard.writeText(inviteLink);
+
+    toast.success(
+      `${friend.username} için davet linki kopyalandı 🚀`
+    );
+  }}
+>
+  Odaya Davet Et
+</button>
               </div>
             ))}
           </div>
