@@ -290,6 +290,60 @@ io.on("connection", (socket) => {
     socket.emit("video-sync", getSyncedVideoState(room));
   });
 
+
+  socket.on("voice-join", ({ roomCode, username }) => {
+    if (!roomCode || !rooms[roomCode]) return;
+
+    socket.join(`voice-${roomCode}`);
+
+    const peers = Array.from(io.sockets.adapter.rooms.get(`voice-${roomCode}`) || [])
+      .filter((id) => id !== socket.id);
+
+    socket.emit("voice-peers", { peers });
+
+    socket.to(`voice-${roomCode}`).emit("voice-user-joined", {
+      socketId: socket.id,
+      username: username || "Kullanıcı",
+    });
+  });
+
+  socket.on("voice-offer", ({ target, offer }) => {
+    if (!target || !offer) return;
+
+    io.to(target).emit("voice-offer", {
+      from: socket.id,
+      offer,
+    });
+  });
+
+  socket.on("voice-answer", ({ target, answer }) => {
+    if (!target || !answer) return;
+
+    io.to(target).emit("voice-answer", {
+      from: socket.id,
+      answer,
+    });
+  });
+
+  socket.on("voice-ice-candidate", ({ target, candidate }) => {
+    if (!target || !candidate) return;
+
+    io.to(target).emit("voice-ice-candidate", {
+      from: socket.id,
+      candidate,
+    });
+  });
+
+  socket.on("voice-leave", ({ roomCode }) => {
+    if (!roomCode) return;
+
+    socket.leave(`voice-${roomCode}`);
+
+    socket.to(`voice-${roomCode}`).emit("voice-user-left", {
+      socketId: socket.id,
+    });
+  });
+
   socket.on("send-message", ({ roomCode, message, username }) => {
     if (!rooms[roomCode] || !message) return;
 
@@ -301,6 +355,14 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     removeUserFromRooms(socket.id);
+
+    for (const roomName of socket.rooms) {
+      if (roomName.startsWith("voice-")) {
+        socket.to(roomName).emit("voice-user-left", {
+          socketId: socket.id,
+        });
+      }
+    }
 
     for (const [userId, user] of onlineUsers.entries()) {
       if (user.socketId === socket.id) {

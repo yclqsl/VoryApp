@@ -11,6 +11,7 @@ import UserList from "../components/UserList";
 import ChatPanel from "../components/ChatPanel";
 import VideoPlayer from "../components/VideoPlayer";
 import ProfileCard from "../components/ProfileCard";
+import VoiceChat from "../components/VoiceChat";
 
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
@@ -281,6 +282,8 @@ export default function Home({ authUser, onLogout }) {
 			  <ProfileCard authUser={authUser} />
 
               <UserList users={users} />
+
+              <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
 
               <FriendPanel />
 
