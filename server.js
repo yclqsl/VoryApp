@@ -4,6 +4,7 @@ const dns = require("dns");
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 const rooms = {};
+const onlineUsers = new Map();
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -98,6 +99,22 @@ function removeUserFromRooms(socketId) {
 
 io.on("connection", (socket) => {
   console.log("Yeni kullanıcı bağlandı:", socket.id);
+
+  socket.on("user-online", ({ userId, username }) => {
+    if (!userId) return;
+
+    onlineUsers.set(String(userId), {
+      socketId: socket.id,
+      userId: String(userId),
+      username: username || "Kullanıcı",
+    });
+
+    io.emit("online-users", Array.from(onlineUsers.values()));
+  });
+
+  socket.on("get-online-users", () => {
+    socket.emit("online-users", Array.from(onlineUsers.values()));
+  });
 
   socket.on("create-room", (user) => {
     const username = typeof user === "object" ? user.username : user;
@@ -261,6 +278,14 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     removeUserFromRooms(socket.id);
+
+    for (const [userId, user] of onlineUsers.entries()) {
+      if (user.socketId === socket.id) {
+        onlineUsers.delete(userId);
+      }
+    }
+
+    io.emit("online-users", Array.from(onlineUsers.values()));
   });
 });
 
