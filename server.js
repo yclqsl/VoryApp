@@ -17,18 +17,19 @@ const inviteRoutes = require("./routes/inviteRoutes");
 
 const app = express();
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://voryapp.com",
-  "https://www.voryapp.com",
-  "https://vory-app.vercel.app",
-];
+const corsOptions = {
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
   })
 );
 
@@ -45,9 +46,8 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: "*",
     methods: ["GET", "POST"],
-    credentials: true,
   },
 });
 
