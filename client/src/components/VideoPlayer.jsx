@@ -22,11 +22,19 @@ export default function VideoPlayer({
       const parsedUrl = new URL(url);
 
       if (parsedUrl.hostname.includes("youtube.com")) {
-        return parsedUrl.searchParams.get("v");
+        if (parsedUrl.pathname.includes("/shorts/")) {
+          return parsedUrl.pathname.split("/shorts/")[1]?.split("?")[0] || "";
+        }
+
+        if (parsedUrl.pathname.includes("/embed/")) {
+          return parsedUrl.pathname.split("/embed/")[1]?.split("?")[0] || "";
+        }
+
+        return parsedUrl.searchParams.get("v") || "";
       }
 
       if (parsedUrl.hostname.includes("youtu.be")) {
-        return parsedUrl.pathname.replace("/", "");
+        return parsedUrl.pathname.replace("/", "").split("?")[0];
       }
 
       return "";
@@ -42,6 +50,8 @@ export default function VideoPlayer({
   }
 
   function requestForceSync() {
+    if (isHost) return;
+
     const roomCode = getRoomCode();
     if (!roomCode) return;
 
@@ -51,9 +61,11 @@ export default function VideoPlayer({
   function handleReady(event) {
     playerRef.current = event.target;
 
-    setTimeout(() => {
-      requestForceSync();
-    }, 800);
+    if (!isHost) {
+      setTimeout(() => {
+        requestForceSync();
+      }, 1000);
+    }
   }
 
   function handleStateChange(event) {
@@ -65,6 +77,17 @@ export default function VideoPlayer({
     if (event.data === 1) onVideoControl("play", currentTime);
     if (event.data === 2) onVideoControl("pause", currentTime);
     if (event.data === 0) onVideoControl("pause", currentTime);
+  }
+
+  function handleError(event) {
+    console.error("YouTube player error:", event.data);
+
+    if (event.data === 101 || event.data === 150) {
+      toast.error("Bu YouTube videosu gömülü oynatmaya izin vermiyor.");
+      return;
+    }
+
+    toast.error("Video yüklenemedi. Farklı bir YouTube linki dene.");
   }
 
   function syncTime() {
@@ -104,13 +127,14 @@ export default function VideoPlayer({
 
   useEffect(() => {
     if (!videoId) return;
+    if (isHost) return;
 
     const timeout = setTimeout(() => {
       requestForceSync();
-    }, 1000);
+    }, 1200);
 
     return () => clearTimeout(timeout);
-  }, [videoId]);
+  }, [videoId, isHost]);
 
   return (
     <section className="glass flex min-h-[560px] flex-1 flex-col">
@@ -162,19 +186,22 @@ export default function VideoPlayer({
       <div className="mt-5 flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl">
         {videoId ? (
           <YouTube
+            key={videoId}
             videoId={videoId}
             className="h-full w-full"
             iframeClassName="h-full w-full"
             onReady={handleReady}
             onStateChange={handleStateChange}
+            onError={handleError}
             opts={{
               width: "100%",
               height: "100%",
               playerVars: {
                 autoplay: 0,
-                controls: isHost ? 1 : 0,
+                controls: 1,
                 rel: 0,
                 modestbranding: 1,
+                playsinline: 1,
               },
             }}
           />

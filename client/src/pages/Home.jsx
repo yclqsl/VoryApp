@@ -193,7 +193,7 @@ export default function Home({ authUser, onLogout }) {
       return;
     }
 
-    socket.emit("set-video", { roomCode, videoUrl: videoInput });
+    socket.emit("set-video", { roomCode, videoUrl: videoInput.trim() });
   }
 
   function sendMessage() {
