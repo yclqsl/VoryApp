@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Maximize2, PlayCircle, RefreshCw, ShieldCheck } from "lucide-react";
+import { PlayCircle, RefreshCw, ShieldCheck } from "lucide-react";
 import YouTube from "react-youtube";
 import toast from "react-hot-toast";
 import { socket } from "../services/socket";
@@ -16,8 +16,6 @@ export default function VideoPlayer({
   isHost,
 }) {
   const heartbeatRef = useRef(null);
-  const viewerSyncRef = useRef(null);
-  const videoBoxRef = useRef(null);
 
   function getYouTubeVideoId(url) {
     try {
@@ -72,9 +70,12 @@ export default function VideoPlayer({
     if (!playerRef.current || ignoreEventRef.current) return;
 
     if (!isHost) {
-      setTimeout(() => {
-        requestForceSync();
-      }, 120);
+      if (event.data === 1 || event.data === 2 || event.data === 0) {
+        setTimeout(() => {
+          requestForceSync();
+        }, 150);
+      }
+
       return;
     }
 
@@ -94,15 +95,6 @@ export default function VideoPlayer({
     }
 
     toast.error("Video yüklenemedi. Farklı bir YouTube linki dene.");
-  }
-
-  function openFullscreen() {
-    const element = videoBoxRef.current;
-    if (!element) return;
-
-    if (element.requestFullscreen) element.requestFullscreen();
-    else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
-    else if (element.msRequestFullscreen) element.msRequestFullscreen();
   }
 
   function syncTime() {
@@ -141,15 +133,14 @@ export default function VideoPlayer({
   }, [isHost, playerRef]);
 
   useEffect(() => {
-    clearInterval(viewerSyncRef.current);
+    if (!videoId) return;
+    if (isHost) return;
 
-    if (!videoId || isHost) return;
-
-    viewerSyncRef.current = setInterval(() => {
+    const timeout = setTimeout(() => {
       requestForceSync();
-    }, 1000);
+    }, 1200);
 
-    return () => clearInterval(viewerSyncRef.current);
+    return () => clearTimeout(timeout);
   }, [videoId, isHost]);
 
   return (
@@ -195,52 +186,33 @@ export default function VideoPlayer({
 
       {!isHost && (
         <p className="mt-3 rounded-2xl bg-black/30 p-3 text-sm text-white/45">
-          İzleyici modundasın. Video kontrolü hostta, sen otomatik senkron kalırsın.
+          İzleyici modundasın. Video kontrolü hostta; ses ve tam ekran kontrollerini kullanabilirsin.
         </p>
       )}
 
-      <div
-        ref={videoBoxRef}
-        className="relative mt-5 flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl"
-      >
+      <div className="relative mt-5 flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl">
         {videoId ? (
-          <>
-            <div className={isHost ? "h-full w-full" : "h-full w-full pointer-events-none select-none"}>
-              <YouTube
-                key={videoId}
-                videoId={videoId}
-                className="h-full w-full"
-                iframeClassName="h-full w-full"
-                onReady={handleReady}
-                onStateChange={handleStateChange}
-                onError={handleError}
-                opts={{
-                  width: "100%",
-                  height: "100%",
-                  playerVars: {
-                    autoplay: 0,
-                    controls: isHost ? 1 : 0,
-                    disablekb: isHost ? 0 : 1,
-                    fs: isHost ? 1 : 0,
-                    rel: 0,
-                    modestbranding: 1,
-                    playsinline: 1,
-                  },
-                }}
-              />
-            </div>
-
-            {!isHost && (
-              <button
-                type="button"
-                onClick={openFullscreen}
-                className="absolute right-4 top-4 z-30 flex items-center gap-2 rounded-2xl bg-black/70 px-4 py-2 text-sm font-bold text-white shadow-lg backdrop-blur transition hover:bg-black/90"
-              >
-                <Maximize2 size={16} />
-                Tam Ekran
-              </button>
-            )}
-          </>
+          <YouTube
+            key={videoId}
+            videoId={videoId}
+            className="h-full w-full"
+            iframeClassName="h-full w-full"
+            onReady={handleReady}
+            onStateChange={handleStateChange}
+            onError={handleError}
+            opts={{
+              width: "100%",
+              height: "100%",
+              playerVars: {
+                autoplay: 0,
+                controls: 1,
+                disablekb: isHost ? 0 : 1,
+                rel: 0,
+                modestbranding: 1,
+                playsinline: 1,
+              },
+            }}
+          />
         ) : (
           <div className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10">
@@ -264,16 +236,6 @@ export default function VideoPlayer({
           <RefreshCw size={17} />
           Herkesi Senkronla
         </button>
-
-        {!isHost && videoId && (
-          <button
-            className="btn-secondary flex items-center justify-center gap-2"
-            onClick={openFullscreen}
-          >
-            <Maximize2 size={17} />
-            Tam Ekran
-          </button>
-        )}
       </div>
     </section>
   );
