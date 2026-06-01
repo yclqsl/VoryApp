@@ -1,4 +1,4 @@
-import { Copy, Link, LogOut, Radio } from "lucide-react";
+import { Copy, Link, LogOut, Radio, PlusCircle, DoorOpen } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
 
@@ -51,11 +51,14 @@ export default function RoomPanel({
   return (
     <section className="glass">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-black">Oda Kontrol</h2>
+        <div>
+          <h2 className="text-lg font-black">Oda Kontrol</h2>
+          <p className="text-xs text-white/35">Oluştur, katıl ve davet et.</p>
+        </div>
 
-        <span className="flex items-center gap-1 rounded-full bg-violet-500/20 px-3 py-1 text-xs text-violet-300">
+        <span className="flex items-center gap-1 rounded-full bg-violet-500/20 px-3 py-1 text-xs font-bold text-violet-300">
           <Radio size={13} />
-          Live Room
+          Live
         </span>
       </div>
 
@@ -66,9 +69,17 @@ export default function RoomPanel({
         onChange={(e) => setUsername(e.target.value)}
       />
 
-      <button className="btn" onClick={onCreateRoom}>
-        Oda Oluştur
-      </button>
+      <div className="grid grid-cols-2 gap-2">
+        <button className="btn flex items-center gap-2" onClick={onCreateRoom}>
+          <PlusCircle size={17} />
+          Oluştur
+        </button>
+
+        <button className="btn-secondary flex items-center gap-2" onClick={onJoinRoom}>
+          <DoorOpen size={17} />
+          Katıl
+        </button>
+      </div>
 
       <input
         className="input"
@@ -77,17 +88,15 @@ export default function RoomPanel({
         onChange={(e) => setRoomInput(e.target.value)}
       />
 
-      <button className="btn-secondary" onClick={onJoinRoom}>
-        Odaya Katıl
-      </button>
-
       {roomCode && (
         <>
-          <div className="mt-4 rounded-2xl bg-black/40 p-4">
-            <p className="text-xs text-white/40">Aktif Oda</p>
+          <div className="mt-4 rounded-3xl border border-emerald-400/10 bg-emerald-400/10 p-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-300/70">
+              Aktif Oda
+            </p>
 
             <div className="mt-2 flex items-center justify-between gap-3">
-              <strong className="text-xl text-emerald-400">{roomCode}</strong>
+              <strong className="text-2xl font-black text-emerald-300">{roomCode}</strong>
 
               <button
                 className="btn-secondary mt-0 w-auto px-4"
@@ -117,7 +126,7 @@ export default function RoomPanel({
         </>
       )}
 
-      {status && <p className="mt-3 text-sm text-white/50">{status}</p>}
+      {status && <p className="mt-3 rounded-2xl bg-white/5 p-3 text-sm text-white/50">{status}</p>}
     </section>
   );
 }

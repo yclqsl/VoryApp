@@ -1,31 +1,53 @@
-import { Film, Home, Users, Settings, Sparkles } from "lucide-react";
+import { Film, Home, Settings, Sparkles, Users, Mic2, BarChart3 } from "lucide-react";
+
+function NavItem({ icon: Icon, label, active }) {
+  return (
+    <button
+      className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-bold transition ${
+        active
+          ? "bg-white/12 text-white shadow-lg shadow-violet-950/20"
+          : "text-white/45 hover:bg-white/8 hover:text-white"
+      }`}
+    >
+      <Icon size={19} className={active ? "text-violet-300" : "text-white/40 group-hover:text-violet-300"} />
+      <span className="hidden xl:block">{label}</span>
+    </button>
+  );
+}
 
 export default function LeftSidebar() {
   return (
-    <aside className="hidden h-[calc(100vh-40px)] w-20 flex-col items-center justify-between rounded-3xl border border-white/10 bg-black/30 py-5 backdrop-blur-xl lg:flex">
-      <div className="flex flex-col items-center gap-5">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-lg shadow-violet-900/40">
+    <aside className="hidden h-[calc(100vh-40px)] w-20 shrink-0 flex-col rounded-[30px] border border-white/10 bg-black/25 p-3 backdrop-blur-2xl lg:flex xl:w-64">
+      <div className="mb-6 flex items-center gap-3 rounded-3xl bg-gradient-to-br from-violet-600/90 to-fuchsia-600/80 p-3 shadow-lg shadow-violet-900/35">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15">
           <Sparkles size={24} />
         </div>
-
-        <div className="flex flex-col gap-3">
-          <button className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-violet-300">
-            <Home size={20} />
-          </button>
-
-          <button className="flex h-11 w-11 items-center justify-center rounded-2xl text-white/45 transition hover:bg-white/10 hover:text-white">
-            <Film size={20} />
-          </button>
-
-          <button className="flex h-11 w-11 items-center justify-center rounded-2xl text-white/45 transition hover:bg-white/10 hover:text-white">
-            <Users size={20} />
-          </button>
+        <div className="hidden xl:block">
+          <p className="text-lg font-black">VoryApp</p>
+          <p className="text-xs text-white/60">Live watch rooms</p>
         </div>
       </div>
 
-      <button className="flex h-11 w-11 items-center justify-center rounded-2xl text-white/45 transition hover:bg-white/10 hover:text-white">
-        <Settings size={20} />
-      </button>
+      <nav className="flex flex-1 flex-col gap-2">
+        <NavItem icon={Home} label="Ana Sayfa" active />
+        <NavItem icon={Film} label="Watch Room" />
+        <NavItem icon={Users} label="Arkadaşlar" />
+        <NavItem icon={Mic2} label="Voice Chat" />
+      </nav>
+
+      <div className="mt-6 space-y-2">
+        <div className="hidden rounded-3xl border border-white/10 bg-white/5 p-4 xl:block">
+          <div className="flex items-center gap-2 text-sm font-black">
+            <BarChart3 size={17} className="text-emerald-300" />
+            Vory Stats
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-white/40">
+            Oda analizleri ve premium özellikler yakında.
+          </p>
+        </div>
+
+        <NavItem icon={Settings} label="Ayarlar" />
+      </div>
     </aside>
   );
 }

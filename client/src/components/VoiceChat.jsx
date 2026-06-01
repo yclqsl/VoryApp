@@ -1,4 +1,4 @@
-import { Mic, MicOff, PhoneOff, Radio } from "lucide-react";
+import { Mic, MicOff, PhoneOff, Radio, Activity } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { socket } from "../services/socket";
@@ -12,6 +12,7 @@ const ICE_SERVERS = {
 
 export default function VoiceChat({ roomCode, username }) {
   const [isVoiceOn, setIsVoiceOn] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
   const localStreamRef = useRef(null);
   const peersRef = useRef({});
@@ -31,6 +32,7 @@ export default function VoiceChat({ roomCode, username }) {
 
       localStreamRef.current = stream;
       setIsVoiceOn(true);
+      setIsMuted(false);
 
       socket.emit("voice-join", {
         roomCode,
@@ -67,6 +69,7 @@ export default function VoiceChat({ roomCode, username }) {
 
     setParticipantCount(0);
     setIsVoiceOn(false);
+    setIsMuted(false);
     toast.success("Mikrofon kapatıldı.");
   }
 
@@ -153,18 +156,23 @@ export default function VoiceChat({ roomCode, username }) {
     setParticipantCount(Object.keys(peersRef.current).length);
   }
 
+  function toggleMute() {
+    const track = localStreamRef.current?.getAudioTracks()?.[0];
+    if (!track) return;
+
+    track.enabled = !track.enabled;
+    setIsMuted(!track.enabled);
+    toast.success(track.enabled ? "Mikrofon açıldı" : "Mikrofon kapandı");
+  }
+
   useEffect(() => {
     socket.on("voice-peers", ({ peers }) => {
       if (!localStreamRef.current) return;
-
-      (peers || []).forEach((peerId) => {
-        createPeer(peerId, true);
-      });
+      (peers || []).forEach((peerId) => createPeer(peerId, true));
     });
 
     socket.on("voice-user-joined", ({ socketId }) => {
       if (!localStreamRef.current) return;
-
       createPeer(socketId, false);
     });
 
@@ -211,9 +219,7 @@ export default function VoiceChat({ roomCode, username }) {
       socket.off("voice-ice-candidate");
       socket.off("voice-user-left");
 
-      if (localStreamRef.current) {
-        stopVoice();
-      }
+      if (localStreamRef.current) stopVoice();
     };
   }, [roomCode]);
 
@@ -227,17 +233,26 @@ export default function VoiceChat({ roomCode, username }) {
           </p>
         </div>
 
-        <Radio
-          size={18}
-          className={isVoiceOn ? "text-emerald-300" : "text-white/35"}
-        />
+        <div className={`rounded-2xl p-3 ${isVoiceOn ? "bg-emerald-500/15 text-emerald-300" : "bg-white/8 text-white/35"}`}>
+          <Radio size={18} />
+        </div>
       </div>
 
-      <div className="mt-4 rounded-2xl bg-black/30 p-3">
-        <p className="text-sm text-white/45">Bağlı kişi</p>
-        <p className="mt-1 text-2xl font-black">
-          {isVoiceOn ? participantCount + 1 : 0}
-        </p>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-3xl bg-black/25 p-4">
+          <p className="text-xs text-white/35">Bağlı Kişi</p>
+          <p className="mt-1 text-2xl font-black">
+            {isVoiceOn ? participantCount + 1 : 0}
+          </p>
+        </div>
+
+        <div className="rounded-3xl bg-black/25 p-4">
+          <p className="text-xs text-white/35">Durum</p>
+          <div className="mt-2 flex items-center gap-2 text-sm font-bold">
+            <Activity size={15} className={isVoiceOn ? "text-emerald-300" : "text-white/35"} />
+            {isVoiceOn ? (isMuted ? "Sessiz" : "Aktif") : "Kapalı"}
+          </div>
+        </div>
       </div>
 
       {!isVoiceOn ? (
@@ -252,16 +267,10 @@ export default function VoiceChat({ roomCode, username }) {
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
             className="btn-secondary flex items-center justify-center gap-2"
-            onClick={() => {
-              const track = localStreamRef.current?.getAudioTracks()?.[0];
-              if (!track) return;
-
-              track.enabled = !track.enabled;
-              toast.success(track.enabled ? "Mikrofon açıldı" : "Mikrofon kapandı");
-            }}
+            onClick={toggleMute}
           >
             <MicOff size={17} />
-            Sustur
+            {isMuted ? "Aç" : "Sustur"}
           </button>
 
           <button

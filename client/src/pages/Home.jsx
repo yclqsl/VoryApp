@@ -25,10 +25,10 @@ export default function Home({ authUser, onLogout }) {
   const [videoInput, setVideoInput] = useState("");
   const [isHost, setIsHost] = useState(false);
   const [pendingInviteRoom, setPendingInviteRoom] = useState("");
-  
+
   useEffect(() => {
-  window.currentRoomCode = roomCode;
-}, [roomCode]);
+    window.currentRoomCode = roomCode;
+  }, [roomCode]);
 
   const playerRef = useRef(null);
   const ignoreEventRef = useRef(false);
@@ -225,30 +225,44 @@ export default function Home({ authUser, onLogout }) {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#2a1160,#08080b_45%)] p-5 text-white">
-      <div className="flex gap-5">
+    <div className="app-shell min-h-screen text-white">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -left-32 top-0 h-96 w-96 rounded-full bg-violet-700/25 blur-3xl" />
+        <div className="absolute right-10 top-20 h-96 w-96 rounded-full bg-fuchsia-700/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/2 h-96 w-96 rounded-full bg-indigo-700/15 blur-3xl" />
+      </div>
+
+      <div className="relative flex min-h-screen gap-5 p-4 lg:p-5">
         <LeftSidebar />
 
-        <div className="min-w-0 flex-1">
-          <Header authUser={authUser} onLogout={onLogout} isHost={isHost} />
+        <div className="flex min-w-0 flex-1 flex-col gap-5">
+          <Header
+            authUser={authUser}
+            onLogout={onLogout}
+            isHost={isHost}
+            roomCode={roomCode}
+            userCount={users.length}
+          />
 
           {pendingInviteRoom && !roomCode && (
-            <div className="glass mt-5 flex items-center justify-between gap-4 border-violet-400/30">
+            <div className="glass-panel flex flex-col gap-4 border-emerald-400/25 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm text-white/40">Davet linki algılandı</p>
-                <h2 className="text-xl font-black text-emerald-300">
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-300/70">
+                  Davet Linki Algılandı
+                </p>
+                <h2 className="mt-1 text-xl font-black text-white">
                   {pendingInviteRoom} odasına katılmaya hazırsın
                 </h2>
               </div>
 
-              <button className="btn mt-0 w-auto px-6" onClick={joinPendingInvite}>
+              <button className="btn-primary w-full sm:w-auto" onClick={joinPendingInvite}>
                 Odaya Katıl
               </button>
             </div>
           )}
 
-          <main className="mt-5 grid h-[calc(100vh-124px)] grid-cols-[minmax(0,1fr)_410px] gap-5 max-xl:h-auto max-xl:grid-cols-1">
-            <div className="flex min-h-0 flex-col gap-5">
+          <main className="grid flex-1 gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <section className="flex min-w-0 flex-col gap-5">
               <VideoPlayer
                 videoUrl={videoUrl}
                 videoInput={videoInput}
@@ -261,10 +275,12 @@ export default function Home({ authUser, onLogout }) {
                 isHost={isHost}
               />
 
-              <QuickActions roomCode={roomCode} isHost={isHost} />
-            </div>
+              <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+            </section>
 
-            <aside className="flex min-h-0 flex-col gap-5 overflow-y-auto pr-1">
+            <aside className="right-rail">
+              <ProfileCard authUser={authUser} />
+
               <RoomPanel
                 username={username}
                 setUsername={setUsername}
@@ -277,15 +293,11 @@ export default function Home({ authUser, onLogout }) {
                 onLeaveRoom={leaveRoom}
               />
 
-              <InviteBox roomCode={roomCode} />
-			  
-			  <ProfileCard authUser={authUser} />
+              <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
 
               <UserList users={users} />
 
-              <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
-
-              <FriendPanel />
+              <InviteBox roomCode={roomCode} />
 
               <ChatPanel
                 messages={messages}
@@ -293,6 +305,8 @@ export default function Home({ authUser, onLogout }) {
                 setMessage={setMessage}
                 onSendMessage={sendMessage}
               />
+
+              <FriendPanel />
             </aside>
           </main>
         </div>

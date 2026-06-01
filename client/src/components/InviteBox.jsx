@@ -1,4 +1,4 @@
-import { Link, Copy } from "lucide-react";
+import { Link, Copy, Send } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
 
@@ -17,8 +17,8 @@ export default function InviteBox({ roomCode }) {
         { roomCode },
         {
           headers: {
-            Authorization: `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
@@ -32,20 +32,35 @@ export default function InviteBox({ roomCode }) {
   return (
     <section className="glass">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-black">Davet</h2>
+        <div>
+          <h2 className="text-lg font-black">Davet</h2>
+          <p className="mt-1 text-xs text-white/35">Arkadaşlarını odaya çağır.</p>
+        </div>
+
         <Link size={18} className="text-violet-300" />
       </div>
 
-      <p className="mt-2 text-sm text-white/45">
-        Oda linkini arkadaşlarınla paylaş.
-      </p>
+      <div className="mt-4 rounded-3xl bg-black/25 p-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-white/30">
+          Paylaşılacak Oda
+        </p>
+        <p className="mt-1 text-lg font-black text-white">{roomCode || "Aktif oda yok"}</p>
+      </div>
 
       <button
         className="btn-secondary flex items-center justify-center gap-2"
         onClick={createInviteLink}
       >
         <Copy size={17} />
-        Davet Linkini Kopyala
+        Linki Kopyala
+      </button>
+
+      <button
+        className="btn-secondary flex items-center justify-center gap-2"
+        onClick={createInviteLink}
+      >
+        <Send size={17} />
+        Hızlı Davet
       </button>
     </section>
   );
