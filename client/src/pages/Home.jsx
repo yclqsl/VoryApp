@@ -10,6 +10,7 @@ import FriendPanel from "../components/FriendPanel";
 import UserList from "../components/UserList";
 import ChatPanel from "../components/ChatPanel";
 import VideoPlayer from "../components/VideoPlayer";
+import ProfileCard from "../components/ProfileCard";
 
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
@@ -274,6 +275,8 @@ export default function Home({ authUser, onLogout }) {
               />
 
               <InviteBox roomCode={roomCode} />
+			  
+			  <ProfileCard authUser={authUser} />
 
               <UserList users={users} />
 

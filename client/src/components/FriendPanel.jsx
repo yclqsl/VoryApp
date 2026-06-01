@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Check, Circle, Search, UserPlus, Users } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Circle, Search, UserPlus, Users, Bell } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
 import { socket } from "../services/socket";
@@ -12,9 +12,16 @@ export default function FriendPanel() {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const previousOnlineIdsRef = useRef(new Set());
+  const notifiedIncomingRef = useRef(false);
+
   function authHeaders() {
     const token = localStorage.getItem("vory_token");
-    return { headers: { Authorization: `Bearer ${token}` } };
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
   }
 
   function isFriendOnline(friendId) {
@@ -29,12 +36,14 @@ export default function FriendPanel() {
       }
 
       setLoading(true);
+
       const { data } = await api.get(
         `/friends/search?q=${encodeURIComponent(query)}`,
         authHeaders()
       );
+
       setResults(data.users || []);
-    } catch {
+    } catch (error) {
       toast.error("Kullanıcı aranamadı.");
     } finally {
       setLoading(false);
@@ -43,7 +52,12 @@ export default function FriendPanel() {
 
   async function sendRequest(toUserId) {
     try {
-      const { data } = await api.post("/friends/request", { toUserId }, authHeaders());
+      const { data } = await api.post(
+        "/friends/request",
+        { toUserId },
+        authHeaders()
+      );
+
       toast.success(data.message || "İstek gönderildi.");
     } catch (error) {
       toast.error(error.response?.data?.message || "İstek gönderilemedi.");
@@ -53,7 +67,17 @@ export default function FriendPanel() {
   async function loadRequests() {
     try {
       const { data } = await api.get("/friends/requests", authHeaders());
-      setIncoming(data.incoming || []);
+      const incomingRequests = data.incoming || [];
+
+      if (
+        notifiedIncomingRef.current &&
+        incomingRequests.length > incoming.length
+      ) {
+        toast.success("Yeni arkadaşlık isteğin var 🔔");
+      }
+
+      notifiedIncomingRef.current = true;
+      setIncoming(incomingRequests);
     } catch {}
   }
 
@@ -66,11 +90,16 @@ export default function FriendPanel() {
 
   async function acceptRequest(requestId) {
     try {
-      const { data } = await api.post(`/friends/accept/${requestId}`, {}, authHeaders());
+      const { data } = await api.post(
+        `/friends/accept/${requestId}`,
+        {},
+        authHeaders()
+      );
+
       toast.success(data.message || "Kabul edildi.");
       loadRequests();
       loadFriends();
-    } catch {
+    } catch (error) {
       toast.error("İstek kabul edilemedi.");
     }
   }
@@ -84,7 +113,9 @@ export default function FriendPanel() {
     }
 
     const inviteLink = `https://voryapp.com/?room=${roomCode}`;
+
     navigator.clipboard.writeText(inviteLink);
+
     toast.success(`${friend.username} için davet linki kopyalandı 🚀`);
   }
 
@@ -92,22 +123,55 @@ export default function FriendPanel() {
     loadRequests();
     loadFriends();
 
+    const requestInterval = setInterval(() => {
+      loadRequests();
+    }, 15000);
+
     socket.emit("get-online-users");
 
     socket.on("online-users", (users) => {
-      setOnlineUsers(users || []);
+      const safeUsers = users || [];
+      setOnlineUsers(safeUsers);
+
+      const currentOnlineIds = new Set(
+        safeUsers.map((user) => String(user.userId))
+      );
+
+      friends.forEach((friend) => {
+        const friendId = String(friend._id);
+
+        if (
+          currentOnlineIds.has(friendId) &&
+          !previousOnlineIdsRef.current.has(friendId)
+        ) {
+          toast.success(`${friend.username} çevrimiçi oldu 🟢`);
+        }
+      });
+
+      previousOnlineIdsRef.current = currentOnlineIds;
     });
 
     return () => {
+      clearInterval(requestInterval);
       socket.off("online-users");
     };
-  }, []);
+  }, [friends]);
 
   return (
     <section className="glass">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-black">Sosyal</h2>
-        <Users size={18} className="text-violet-300" />
+
+        <div className="flex items-center gap-2">
+          {incoming.length > 0 && (
+            <span className="flex items-center gap-1 rounded-full bg-red-500/20 px-3 py-1 text-xs text-red-300">
+              <Bell size={13} />
+              {incoming.length}
+            </span>
+          )}
+
+          <Users size={18} className="text-violet-300" />
+        </div>
       </div>
 
       <p className="mt-1 text-xs text-white/40">
@@ -132,16 +196,24 @@ export default function FriendPanel() {
 
       {results.length > 0 && (
         <div className="mt-4 space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-white/35">Sonuçlar</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-white/35">
+            Sonuçlar
+          </p>
 
           {results.map((user) => (
-            <div key={user._id} className="flex items-center justify-between gap-3 rounded-2xl bg-black/35 p-3">
+            <div
+              key={user._id}
+              className="flex items-center justify-between gap-3 rounded-2xl bg-black/35 p-3"
+            >
               <div className="min-w-0">
                 <p className="truncate font-bold">{user.username}</p>
                 <p className="truncate text-xs text-white/35">{user.email}</p>
               </div>
 
-              <button className="btn-secondary mt-0 flex w-auto items-center gap-2 px-3" onClick={() => sendRequest(user._id)}>
+              <button
+                className="btn-secondary mt-0 flex w-auto items-center gap-2 px-3"
+                onClick={() => sendRequest(user._id)}
+              >
                 <UserPlus size={16} />
                 Ekle
               </button>
@@ -152,17 +224,25 @@ export default function FriendPanel() {
 
       {incoming.length > 0 && (
         <div className="mt-5">
-          <p className="text-xs font-bold uppercase tracking-wide text-white/35">Gelen İstekler</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-white/35">
+            Gelen İstekler
+          </p>
 
           <div className="mt-2 space-y-2">
             {incoming.map((request) => (
-              <div key={request._id} className="flex items-center justify-between rounded-2xl bg-black/35 p-3">
+              <div
+                key={request._id}
+                className="flex items-center justify-between rounded-2xl bg-black/35 p-3"
+              >
                 <div>
                   <p className="font-bold">{request.from.username}</p>
                   <p className="text-xs text-white/35">{request.from.email}</p>
                 </div>
 
-                <button className="btn-secondary mt-0 w-auto px-3" onClick={() => acceptRequest(request._id)}>
+                <button
+                  className="btn-secondary mt-0 w-auto px-3"
+                  onClick={() => acceptRequest(request._id)}
+                >
                   <Check size={16} />
                 </button>
               </div>
@@ -172,10 +252,14 @@ export default function FriendPanel() {
       )}
 
       <div className="mt-5">
-        <p className="text-xs font-bold uppercase tracking-wide text-white/35">Arkadaşların</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-white/35">
+          Arkadaşların
+        </p>
 
         {friends.length === 0 ? (
-          <p className="mt-2 rounded-2xl bg-black/25 p-3 text-sm text-white/35">Henüz arkadaş yok.</p>
+          <p className="mt-2 rounded-2xl bg-black/25 p-3 text-sm text-white/35">
+            Henüz arkadaş yok.
+          </p>
         ) : (
           <div className="mt-2 space-y-2">
             {friends.map((friend) => {
@@ -190,9 +274,18 @@ export default function FriendPanel() {
                       <div className="mt-1 flex items-center gap-2 text-xs">
                         <Circle
                           size={9}
-                          className={online ? "fill-emerald-400 text-emerald-400" : "fill-white/25 text-white/25"}
+                          className={
+                            online
+                              ? "fill-emerald-400 text-emerald-400"
+                              : "fill-white/25 text-white/25"
+                          }
                         />
-                        <span className={online ? "text-emerald-300" : "text-white/35"}>
+
+                        <span
+                          className={
+                            online ? "text-emerald-300" : "text-white/35"
+                          }
+                        >
                           {online ? "Çevrimiçi" : "Çevrimdışı"}
                         </span>
                       </div>
@@ -203,7 +296,10 @@ export default function FriendPanel() {
                     </span>
                   </div>
 
-                  <button className="btn-secondary mt-3 w-full" onClick={() => copyInviteForFriend(friend)}>
+                  <button
+                    className="btn-secondary mt-3 w-full"
+                    onClick={() => copyInviteForFriend(friend)}
+                  >
                     Odaya Davet Et
                   </button>
                 </div>
