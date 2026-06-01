@@ -56,6 +56,55 @@ function createRoomCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+function getYouTubeVideoId(url) {
+  try {
+    const parsedUrl = new URL(url);
+
+    if (parsedUrl.hostname.includes("youtube.com")) {
+      if (parsedUrl.pathname.includes("/shorts/")) {
+        return parsedUrl.pathname.split("/shorts/")[1]?.split("?")[0] || "";
+      }
+
+      if (parsedUrl.pathname.includes("/embed/")) {
+        return parsedUrl.pathname.split("/embed/")[1]?.split("?")[0] || "";
+      }
+
+      return parsedUrl.searchParams.get("v") || "";
+    }
+
+    if (parsedUrl.hostname.includes("youtu.be")) {
+      return parsedUrl.pathname.replace("/", "").split("?")[0];
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+function getPublicRooms() {
+  return Object.entries(rooms).map(([roomCode, room]) => {
+    const hostUser = room.users.find((user) => user.id === room.host) || room.users[0];
+    const videoId = getYouTubeVideoId(room.videoUrl || "");
+
+    return {
+      roomCode,
+      title: room.title || (room.videoUrl ? "Watch Party" : `${hostUser?.username || "Vory"}'nin Odası`),
+      host: hostUser?.username || "Host",
+      videoUrl: room.videoUrl || "",
+      thumbnail: videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : "",
+      users: room.users.slice(0, 6),
+      userCount: room.users.length,
+      isPlaying: !!room.videoState?.isPlaying,
+      createdAt: room.createdAt || Date.now(),
+    };
+  }).sort((a, b) => b.userCount - a.userCount || b.createdAt - a.createdAt);
+}
+
+function broadcastPublicRooms() {
+  io.emit("public-rooms", getPublicRooms());
+}
+
 function isHost(roomCode, socketId) {
   return rooms[roomCode]?.host === socketId;
 }
@@ -134,6 +183,10 @@ io.on("connection", (socket) => {
     socket.emit("online-users", Array.from(onlineUsers.values()));
   });
 
+  socket.on("get-public-rooms", () => {
+    socket.emit("public-rooms", getPublicRooms());
+  });
+
   socket.on("create-room", (user) => {
     const username = typeof user === "object" ? user.username : user;
     const avatar = typeof user === "object" ? user.avatar : "";
@@ -142,6 +195,8 @@ io.on("connection", (socket) => {
 
     rooms[roomCode] = {
       host: socket.id,
+      title: `${username || "Vory"}'nin Odası`,
+      createdAt: Date.now(),
       videoUrl: "",
       videoState: {
         isPlaying: false,
@@ -171,6 +226,8 @@ io.on("connection", (socket) => {
       "system-message",
       `${username || "Misafir"} odayı oluşturdu.`
     );
+
+    broadcastPublicRooms();
   });
 
   socket.on("join-room", ({ roomCode, username, avatar }) => {
@@ -206,12 +263,15 @@ io.on("connection", (socket) => {
       socket.emit("video-updated", room.videoUrl);
       socket.emit("video-sync", getSyncedVideoState(room));
     }
+
+    broadcastPublicRooms();
   });
 
   socket.on("leave-room", ({ roomCode }) => {
     socket.leave(roomCode);
     removeUserFromRooms(socket.id);
     socket.emit("room-left");
+    broadcastPublicRooms();
   });
 
   socket.on("set-video", ({ roomCode, videoUrl }) => {
@@ -225,6 +285,7 @@ io.on("connection", (socket) => {
     }
 
     room.videoUrl = videoUrl;
+    room.title = "YouTube Watch Party";
 
     room.videoState = {
       isPlaying: false,
@@ -235,6 +296,8 @@ io.on("connection", (socket) => {
     io.to(roomCode).emit("video-updated", videoUrl);
     io.to(roomCode).emit("video-sync", room.videoState);
     io.to(roomCode).emit("system-message", "Host yeni video ekledi.");
+
+    broadcastPublicRooms();
   });
 
   socket.on("video-control", ({ roomCode, action, currentTime }) => {
@@ -371,6 +434,7 @@ io.on("connection", (socket) => {
     }
 
     io.emit("online-users", Array.from(onlineUsers.values()));
+    broadcastPublicRooms();
   });
 });
 
