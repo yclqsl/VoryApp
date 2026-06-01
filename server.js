@@ -60,6 +60,24 @@ function isHost(roomCode, socketId) {
   return rooms[roomCode]?.host === socketId;
 }
 
+function getSyncedVideoState(room) {
+  const state = room.videoState || {
+    isPlaying: false,
+    currentTime: 0,
+    updatedAt: Date.now(),
+  };
+
+  if (!state.isPlaying) return state;
+
+  const elapsed = (Date.now() - (state.updatedAt || Date.now())) / 1000;
+
+  return {
+    ...state,
+    currentTime: (state.currentTime || 0) + elapsed,
+    updatedAt: Date.now(),
+  };
+}
+
 function removeUserFromRooms(socketId) {
   for (const roomCode in rooms) {
     const room = rooms[roomCode];
@@ -128,6 +146,7 @@ io.on("connection", (socket) => {
       videoState: {
         isPlaying: false,
         currentTime: 0,
+        updatedAt: Date.now(),
       },
       users: [
         {
@@ -185,7 +204,7 @@ io.on("connection", (socket) => {
 
     if (room.videoUrl) {
       socket.emit("video-updated", room.videoUrl);
-      socket.emit("video-sync", room.videoState);
+      socket.emit("video-sync", getSyncedVideoState(room));
     }
   });
 
@@ -210,6 +229,7 @@ io.on("connection", (socket) => {
     room.videoState = {
       isPlaying: false,
       currentTime: 0,
+      updatedAt: Date.now(),
     };
 
     io.to(roomCode).emit("video-updated", videoUrl);
@@ -226,6 +246,7 @@ io.on("connection", (socket) => {
     room.videoState = {
       isPlaying: action === "play",
       currentTime: currentTime || 0,
+      updatedAt: Date.now(),
     };
 
     socket.to(roomCode).emit("video-control", {
@@ -241,6 +262,7 @@ io.on("connection", (socket) => {
     if (!isHost(roomCode, socket.id)) return;
 
     room.videoState.currentTime = currentTime || 0;
+    room.videoState.updatedAt = Date.now();
 
     socket.to(roomCode).emit("video-seek", {
       currentTime: currentTime || 0,
@@ -256,6 +278,7 @@ io.on("connection", (socket) => {
     room.videoState = {
       currentTime: currentTime || 0,
       isPlaying: !!isPlaying,
+      updatedAt: Date.now(),
     };
   });
 
@@ -264,7 +287,7 @@ io.on("connection", (socket) => {
 
     if (!room) return;
 
-    socket.emit("video-sync", room.videoState);
+    socket.emit("video-sync", getSyncedVideoState(room));
   });
 
   socket.on("send-message", ({ roomCode, message, username }) => {

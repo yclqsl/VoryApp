@@ -14,7 +14,7 @@ export default function VideoPlayer({
   ignoreEventRef,
   isHost,
 }) {
-  const lastSeekTimeRef = useRef(0);
+  const heartbeatRef = useRef(null);
 
   function getYouTubeVideoId(url) {
     try {
@@ -36,18 +36,23 @@ export default function VideoPlayer({
 
   const videoId = getYouTubeVideoId(videoUrl);
 
-  function getRoomCodeFromStorage() {
+  function getRoomCode() {
     return window.currentRoomCode || "";
+  }
+
+  function requestForceSync() {
+    const roomCode = getRoomCode();
+    if (!roomCode) return;
+
+    socket.emit("force-video-sync", { roomCode });
   }
 
   function handleReady(event) {
     playerRef.current = event.target;
 
-    const roomCode = getRoomCodeFromStorage();
-
-    if (roomCode && !isHost) {
-      socket.emit("force-video-sync", { roomCode });
-    }
+    setTimeout(() => {
+      requestForceSync();
+    }, 800);
   }
 
   function handleStateChange(event) {
@@ -56,13 +61,9 @@ export default function VideoPlayer({
 
     const currentTime = playerRef.current.getCurrentTime();
 
-    if (event.data === 1) {
-      onVideoControl("play", currentTime);
-    }
-
-    if (event.data === 2) {
-      onVideoControl("pause", currentTime);
-    }
+    if (event.data === 1) onVideoControl("play", currentTime);
+    if (event.data === 2) onVideoControl("pause", currentTime);
+    if (event.data === 0) onVideoControl("pause", currentTime);
   }
 
   function syncTime() {
@@ -74,20 +75,20 @@ export default function VideoPlayer({
     if (!playerRef.current || ignoreEventRef.current) return;
 
     const currentTime = playerRef.current.getCurrentTime();
-
     onVideoSeek(currentTime);
-    lastSeekTimeRef.current = currentTime;
 
-    toast.success("Video zamanı senkronlandı.");
+    toast.success("Herkes senkronlandı ⚡");
   }
 
   useEffect(() => {
     if (!isHost) return;
 
-    const interval = setInterval(() => {
+    clearInterval(heartbeatRef.current);
+
+    heartbeatRef.current = setInterval(() => {
       if (!playerRef.current) return;
 
-      const roomCode = getRoomCodeFromStorage();
+      const roomCode = getRoomCode();
       if (!roomCode) return;
 
       socket.emit("video-heartbeat", {
@@ -95,10 +96,20 @@ export default function VideoPlayer({
         currentTime: playerRef.current.getCurrentTime(),
         isPlaying: playerRef.current.getPlayerState() === 1,
       });
-    }, 5000);
+    }, 3000);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(heartbeatRef.current);
   }, [isHost, playerRef]);
+
+  useEffect(() => {
+    if (!videoId) return;
+
+    const timeout = setTimeout(() => {
+      requestForceSync();
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [videoId]);
 
   return (
     <section className="glass flex min-h-[560px] flex-1 flex-col">
@@ -106,7 +117,7 @@ export default function VideoPlayer({
         <div>
           <h2 className="text-xl font-black">Watch Room</h2>
           <p className="text-sm text-white/40">
-            YouTube videosunu odadaki herkesle senkron izle.
+            Host kontrol eder, odadaki herkes otomatik senkron kalır.
           </p>
         </div>
 
@@ -143,8 +154,7 @@ export default function VideoPlayer({
 
       {!isHost && (
         <p className="mt-3 rounded-2xl bg-black/30 p-3 text-sm text-white/45">
-          Video kontrolü host tarafından yönetiliyor. Sen otomatik senkron
-          kalırsın.
+          İzleyici modundasın. Video kontrolü hostta, sen otomatik senkron kalırsın.
         </p>
       )}
 
