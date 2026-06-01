@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { Globe2, Plus, Search, Users, Play, Lock, LogOut, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 import { socket } from "../services/socket";
 import Header from "../components/Header";
@@ -14,244 +13,12 @@ import VideoPlayer from "../components/VideoPlayer";
 import ProfileCard from "../components/ProfileCard";
 import VoiceChat from "../components/VoiceChat";
 
-function RoomAvatarStack({ users = [], count = 0 }) {
-  const shown = users.slice(0, 5);
-
-  return (
-    <div className="flex items-center">
-      {shown.map((user, index) => (
-        <div
-          key={user.id || index}
-          className="-ml-2 first:ml-0"
-          title={user.username}
-        >
-          {user.avatar ? (
-            <img
-              src={user.avatar}
-              alt="avatar"
-              className="h-9 w-9 rounded-full border-2 border-[#13091f] object-cover"
-            />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#13091f] bg-gradient-to-br from-violet-500 to-fuchsia-500 text-xs font-black">
-              {(user.username || "V").charAt(0).toUpperCase()}
-            </div>
-          )}
-        </div>
-      ))}
-
-      {count > shown.length && (
-        <div className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#13091f] bg-red-500 text-xs font-black">
-          +{count - shown.length}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PublicRoomCard({ room, onJoin }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onJoin(room.roomCode)}
-      className="group flex w-full overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.07] text-left shadow-2xl shadow-black/20 transition hover:-translate-y-1 hover:bg-white/[0.11]"
-    >
-      <div className="relative h-36 w-40 shrink-0 overflow-hidden bg-black sm:w-52">
-        {room.thumbnail ? (
-          <img
-            src={room.thumbnail}
-            alt={room.title}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-700/70 to-fuchsia-700/60">
-            <Play size={42} className="text-white/70" />
-          </div>
-        )}
-
-        <div className="absolute right-3 top-3 rounded-xl bg-black/65 p-2 backdrop-blur">
-          <Play size={17} />
-        </div>
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col justify-between p-4">
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-black text-emerald-300">
-              PUBLIC
-            </span>
-            {room.isPlaying && (
-              <span className="rounded-full bg-red-500/20 px-3 py-1 text-xs font-black text-red-300">
-                LIVE
-              </span>
-            )}
-          </div>
-
-          <h3 className="line-clamp-2 text-lg font-black leading-tight text-white">
-            {room.title}
-          </h3>
-          <p className="mt-1 text-sm text-white/45">Host: @{room.host}</p>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <RoomAvatarStack users={room.users} count={room.userCount} />
-
-          <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-black text-white">
-            +{room.userCount}
-          </span>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-function PublicRoomsLobby({
-  authUser,
-  onLogout,
-  publicRooms,
-  onCreateRoom,
-  onJoinRoom,
-  roomInput,
-  setRoomInput,
-  pendingInviteRoom,
-  joinPendingInvite,
-}) {
-  const [search, setSearch] = useState("");
-
-  const filteredRooms = publicRooms.filter((room) => {
-    const keyword = search.trim().toLowerCase();
-    if (!keyword) return true;
-
-    return (
-      room.title?.toLowerCase().includes(keyword) ||
-      room.host?.toLowerCase().includes(keyword) ||
-      room.roomCode?.toLowerCase().includes(keyword)
-    );
-  });
-
-  return (
-    <div className="rave-mobile-shell min-h-screen text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-[760px] flex-col px-4 pb-24 pt-5">
-        <header className="flex items-center justify-between">
-          <button
-            onClick={onLogout}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white/70"
-            title="Çıkış"
-          >
-            <LogOut size={20} />
-          </button>
-
-          <div className="text-center">
-            <h1 className="text-4xl font-black tracking-tight">
-              r<span className="text-violet-200">Λ</span>ve
-            </h1>
-            <p className="text-xs text-white/45">VoryApp Rooms</p>
-          </div>
-
-          <div className="relative">
-            {authUser?.avatar ? (
-              <img
-                src={authUser.avatar}
-                alt="avatar"
-                className="h-12 w-12 rounded-2xl object-cover"
-              />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 font-black">
-                {(authUser?.username || "V").charAt(0).toUpperCase()}
-              </div>
-            )}
-            <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-[#13091f] bg-emerald-400" />
-          </div>
-        </header>
-
-        <section className="mt-8">
-          <div className="flex items-center gap-3">
-            <Globe2 size={44} className="text-white" />
-            <div>
-              <h2 className="text-4xl font-black">Public</h2>
-              <p className="text-sm text-white/45">Açık odalara katıl veya kendi odanı aç.</p>
-            </div>
-          </div>
-
-          {pendingInviteRoom && (
-            <div className="mt-5 rounded-[2rem] border border-emerald-400/20 bg-emerald-400/10 p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-300/70">
-                Davet algılandı
-              </p>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <strong className="text-xl">{pendingInviteRoom}</strong>
-                <button className="btn-primary mt-0 w-auto px-5" onClick={joinPendingInvite}>
-                  Katıl
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-5 flex gap-2">
-            <div className="relative flex-1">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/35" />
-              <input
-                className="input mt-0 pl-11"
-                placeholder="Oda, host veya kod ara..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            <button
-              onClick={onCreateRoom}
-              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full bg-white text-black shadow-2xl shadow-white/20 transition hover:scale-105"
-              title="Oda oluştur"
-            >
-              <Plus size={28} />
-            </button>
-          </div>
-
-          <div className="mt-3 flex gap-2">
-            <input
-              className="input mt-0"
-              placeholder="Oda kodu ile katıl..."
-              value={roomInput}
-              onChange={(e) => setRoomInput(e.target.value)}
-            />
-            <button
-              className="btn-primary mt-0 w-auto px-5"
-              onClick={() => onJoinRoom()}
-            >
-              Katıl
-            </button>
-          </div>
-        </section>
-
-        <section className="mt-6 space-y-4">
-          {filteredRooms.length === 0 ? (
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-8 text-center">
-              <Sparkles size={42} className="mx-auto text-violet-300" />
-              <h3 className="mt-3 text-2xl font-black">Henüz public oda yok</h3>
-              <p className="mt-2 text-sm text-white/45">
-                İlk odayı sen oluştur, arkadaşların listeye düşsün.
-              </p>
-              <button className="btn-primary mt-5" onClick={onCreateRoom}>
-                Oda Oluştur
-              </button>
-            </div>
-          ) : (
-            filteredRooms.map((room) => (
-              <PublicRoomCard key={room.roomCode} room={room} onJoin={onJoinRoom} />
-            ))
-          )}
-        </section>
-      </div>
-    </div>
-  );
-}
-
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
   const [roomInput, setRoomInput] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [status, setStatus] = useState("");
   const [users, setUsers] = useState([]);
-  const [publicRooms, setPublicRooms] = useState([]);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [videoUrl, setVideoUrl] = useState("");
@@ -272,8 +39,6 @@ export default function Home({ authUser, onLogout }) {
   };
 
   useEffect(() => {
-    socket.emit("get-public-rooms");
-
     const params = new URLSearchParams(window.location.search);
     const invitedRoom = params.get("room");
 
@@ -286,17 +51,12 @@ export default function Home({ authUser, onLogout }) {
   }, []);
 
   useEffect(() => {
-    socket.on("public-rooms", (rooms) => {
-      setPublicRooms(rooms || []);
-    });
-
     socket.on("room-created", (data) => {
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
       setPendingInviteRoom("");
       setStatus("Oda oluşturuldu.");
       toast.success("Oda oluşturuldu 🚀");
-      socket.emit("get-public-rooms");
     });
 
     socket.on("room-joined", (data) => {
@@ -305,7 +65,6 @@ export default function Home({ authUser, onLogout }) {
       setPendingInviteRoom("");
       setStatus("Odaya katıldın.");
       toast.success("Odaya katıldın 🎉");
-      socket.emit("get-public-rooms");
     });
 
     socket.on("room-left", () => {
@@ -315,7 +74,6 @@ export default function Home({ authUser, onLogout }) {
       setVideoUrl("");
       setStatus("");
       setIsHost(false);
-      socket.emit("get-public-rooms");
       toast.success("Odadan ayrıldın.");
     });
 
@@ -359,11 +117,26 @@ export default function Home({ authUser, onLogout }) {
     socket.on("video-sync", ({ isPlaying, currentTime }) => {
       if (!playerRef.current) return;
 
-      ignoreEventRef.current = true;
-      playerRef.current.seekTo(currentTime, true);
+      const localTime = playerRef.current.getCurrentTime?.() || 0;
+      const localState = playerRef.current.getPlayerState?.();
+      const drift = Math.abs(localTime - (currentTime || 0));
 
-      if (isPlaying) playerRef.current.playVideo();
-      else playerRef.current.pauseVideo();
+      ignoreEventRef.current = true;
+
+      // Rave tarzı yumuşak senkron:
+      // Küçük farklarda seek yapma, yoksa video sürekli takılır.
+      if (drift > 2.5) {
+        playerRef.current.seekTo(currentTime || 0, true);
+      }
+
+      // Sadece oynatma durumu farklıysa play/pause uygula.
+      if (isPlaying && localState !== 1) {
+        playerRef.current.playVideo();
+      }
+
+      if (!isPlaying && localState === 1) {
+        playerRef.current.pauseVideo();
+      }
 
       setTimeout(() => {
         ignoreEventRef.current = false;
@@ -383,7 +156,6 @@ export default function Home({ authUser, onLogout }) {
     });
 
     return () => {
-      socket.off("public-rooms");
       socket.off("room-created");
       socket.off("room-joined");
       socket.off("room-left");
@@ -467,22 +239,6 @@ export default function Home({ authUser, onLogout }) {
     socket.emit("video-seek", { roomCode, currentTime });
   }
 
-  if (!roomCode) {
-    return (
-      <PublicRoomsLobby
-        authUser={authUser}
-        onLogout={onLogout}
-        publicRooms={publicRooms}
-        onCreateRoom={createRoom}
-        onJoinRoom={joinRoom}
-        roomInput={roomInput}
-        setRoomInput={setRoomInput}
-        pendingInviteRoom={pendingInviteRoom}
-        joinPendingInvite={joinPendingInvite}
-      />
-    );
-  }
-
   return (
     <div className="app-shell min-h-screen text-white">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -502,6 +258,23 @@ export default function Home({ authUser, onLogout }) {
             roomCode={roomCode}
             userCount={users.length}
           />
+
+          {pendingInviteRoom && !roomCode && (
+            <div className="glass-panel flex flex-col gap-4 border-emerald-400/25 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-300/70">
+                  Davet Linki Algılandı
+                </p>
+                <h2 className="mt-1 text-xl font-black text-white">
+                  {pendingInviteRoom} odasına katılmaya hazırsın
+                </h2>
+              </div>
+
+              <button className="btn-primary w-full sm:w-auto" onClick={joinPendingInvite}>
+                Odaya Katıl
+              </button>
+            </div>
+          )}
 
           <main className="grid flex-1 gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
             <section className="flex min-w-0 flex-col gap-5">

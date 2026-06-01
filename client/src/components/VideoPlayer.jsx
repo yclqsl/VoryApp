@@ -16,6 +16,7 @@ export default function VideoPlayer({
   isHost,
 }) {
   const heartbeatRef = useRef(null);
+  const driftCheckRef = useRef(null);
 
   function getYouTubeVideoId(url) {
     try {
@@ -59,25 +60,20 @@ export default function VideoPlayer({
   function handleReady(event) {
     playerRef.current = event.target;
 
+    // Yeni giren viewer sadece ilk açılışta host durumuna çekilir.
     if (!isHost) {
       setTimeout(() => {
         requestForceSync();
-      }, 800);
+      }, 900);
     }
   }
 
   function handleStateChange(event) {
     if (!playerRef.current || ignoreEventRef.current) return;
 
-    if (!isHost) {
-      if (event.data === 1 || event.data === 2 || event.data === 0) {
-        setTimeout(() => {
-          requestForceSync();
-        }, 150);
-      }
-
-      return;
-    }
+    // Viewer'ın local play/pause yapması hostu etkilemez.
+    // Sürekli geri çekmeyiz; 30 sn drift kontrolü bunu gerekirse düzeltir.
+    if (!isHost) return;
 
     const currentTime = playerRef.current.getCurrentTime();
 
@@ -116,6 +112,8 @@ export default function VideoPlayer({
 
     if (!isHost) return;
 
+    // Host state'i serverda güncel kalsın diye seyrek heartbeat.
+    // Bu emit viewer'a seek yaptırmaz, sadece state saklar.
     heartbeatRef.current = setInterval(() => {
       if (!playerRef.current) return;
 
@@ -127,20 +125,24 @@ export default function VideoPlayer({
         currentTime: playerRef.current.getCurrentTime(),
         isPlaying: playerRef.current.getPlayerState() === 1,
       });
-    }, 3000);
+    }, 10000);
 
     return () => clearInterval(heartbeatRef.current);
   }, [isHost, playerRef]);
 
   useEffect(() => {
-    if (!videoId) return;
-    if (isHost) return;
+    clearInterval(driftCheckRef.current);
 
-    const timeout = setTimeout(() => {
+    if (!videoId || isHost) return;
+
+    // Rave tarzı: sürekli çekme yok.
+    // Viewer sadece 30 saniyede bir host durumunu sorar.
+    // Home.jsx drift küçükse seek yapmaz.
+    driftCheckRef.current = setInterval(() => {
       requestForceSync();
-    }, 1200);
+    }, 30000);
 
-    return () => clearTimeout(timeout);
+    return () => clearInterval(driftCheckRef.current);
   }, [videoId, isHost]);
 
   return (
@@ -149,7 +151,7 @@ export default function VideoPlayer({
         <div>
           <h2 className="text-xl font-black">Watch Room</h2>
           <p className="text-sm text-white/40">
-            Host kontrol eder, odadaki herkes otomatik senkron kalır.
+            Rave tarzı yumuşak senkron: sadece büyük farklarda düzeltir.
           </p>
         </div>
 
@@ -186,7 +188,7 @@ export default function VideoPlayer({
 
       {!isHost && (
         <p className="mt-3 rounded-2xl bg-black/30 p-3 text-sm text-white/45">
-          İzleyici modundasın. Video kontrolü hostta; ses ve tam ekran kontrollerini kullanabilirsin.
+          İzleyici modundasın. Ses ve tam ekran kontrolleri açık; hostu etkilemezsin.
         </p>
       )}
 
