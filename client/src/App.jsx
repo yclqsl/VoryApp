@@ -4,40 +4,37 @@ import Auth from "./pages/Auth";
 import { socket } from "./services/socket";
 
 function App() {
-const [authUser, setAuthUser] = useState(() => {
-const savedUser = localStorage.getItem("vory_user");
-return savedUser ? JSON.parse(savedUser) : null;
-});
+  const [authUser, setAuthUser] = useState(() => {
+    const savedUser = localStorage.getItem("vory_user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
-useEffect(() => {
-if (!authUser) return;
+  useEffect(() => {
+    if (!authUser) return;
 
-```
-socket.emit("user-online", {
-  userId: authUser._id,
-  username: authUser.username,
-});
-```
+    socket.emit("user-online", {
+      userId: authUser.id || authUser._id,
+      username: authUser.username,
+    });
+  }, [authUser]);
 
-}, [authUser]);
+  function handleLogin(user, token) {
+    localStorage.setItem("vory_user", JSON.stringify(user));
+    localStorage.setItem("vory_token", token);
+    setAuthUser(user);
+  }
 
-function handleLogin(user, token) {
-localStorage.setItem("vory_user", JSON.stringify(user));
-localStorage.setItem("vory_token", token);
-setAuthUser(user);
-}
+  function handleLogout() {
+    localStorage.removeItem("vory_user");
+    localStorage.removeItem("vory_token");
+    setAuthUser(null);
+  }
 
-function handleLogout() {
-localStorage.removeItem("vory_user");
-localStorage.removeItem("vory_token");
-setAuthUser(null);
-}
+  if (!authUser) {
+    return <Auth onLogin={handleLogin} />;
+  }
 
-if (!authUser) {
-return <Auth onLogin={handleLogin} />;
-}
-
-return <Home authUser={authUser} onLogout={handleLogout} />;
+  return <Home authUser={authUser} onLogout={handleLogout} />;
 }
 
 export default App;
