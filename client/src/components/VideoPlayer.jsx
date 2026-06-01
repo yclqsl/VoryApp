@@ -6,7 +6,8 @@ import { socket } from "../services/socket";
 
 export default function VideoPlayer({
   videoUrl,
-  setVideoUrl,
+  videoInput,
+  setVideoInput,
   onSetVideo,
   onVideoControl,
   onVideoSeek,
@@ -137,8 +138,8 @@ export default function VideoPlayer({
         <input
           className="input mt-0"
           placeholder="YouTube linki gir..."
-          value={videoUrl}
-          onChange={(e) => setVideoUrl(e.target.value)}
+          value={videoInput}
+          onChange={(e) => setVideoInput(e.target.value)}
           disabled={!isHost}
         />
 

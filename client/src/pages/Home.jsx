@@ -21,6 +21,7 @@ export default function Home({ authUser, onLogout }) {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [videoUrl, setVideoUrl] = useState("");
+  const [videoInput, setVideoInput] = useState("");
   const [isHost, setIsHost] = useState(false);
   const [pendingInviteRoom, setPendingInviteRoom] = useState("");
   
@@ -187,12 +188,12 @@ export default function Home({ authUser, onLogout }) {
       return;
     }
 
-    if (!videoUrl.trim()) {
+    if (!videoInput.trim()) {
       toast.error("YouTube linki gir");
       return;
     }
 
-    socket.emit("set-video", { roomCode, videoUrl });
+    socket.emit("set-video", { roomCode, videoUrl: videoInput });
   }
 
   function sendMessage() {
@@ -249,7 +250,8 @@ export default function Home({ authUser, onLogout }) {
             <div className="flex min-h-0 flex-col gap-5">
               <VideoPlayer
                 videoUrl={videoUrl}
-                setVideoUrl={setVideoUrl}
+                videoInput={videoInput}
+                setVideoInput={setVideoInput}
                 onSetVideo={setRoomVideo}
                 onVideoControl={handleVideoControl}
                 onVideoSeek={handleVideoSeek}
