@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { PlayCircle, RefreshCw, ShieldCheck, Maximize2 } from "lucide-react";
+import { Maximize2, PlayCircle, RefreshCw, ShieldCheck } from "lucide-react";
 import YouTube from "react-youtube";
 import toast from "react-hot-toast";
 import { socket } from "../services/socket";
@@ -16,6 +16,7 @@ export default function VideoPlayer({
   isHost,
 }) {
   const heartbeatRef = useRef(null);
+  const viewerSyncRef = useRef(null);
   const videoBoxRef = useRef(null);
 
   function getYouTubeVideoId(url) {
@@ -51,8 +52,6 @@ export default function VideoPlayer({
   }
 
   function requestForceSync() {
-    if (isHost) return;
-
     const roomCode = getRoomCode();
     if (!roomCode) return;
 
@@ -65,7 +64,7 @@ export default function VideoPlayer({
     if (!isHost) {
       setTimeout(() => {
         requestForceSync();
-      }, 1000);
+      }, 800);
     }
   }
 
@@ -73,7 +72,9 @@ export default function VideoPlayer({
     if (!playerRef.current || ignoreEventRef.current) return;
 
     if (!isHost) {
-      requestForceSync();
+      setTimeout(() => {
+        requestForceSync();
+      }, 120);
       return;
     }
 
@@ -97,16 +98,11 @@ export default function VideoPlayer({
 
   function openFullscreen() {
     const element = videoBoxRef.current;
-
     if (!element) return;
 
-    if (element.requestFullscreen) {
-      element.requestFullscreen();
-    } else if (element.webkitRequestFullscreen) {
-      element.webkitRequestFullscreen();
-    } else if (element.msRequestFullscreen) {
-      element.msRequestFullscreen();
-    }
+    if (element.requestFullscreen) element.requestFullscreen();
+    else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
+    else if (element.msRequestFullscreen) element.msRequestFullscreen();
   }
 
   function syncTime() {
@@ -124,9 +120,9 @@ export default function VideoPlayer({
   }
 
   useEffect(() => {
-    if (!isHost) return;
-
     clearInterval(heartbeatRef.current);
+
+    if (!isHost) return;
 
     heartbeatRef.current = setInterval(() => {
       if (!playerRef.current) return;
@@ -145,14 +141,15 @@ export default function VideoPlayer({
   }, [isHost, playerRef]);
 
   useEffect(() => {
-    if (!videoId) return;
-    if (isHost) return;
+    clearInterval(viewerSyncRef.current);
 
-    const timeout = setTimeout(() => {
+    if (!videoId || isHost) return;
+
+    viewerSyncRef.current = setInterval(() => {
       requestForceSync();
-    }, 1200);
+    }, 1000);
 
-    return () => clearTimeout(timeout);
+    return () => clearInterval(viewerSyncRef.current);
   }, [videoId, isHost]);
 
   return (
@@ -202,39 +199,48 @@ export default function VideoPlayer({
         </p>
       )}
 
-      <div ref={videoBoxRef} className="relative mt-5 flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl">
+      <div
+        ref={videoBoxRef}
+        className="relative mt-5 flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl"
+      >
         {videoId ? (
-          <YouTube
-            key={videoId}
-            videoId={videoId}
-            className="h-full w-full"
-            iframeClassName="h-full w-full"
-            onReady={handleReady}
-            onStateChange={handleStateChange}
-            onError={handleError}
-            opts={{
-              width: "100%",
-              height: "100%",
-              playerVars: {
-                autoplay: 0,
-                controls: isHost ? 1 : 0,
-                rel: 0,
-                modestbranding: 1,
-                playsinline: 1,
-              },
-            }}
-          />
+          <>
+            <div className={isHost ? "h-full w-full" : "h-full w-full pointer-events-none select-none"}>
+              <YouTube
+                key={videoId}
+                videoId={videoId}
+                className="h-full w-full"
+                iframeClassName="h-full w-full"
+                onReady={handleReady}
+                onStateChange={handleStateChange}
+                onError={handleError}
+                opts={{
+                  width: "100%",
+                  height: "100%",
+                  playerVars: {
+                    autoplay: 0,
+                    controls: isHost ? 1 : 0,
+                    disablekb: isHost ? 0 : 1,
+                    fs: isHost ? 1 : 0,
+                    rel: 0,
+                    modestbranding: 1,
+                    playsinline: 1,
+                  },
+                }}
+              />
+            </div>
 
-          {!isHost && (
-            <button
-              type="button"
-              onClick={openFullscreen}
-              className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded-2xl bg-black/60 px-4 py-2 text-sm font-bold text-white backdrop-blur transition hover:bg-black/80"
-            >
-              <Maximize2 size={16} />
-              Tam Ekran
-            </button>
-          )}
+            {!isHost && (
+              <button
+                type="button"
+                onClick={openFullscreen}
+                className="absolute right-4 top-4 z-30 flex items-center gap-2 rounded-2xl bg-black/70 px-4 py-2 text-sm font-bold text-white shadow-lg backdrop-blur transition hover:bg-black/90"
+              >
+                <Maximize2 size={16} />
+                Tam Ekran
+              </button>
+            )}
+          </>
         ) : (
           <div className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10">
@@ -258,6 +264,16 @@ export default function VideoPlayer({
           <RefreshCw size={17} />
           Herkesi Senkronla
         </button>
+
+        {!isHost && videoId && (
+          <button
+            className="btn-secondary flex items-center justify-center gap-2"
+            onClick={openFullscreen}
+          >
+            <Maximize2 size={17} />
+            Tam Ekran
+          </button>
+        )}
       </div>
     </section>
   );
