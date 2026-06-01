@@ -198,7 +198,7 @@ export default function VideoPlayer({
               height: "100%",
               playerVars: {
                 autoplay: 0,
-                controls: 1,
+                controls: isHost ? 1 : 0,
                 rel: 0,
                 modestbranding: 1,
                 playsinline: 1,
