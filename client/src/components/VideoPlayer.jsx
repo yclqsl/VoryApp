@@ -183,7 +183,7 @@ export default function VideoPlayer({
         </p>
       )}
 
-      <div className="mt-5 flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl">
+      <div className="relative mt-5 flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl">
         {videoId ? (
           <YouTube
             key={videoId}
@@ -205,6 +205,10 @@ export default function VideoPlayer({
               },
             }}
           />
+
+          {!isHost && (
+            <div className="absolute inset-0 z-10 cursor-not-allowed bg-transparent" />
+          )}
         ) : (
           <div className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10">
