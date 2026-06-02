@@ -6,7 +6,7 @@ import LeftSidebar from "../components/LeftSidebar";
 import QuickActions from "../components/QuickActions";
 import RoomPanel from "../components/RoomPanel";
 import InviteBox from "../components/InviteBox";
-import FriendPanel from "../components/FriendPanel";
+import PresenceFriendPanel from "../components/PresenceFriendPanel";
 import UserList from "../components/UserList";
 import ChatPanel from "../components/ChatPanel";
 import VideoPlayer from "../components/VideoPlayer";
@@ -26,6 +26,7 @@ export default function Home({ authUser, onLogout }) {
   const [videoInput, setVideoInput] = useState("");
   const [isHost, setIsHost] = useState(false);
   const [pendingInviteRoom, setPendingInviteRoom] = useState("");
+  const [onlinePresence, setOnlinePresence] = useState([]);
 
   useEffect(() => {
     window.currentRoomCode = roomCode;
@@ -188,6 +189,14 @@ export default function Home({ authUser, onLogout }) {
       toast.error(message);
     });
 
+    socket.on("online-users", (presenceUsers) => {
+      setOnlinePresence(presenceUsers || []);
+    });
+
+    socket.on("presence-changed", (presenceUsers) => {
+      setOnlinePresence(presenceUsers || []);
+    });
+
     return () => {
       socket.off("room-created");
       socket.off("room-joined");
@@ -207,6 +216,8 @@ export default function Home({ authUser, onLogout }) {
       socket.off("receive-message");
       socket.off("system-message");
       socket.off("room-error");
+      socket.off("online-users");
+      socket.off("presence-changed");
     };
   }, []);
 
@@ -255,6 +266,16 @@ export default function Home({ authUser, onLogout }) {
       }
     };
   }, [roomCode, isHost]);
+
+
+  useEffect(() => {
+    socket.emit("presence-update", {
+      roomCode,
+      activity: roomCode ? (videoUrl ? "watching" : "in-room") : "idle",
+      voiceActive: false,
+      screenSharing: false,
+    });
+  }, [roomCode, videoUrl]);
 
   function createRoom() {
     socket.emit("create-room", currentUserPayload);
@@ -409,7 +430,11 @@ export default function Home({ authUser, onLogout }) {
                 onSendMessage={sendMessage}
               />
 
-              <FriendPanel />
+              <PresenceFriendPanel
+                onlineUsers={onlinePresence}
+                currentSocketId={socket.id}
+                onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+              />
             </aside>
           </main>
         </div>

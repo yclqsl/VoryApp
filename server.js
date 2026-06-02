@@ -87,6 +87,70 @@ function getSyncedVideoState(room) {
   };
 }
 
+function emitPresence() {
+  io.emit("online-users", Array.from(onlineUsers.values()));
+  io.emit("presence-changed", Array.from(onlineUsers.values()));
+}
+
+function getRoomSummary(roomCode) {
+  const room = rooms[roomCode];
+
+  if (!room) {
+    return {
+      roomCode,
+      userCount: 0,
+      voiceCount: 0,
+      screenSharing: false,
+      videoActive: false,
+    };
+  }
+
+  return {
+    roomCode,
+    userCount: room.users?.length || 0,
+    voiceCount: voiceRooms[roomCode] ? Object.keys(voiceRooms[roomCode]).length : 0,
+    screenSharing: !!screenShares[roomCode],
+    videoActive: !!room.videoUrl,
+  };
+}
+
+function updateSocketPresence(socketId, patch = {}) {
+  for (const [userId, user] of onlineUsers.entries()) {
+    if (user.socketId !== socketId) continue;
+
+    onlineUsers.set(userId, {
+      ...user,
+      ...patch,
+      updatedAt: Date.now(),
+    });
+
+    return onlineUsers.get(userId);
+  }
+
+  return null;
+}
+
+function updateRoomPresence(socketId, roomCode, patch = {}) {
+  const roomSummary = roomCode ? getRoomSummary(roomCode) : null;
+
+  return updateSocketPresence(socketId, {
+    roomCode: roomCode || "",
+    roomSummary,
+    ...patch,
+  });
+}
+
+function clearSocketRoomPresence(socketId) {
+  return updateSocketPresence(socketId, {
+    roomCode: "",
+    roomSummary: null,
+    activity: "idle",
+    voiceActive: false,
+    screenSharing: false,
+  });
+}
+
+
 function removeUserFromRooms(socketId) {
   for (const roomCode in rooms) {
     const room = rooms[roomCode];
@@ -138,17 +202,28 @@ io.on("connection", (socket) => {
   socket.on("user-online", ({ userId, username }) => {
     if (!userId) return;
 
+    const existing = onlineUsers.get(String(userId)) || {};
+
     onlineUsers.set(String(userId), {
+      ...existing,
       socketId: socket.id,
       userId: String(userId),
-      username: username || "Kullanıcı",
+      username: username || existing.username || "Kullanıcı",
+      status: "online",
+      roomCode: existing.roomCode || "",
+      roomSummary: existing.roomSummary || null,
+      activity: existing.activity || "idle",
+      voiceActive: !!existing.voiceActive,
+      screenSharing: !!existing.screenSharing,
+      updatedAt: Date.now(),
     });
 
-    io.emit("online-users", Array.from(onlineUsers.values()));
+    emitPresence();
   });
 
   socket.on("get-online-users", () => {
     socket.emit("online-users", Array.from(onlineUsers.values()));
+    socket.emit("presence-changed", Array.from(onlineUsers.values()));
   });
 
   socket.on("create-room", (user) => {
@@ -185,6 +260,14 @@ io.on("connection", (socket) => {
 
     socket.emit("room-users", rooms[roomCode].users);
 
+    updateRoomPresence(socket.id, roomCode, {
+      activity: "in-room",
+      voiceActive: false,
+      screenSharing: false,
+    });
+
+    emitPresence();
+
     io.to(roomCode).emit(
       "system-message",
       `${username || "Misafir"} odayı oluşturdu.`
@@ -215,6 +298,14 @@ io.on("connection", (socket) => {
 
     io.to(roomCode).emit("room-users", room.users);
 
+    updateRoomPresence(socket.id, roomCode, {
+      activity: room.videoUrl ? "watching" : "in-room",
+      voiceActive: false,
+      screenSharing: !!screenShares[roomCode],
+    });
+
+    emitPresence();
+
     io.to(roomCode).emit(
       "system-message",
       `${username || "Misafir"} odaya katıldı.`
@@ -235,6 +326,8 @@ io.on("connection", (socket) => {
   socket.on("leave-room", ({ roomCode }) => {
     socket.leave(roomCode);
     removeUserFromRooms(socket.id);
+    clearSocketRoomPresence(socket.id);
+    emitPresence();
     socket.emit("room-left");
   });
 
@@ -258,6 +351,15 @@ io.on("connection", (socket) => {
 
     io.to(roomCode).emit("video-updated", videoUrl);
     io.to(roomCode).emit("video-sync", room.videoState);
+
+    room.users.forEach((user) => {
+      updateRoomPresence(user.id, roomCode, {
+        activity: "watching",
+      });
+    });
+
+    emitPresence();
+
     io.to(roomCode).emit("system-message", "Host yeni video ekledi.");
   });
 
@@ -420,6 +522,13 @@ io.on("connection", (socket) => {
       users: Object.values(voiceRooms[roomCode]),
     });
 
+    updateRoomPresence(socket.id, roomCode, {
+      voiceActive: true,
+      activity: "voice",
+    });
+
+    emitPresence();
+
     socket.to(voiceRoomName).emit("voice-user-joined", {
       socketId: socket.id,
       username: username || "Kullanıcı",
@@ -494,6 +603,16 @@ io.on("connection", (socket) => {
       socketId: socket.id,
     });
 
+    const activeRoom = rooms[roomCode];
+    const stillInRoom = activeRoom?.users?.some((user) => user.id === socket.id);
+
+    updateRoomPresence(socket.id, stillInRoom ? roomCode : "", {
+      voiceActive: false,
+      activity: stillInRoom ? (activeRoom?.videoUrl ? "watching" : "in-room") : "idle",
+    });
+
+    emitPresence();
+
     io.to(voiceRoomName).emit("voice-users", {
       users: Object.values(voiceRooms[roomCode] || {}),
     });
@@ -518,6 +637,13 @@ io.on("connection", (socket) => {
       startedAt: Date.now(),
     };
 
+    updateRoomPresence(socket.id, roomCode, {
+      activity: "sharing-screen",
+      screenSharing: true,
+    });
+
+    emitPresence();
+
     io.to(roomCode).emit("screen-share-started", {
       broadcaster: socket.id,
       username: username || "Kullanıcı",
@@ -535,6 +661,13 @@ io.on("connection", (socket) => {
 
     delete screenShares[roomCode];
     rooms[roomCode].screenShare = null;
+
+    updateRoomPresence(socket.id, roomCode, {
+      activity: rooms[roomCode]?.videoUrl ? "watching" : "in-room",
+      screenSharing: false,
+    });
+
+    emitPresence();
 
     io.to(roomCode).emit("screen-share-stopped", {
       broadcaster: socket.id,
@@ -579,6 +712,16 @@ io.on("connection", (socket) => {
       from: socket.id,
       candidate,
     });
+  });
+
+  socket.on("presence-update", ({ roomCode, activity, voiceActive, screenSharing }) => {
+    updateRoomPresence(socket.id, roomCode || "", {
+      activity: activity || "idle",
+      voiceActive: !!voiceActive,
+      screenSharing: !!screenSharing,
+    });
+
+    emitPresence();
   });
 
   socket.on("send-message", ({ roomCode, message, username }) => {
@@ -635,7 +778,7 @@ io.on("connection", (socket) => {
       }
     }
 
-    io.emit("online-users", Array.from(onlineUsers.values()));
+    emitPresence();
   });
 });
 
