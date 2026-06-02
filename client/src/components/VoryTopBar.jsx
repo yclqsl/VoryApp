@@ -16,25 +16,34 @@ export default function VoryTopBar({
   onClearNotifications,
 }) {
   return (
-    <header className="vory-topbar">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-violet-500/25 text-sm font-black shadow-[0_0_26px_rgba(139,92,246,0.22)]">
-            V
-          </span>
+    <header className="vory-v5-topbar">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-500/25 font-black shadow-[0_0_24px_rgba(139,92,246,0.25)] sm:flex">
+          V
+        </div>
 
-          <div className="min-w-0">
-            <p className="truncate text-sm font-black text-white">
-              VoryApp
-            </p>
-            <p className="truncate text-xs text-white/35">
-              {authUser?.username || "Beta user"} • {isHost ? "Host" : "Guest"} • 👥 {userCount || 0}
-            </p>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="truncate text-lg font-black text-white">VoryApp</h1>
+            <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-black text-white/45">
+              {roomCode ? `ROOM ${roomCode}` : "LOBBY"}
+            </span>
+            <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-black text-white/45">
+              👥 {userCount || 0}
+            </span>
+            {isHost && (
+              <span className="rounded-full bg-amber-400/15 px-2.5 py-1 text-[11px] font-black text-amber-200">
+                HOST
+              </span>
+            )}
           </div>
+          <p className="truncate text-xs text-white/35">
+            @{authUser?.username || "user"} • Watch together
+          </p>
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-1 justify-end gap-2">
+      <div className="flex min-w-0 items-center justify-end gap-2">
         <ConnectionBanner
           status={connectionStatus}
           roomCode={roomCode}
@@ -52,7 +61,8 @@ export default function VoryTopBar({
         <button
           type="button"
           onClick={onLogout}
-          className="hidden rounded-2xl border border-red-400/10 bg-red-500/10 px-4 py-3 text-sm font-black text-red-200 transition hover:bg-red-500/20 md:block"
+          className="vory-v5-logout"
+          title="Çıkış"
         >
           Çıkış
         </button>

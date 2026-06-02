@@ -1,0 +1,268 @@
+/* VoryApp UI Revamp V5 Premium Layout */
+.app-shell {
+  background:
+    radial-gradient(circle at 20% -10%, rgba(124, 58, 237, 0.20), transparent 32%),
+    radial-gradient(circle at 95% 0%, rgba(217, 70, 239, 0.13), transparent 30%),
+    #070610;
+}
+
+.vory-v5-sidebar {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 40;
+  display: none;
+  width: 72px;
+  height: calc(100vh - 1.5rem);
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 28px;
+  background: rgba(0,0,0,0.34);
+  padding: 12px 10px;
+  box-shadow: 0 24px 100px rgba(0,0,0,0.32);
+  backdrop-filter: blur(24px);
+}
+
+@media (min-width: 1024px) {
+  .vory-v5-sidebar {
+    display: flex;
+  }
+}
+
+.vory-v5-logo {
+  display: flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: rgba(124, 58, 237, 0.28);
+  color: white;
+  font-weight: 900;
+  font-size: 20px;
+  box-shadow: 0 0 28px rgba(124, 58, 237, 0.28);
+}
+
+.vory-v5-nav-button {
+  position: relative;
+  display: flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  color: rgba(255,255,255,0.42);
+  transition: all .18s ease;
+}
+
+.vory-v5-nav-button:hover {
+  background: rgba(255,255,255,0.08);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.vory-v5-nav-active {
+  background: white;
+  color: black;
+  box-shadow: 0 14px 36px rgba(255,255,255,0.08);
+}
+
+.vory-v5-nav-badge {
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #d946ef;
+  color: white;
+  font-size: 10px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+
+.vory-v5-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  box-shadow: 0 0 18px currentColor;
+}
+
+.vory-v5-topbar {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 24px;
+  background: rgba(0,0,0,0.22);
+  padding: 10px 12px;
+  backdrop-filter: blur(24px);
+}
+
+.vory-v5-logout {
+  display: none;
+  border-radius: 16px;
+  background: rgba(239,68,68,0.12);
+  padding: 10px 14px;
+  color: rgb(254,202,202);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+@media (min-width: 768px) {
+  .vory-v5-logout {
+    display: block;
+  }
+}
+
+.vory-v5-watch-layout {
+  display: grid;
+  min-height: calc(100vh - 112px);
+  gap: 14px;
+}
+
+@media (min-width: 1280px) {
+  .vory-v5-watch-layout {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .vory-v5-watch-layout {
+    grid-template-columns: minmax(0, 1fr) 400px;
+  }
+}
+
+.vory-v5-player-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 30px;
+  background: rgba(0,0,0,0.26);
+  padding: 10px;
+  box-shadow: 0 26px 110px rgba(0,0,0,0.34);
+  backdrop-filter: blur(24px);
+}
+
+.vory-v5-player-card iframe,
+.vory-v5-player-card video {
+  min-height: 62vh;
+  border-radius: 22px;
+}
+
+.vory-v5-right-panel {
+  display: flex;
+  min-height: 0;
+  max-height: calc(100vh - 112px);
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 30px;
+  background: rgba(0,0,0,0.24);
+  padding: 12px;
+  backdrop-filter: blur(24px);
+}
+
+.vory-v5-panel-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  border-radius: 22px;
+  background: rgba(255,255,255,0.045);
+  padding: 6px;
+}
+
+.vory-v5-panel-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 16px;
+  padding: 10px 8px;
+  color: rgba(255,255,255,0.42);
+  font-size: 12px;
+  font-weight: 900;
+  transition: all .18s ease;
+}
+
+.vory-v5-panel-tab:hover {
+  background: rgba(255,255,255,0.07);
+  color: white;
+}
+
+.vory-v5-panel-tab-active {
+  background: white;
+  color: black;
+}
+
+.vory-v5-bottom-dock {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 24px;
+  background: rgba(0,0,0,0.30);
+  padding: 8px;
+  backdrop-filter: blur(24px);
+}
+
+.vory-v5-dock-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.055);
+  padding: 10px 13px;
+  color: rgba(255,255,255,0.70);
+  font-size: 13px;
+  font-weight: 900;
+  transition: all .18s ease;
+}
+
+.vory-v5-dock-btn:hover {
+  background: rgba(255,255,255,0.10);
+  color: white;
+}
+
+.vory-v5-page-grid {
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 1280px) {
+  .vory-v5-page-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.vory-v5-chat-focus {
+  max-width: 920px;
+}
+
+.glass,
+.glass-panel {
+  border-color: rgba(255,255,255,0.085) !important;
+  background: rgba(255,255,255,0.04) !important;
+}
+
+@media (max-width: 1023px) {
+  .vory-v5-topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vory-v5-player-card iframe,
+  .vory-v5-player-card video {
+    min-height: auto;
+  }
+}
