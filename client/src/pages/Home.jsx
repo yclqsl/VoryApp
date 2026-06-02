@@ -12,6 +12,7 @@ import ChatPanel from "../components/ChatPanel";
 import VideoPlayer from "../components/VideoPlayer";
 import ProfileCard from "../components/ProfileCard";
 import VoiceChat from "../components/VoiceChat";
+import ScreenShare from "../components/ScreenShare";
 
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
@@ -289,6 +290,8 @@ export default function Home({ authUser, onLogout }) {
                 ignoreEventRef={ignoreEventRef}
                 isHost={isHost}
               />
+
+              <ScreenShare roomCode={roomCode} username={currentUserPayload.username} />
 
               <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
             </section>

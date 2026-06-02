@@ -6,6 +6,7 @@ dns.setServers(["8.8.8.8", "1.1.1.1"]);
 const rooms = {};
 const onlineUsers = new Map();
 const voiceRooms = {};
+const screenShares = {};
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -149,6 +150,7 @@ io.on("connection", (socket) => {
         currentTime: 0,
         updatedAt: Date.now(),
       },
+      screenShare: null,
       users: [
         {
           id: socket.id,
@@ -206,6 +208,12 @@ io.on("connection", (socket) => {
     if (room.videoUrl) {
       socket.emit("video-updated", room.videoUrl);
       socket.emit("video-sync", getSyncedVideoState(room));
+    }
+
+    if (screenShares[roomCode]) {
+      socket.emit("screen-share-started", {
+        broadcaster: screenShares[roomCode],
+      });
     }
   });
 
@@ -397,6 +405,88 @@ io.on("connection", (socket) => {
     });
   });
 
+
+
+  socket.on("screen-share-start", ({ roomCode, username }) => {
+    if (!roomCode || !rooms[roomCode]) return;
+
+    const activeBroadcaster = screenShares[roomCode];
+
+    if (activeBroadcaster && activeBroadcaster !== socket.id) {
+      socket.emit("screen-share-error", "Bu odada zaten ekran paylaşımı var.");
+      return;
+    }
+
+    screenShares[roomCode] = socket.id;
+    rooms[roomCode].screenShare = {
+      broadcaster: socket.id,
+      username: username || "Kullanıcı",
+      startedAt: Date.now(),
+    };
+
+    io.to(roomCode).emit("screen-share-started", {
+      broadcaster: socket.id,
+      username: username || "Kullanıcı",
+    });
+
+    io.to(roomCode).emit(
+      "system-message",
+      `${username || "Kullanıcı"} ekran paylaşımı başlattı.`
+    );
+  });
+
+  socket.on("screen-share-stop", ({ roomCode }) => {
+    if (!roomCode || !rooms[roomCode]) return;
+    if (screenShares[roomCode] !== socket.id) return;
+
+    delete screenShares[roomCode];
+    rooms[roomCode].screenShare = null;
+
+    io.to(roomCode).emit("screen-share-stopped", {
+      broadcaster: socket.id,
+    });
+
+    io.to(roomCode).emit("system-message", "Ekran paylaşımı durduruldu.");
+  });
+
+  socket.on("request-screen-stream", ({ roomCode }) => {
+    if (!roomCode || !rooms[roomCode]) return;
+
+    const broadcaster = screenShares[roomCode];
+    if (!broadcaster || broadcaster === socket.id) return;
+
+    io.to(broadcaster).emit("screen-viewer-joined", {
+      viewer: socket.id,
+    });
+  });
+
+  socket.on("screen-offer", ({ target, offer }) => {
+    if (!target || !offer) return;
+
+    io.to(target).emit("screen-offer", {
+      from: socket.id,
+      offer,
+    });
+  });
+
+  socket.on("screen-answer", ({ target, answer }) => {
+    if (!target || !answer) return;
+
+    io.to(target).emit("screen-answer", {
+      from: socket.id,
+      answer,
+    });
+  });
+
+  socket.on("screen-ice-candidate", ({ target, candidate }) => {
+    if (!target || !candidate) return;
+
+    io.to(target).emit("screen-ice-candidate", {
+      from: socket.id,
+      candidate,
+    });
+  });
+
   socket.on("send-message", ({ roomCode, message, username }) => {
     if (!rooms[roomCode] || !message) return;
 
@@ -427,6 +517,20 @@ io.on("connection", (socket) => {
 
         io.to(roomName).emit("voice-users", {
           users: Object.values(voiceRooms[roomCode] || {}),
+        });
+      }
+    }
+
+    for (const roomCode in screenShares) {
+      if (screenShares[roomCode] === socket.id) {
+        delete screenShares[roomCode];
+
+        if (rooms[roomCode]) {
+          rooms[roomCode].screenShare = null;
+        }
+
+        io.to(roomCode).emit("screen-share-stopped", {
+          broadcaster: socket.id,
         });
       }
     }
