@@ -33,6 +33,9 @@ export default function Home({ authUser, onLogout }) {
 
   const playerRef = useRef(null);
   const ignoreEventRef = useRef(false);
+  const syncIntervalRef = useRef(null);
+  const pulseLockRef = useRef(false);
+  const lastSoftSyncRef = useRef(0);
 
   const currentUserPayload = {
     username: username || authUser?.username || "Misafir",
@@ -75,6 +78,11 @@ export default function Home({ authUser, onLogout }) {
       setVideoUrl("");
       setStatus("");
       setIsHost(false);
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
+
       toast.success("Odadan ayrıldın.");
     });
 
@@ -115,22 +123,27 @@ export default function Home({ authUser, onLogout }) {
       }, 700);
     });
 
-    socket.on("video-sync", ({ isPlaying, currentTime }) => {
+    function applySyncState({ isPlaying, currentTime, soft = false }) {
       if (!playerRef.current) return;
 
+      const targetTime = Math.max(0, Number(currentTime) || 0);
       const localTime = playerRef.current.getCurrentTime?.() || 0;
       const localState = playerRef.current.getPlayerState?.();
-      const drift = Math.abs(localTime - (currentTime || 0));
+      const drift = Math.abs(localTime - targetTime);
 
       ignoreEventRef.current = true;
 
-      // Rave tarzı yumuşak senkron:
-      // Küçük farklarda seek yapma, yoksa video sürekli takılır.
-      if (drift > 2.5) {
-        playerRef.current.seekTo(currentTime || 0, true);
+      if (soft) {
+        const now = Date.now();
+
+        if (now - lastSoftSyncRef.current > 1200 && drift > 1.2) {
+          lastSoftSyncRef.current = now;
+          playerRef.current.seekTo(targetTime, true);
+        }
+      } else if (drift > 0.75) {
+        playerRef.current.seekTo(targetTime, true);
       }
 
-      // Sadece oynatma durumu farklıysa play/pause uygula.
       if (isPlaying && localState !== 1) {
         playerRef.current.playVideo();
       }
@@ -141,7 +154,26 @@ export default function Home({ authUser, onLogout }) {
 
       setTimeout(() => {
         ignoreEventRef.current = false;
-      }, 700);
+      }, 650);
+    }
+
+    socket.on("video-sync", (state) => {
+      applySyncState({ ...state, soft: false });
+    });
+
+    socket.on("video-soft-sync", (state) => {
+      applySyncState({ ...state, soft: true });
+    });
+
+    socket.on("video-sync-pulse", (state) => {
+      if (isHost || pulseLockRef.current) return;
+
+      pulseLockRef.current = true;
+      applySyncState({ ...state, soft: true });
+
+      setTimeout(() => {
+        pulseLockRef.current = false;
+      }, 900);
     });
 
     socket.on("receive-message", (data) => {
@@ -165,11 +197,64 @@ export default function Home({ authUser, onLogout }) {
       socket.off("video-control");
       socket.off("video-seek");
       socket.off("video-sync");
+      socket.off("video-soft-sync");
+      socket.off("video-sync-pulse");
+
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
       socket.off("receive-message");
       socket.off("system-message");
       socket.off("room-error");
     };
   }, []);
+
+
+  useEffect(() => {
+    if (!roomCode) {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
+      return;
+    }
+
+    if (syncIntervalRef.current) {
+      clearInterval(syncIntervalRef.current);
+    }
+
+    socket.emit("force-video-sync", { roomCode });
+
+    syncIntervalRef.current = setInterval(() => {
+      if (!playerRef.current) return;
+
+      const currentTime = playerRef.current.getCurrentTime?.() || 0;
+      const playerState = playerRef.current.getPlayerState?.();
+      const playing = playerState === 1;
+
+      if (isHost) {
+        socket.emit("video-heartbeat", {
+          roomCode,
+          currentTime,
+          isPlaying: playing,
+        });
+      } else {
+        socket.emit("client-sync-state", {
+          roomCode,
+          currentTime,
+          isPlaying: playing,
+        });
+      }
+    }, isHost ? 1000 : 1500);
+
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
+    };
+  }, [roomCode, isHost]);
 
   function createRoom() {
     socket.emit("create-room", currentUserPayload);

@@ -7,6 +7,13 @@ const rooms = {};
 const onlineUsers = new Map();
 const voiceRooms = {};
 const screenShares = {};
+
+const SYNC_DRIFT_WARN_SECONDS = 1.5;
+const SYNC_HARD_DRIFT_SECONDS = 3.5;
+const SYNC_HEARTBEAT_MIN_MS = 700;
+
+const syncClients = {};
+const syncHeartbeatLimiter = {};
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -88,6 +95,14 @@ function removeUserFromRooms(socketId) {
     if (!leavingUser) continue;
 
     room.users = room.users.filter((user) => user.id !== socketId);
+
+    if (syncClients[roomCode]) {
+      delete syncClients[roomCode][socketId];
+
+      if (Object.keys(syncClients[roomCode]).length === 0) {
+        delete syncClients[roomCode];
+      }
+    }
 
     if (room.host === socketId && room.users.length > 0) {
       room.host = room.users[0].id;
@@ -252,15 +267,21 @@ io.on("connection", (socket) => {
     if (!room) return;
     if (!isHost(roomCode, socket.id)) return;
 
+    const safeTime = Math.max(0, Number(currentTime) || 0);
+
     room.videoState = {
       isPlaying: action === "play",
-      currentTime: currentTime || 0,
+      currentTime: safeTime,
       updatedAt: Date.now(),
+      version: Date.now(),
+      hostId: socket.id,
     };
 
-    socket.to(roomCode).emit("video-control", {
+    io.to(roomCode).emit("video-control", {
       action,
-      currentTime: currentTime || 0,
+      currentTime: safeTime,
+      serverTime: Date.now(),
+      version: room.videoState.version,
     });
   });
 
@@ -270,11 +291,20 @@ io.on("connection", (socket) => {
     if (!room) return;
     if (!isHost(roomCode, socket.id)) return;
 
-    room.videoState.currentTime = currentTime || 0;
-    room.videoState.updatedAt = Date.now();
+    const safeTime = Math.max(0, Number(currentTime) || 0);
 
-    socket.to(roomCode).emit("video-seek", {
-      currentTime: currentTime || 0,
+    room.videoState = {
+      ...(room.videoState || {}),
+      currentTime: safeTime,
+      updatedAt: Date.now(),
+      version: Date.now(),
+      hostId: socket.id,
+    };
+
+    io.to(roomCode).emit("video-seek", {
+      currentTime: safeTime,
+      serverTime: Date.now(),
+      version: room.videoState.version,
     });
   });
 
@@ -284,11 +314,60 @@ io.on("connection", (socket) => {
     if (!room) return;
     if (!isHost(roomCode, socket.id)) return;
 
+    const now = Date.now();
+    const limiterKey = `${roomCode}:${socket.id}`;
+    const lastHeartbeat = syncHeartbeatLimiter[limiterKey] || 0;
+
+    if (now - lastHeartbeat < SYNC_HEARTBEAT_MIN_MS) return;
+    syncHeartbeatLimiter[limiterKey] = now;
+
+    const safeTime = Math.max(0, Number(currentTime) || 0);
+
     room.videoState = {
-      currentTime: currentTime || 0,
+      currentTime: safeTime,
       isPlaying: !!isPlaying,
+      updatedAt: now,
+      version: room.videoState?.version || now,
+      hostId: socket.id,
+    };
+
+    socket.to(roomCode).emit("video-sync-pulse", getSyncedVideoState(room));
+  });
+
+  socket.on("client-sync-state", ({ roomCode, currentTime, isPlaying }) => {
+    const room = rooms[roomCode];
+
+    if (!room || !rooms[roomCode]?.users?.some((user) => user.id === socket.id)) return;
+
+    const targetState = getSyncedVideoState(room);
+    const safeTime = Math.max(0, Number(currentTime) || 0);
+    const drift = Math.abs(safeTime - (targetState.currentTime || 0));
+
+    if (!syncClients[roomCode]) syncClients[roomCode] = {};
+
+    syncClients[roomCode][socket.id] = {
+      socketId: socket.id,
+      currentTime: safeTime,
+      isPlaying: !!isPlaying,
+      drift,
       updatedAt: Date.now(),
     };
+
+    if (drift >= SYNC_HARD_DRIFT_SECONDS || !!isPlaying !== !!targetState.isPlaying) {
+      socket.emit("video-sync", {
+        ...targetState,
+        reason: "hard-resync",
+      });
+      return;
+    }
+
+    if (drift >= SYNC_DRIFT_WARN_SECONDS) {
+      socket.emit("video-soft-sync", {
+        ...targetState,
+        drift,
+        reason: "soft-resync",
+      });
+    }
   });
 
   socket.on("force-video-sync", ({ roomCode }) => {
@@ -296,7 +375,22 @@ io.on("connection", (socket) => {
 
     if (!room) return;
 
-    socket.emit("video-sync", getSyncedVideoState(room));
+    socket.emit("video-sync", {
+      ...getSyncedVideoState(room),
+      reason: "manual-sync",
+    });
+  });
+
+  socket.on("get-sync-stats", ({ roomCode }) => {
+    if (!roomCode || !syncClients[roomCode]) {
+      socket.emit("sync-stats", { roomCode, clients: [] });
+      return;
+    }
+
+    socket.emit("sync-stats", {
+      roomCode,
+      clients: Object.values(syncClients[roomCode]),
+    });
   });
 
 
