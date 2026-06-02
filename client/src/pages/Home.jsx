@@ -40,6 +40,11 @@ export default function Home({ authUser, onLogout }) {
   const [lastRestoreMessage, setLastRestoreMessage] = useState("");
   const [onlinePresence, setOnlinePresence] = useState([]);
 
+  const currentUserPayload = {
+    username: username || authUser?.username || "Misafir",
+    avatar: authUser?.avatar || "",
+  };
+
   useEffect(() => {
     window.currentRoomCode = roomCode;
 
@@ -61,11 +66,6 @@ export default function Home({ authUser, onLogout }) {
   const syncIntervalRef = useRef(null);
   const pulseLockRef = useRef(false);
   const lastSoftSyncRef = useRef(0);
-
-  const currentUserPayload = {
-    username: username || authUser?.username || "Misafir",
-    avatar: authUser?.avatar || "",
-  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -114,11 +114,11 @@ export default function Home({ authUser, onLogout }) {
       setConnectionStatus("offline");
     });
 
-    socket.io.on("reconnect_attempt", () => {
+    socket.io?.on?.("reconnect_attempt", () => {
       setConnectionStatus("reconnecting");
     });
 
-    socket.io.on("reconnect", () => {
+    socket.io?.on?.("reconnect", () => {
       setConnectionStatus("connected");
     });
 
@@ -322,8 +322,8 @@ export default function Home({ authUser, onLogout }) {
       socket.off("disconnect");
       socket.off("restore-failed");
       socket.off("room-snapshot");
-      socket.io.off("reconnect_attempt");
-      socket.io.off("reconnect");
+      socket.io?.off?.("reconnect_attempt");
+      socket.io?.off?.("reconnect");
       socket.off("room-created");
       socket.off("room-joined");
       socket.off("room-left");
