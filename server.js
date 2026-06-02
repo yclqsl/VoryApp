@@ -150,6 +150,25 @@ function clearSocketRoomPresence(socketId) {
   });
 }
 
+function emitNotification(roomCode, payload = {}) {
+  const notification = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: payload.type || "system",
+    title: payload.title || "VoryApp",
+    message: payload.message || "",
+    roomCode: roomCode || "",
+    createdAt: Date.now(),
+    read: false,
+  };
+
+  if (roomCode) {
+    io.to(roomCode).emit("notification:new", notification);
+    return;
+  }
+
+  io.emit("notification:new", notification);
+}
+
 
 function removeUserFromRooms(socketId) {
   for (const roomCode in rooms) {
@@ -180,12 +199,24 @@ function removeUserFromRooms(socketId) {
         "system-message",
         `${room.users[0].username} yeni host oldu.`
       );
+
+      emitNotification(roomCode, {
+        type: "host",
+        title: "Yeni host",
+        message: `${room.users[0].username} yeni host oldu.`,
+      });
     }
 
     io.to(roomCode).emit(
       "system-message",
       `${leavingUser.username} odadan ayrıldı.`
     );
+
+    emitNotification(roomCode, {
+      type: "room",
+      title: "Odadan ayrıldı",
+      message: `${leavingUser.username} odadan ayrıldı.`,
+    });
 
     io.to(roomCode).emit("room-users", room.users);
 
@@ -272,6 +303,12 @@ io.on("connection", (socket) => {
       "system-message",
       `${username || "Misafir"} odayı oluşturdu.`
     );
+
+    emitNotification(roomCode, {
+      type: "room",
+      title: "Oda oluşturuldu",
+      message: `${username || "Misafir"} yeni bir oda oluşturdu.`,
+    });
   });
 
   socket.on("join-room", ({ roomCode, username, avatar }) => {
@@ -310,6 +347,12 @@ io.on("connection", (socket) => {
       "system-message",
       `${username || "Misafir"} odaya katıldı.`
     );
+
+    emitNotification(roomCode, {
+      type: "room",
+      title: "Odaya katıldı",
+      message: `${username || "Misafir"} odaya katıldı.`,
+    });
 
     if (room.videoUrl) {
       socket.emit("video-updated", room.videoUrl);
@@ -361,6 +404,12 @@ io.on("connection", (socket) => {
     emitPresence();
 
     io.to(roomCode).emit("system-message", "Host yeni video ekledi.");
+
+    emitNotification(roomCode, {
+      type: "video",
+      title: "Video değişti",
+      message: "Host yeni video ekledi.",
+    });
   });
 
   socket.on("video-control", ({ roomCode, action, currentTime }) => {
@@ -533,6 +582,12 @@ io.on("connection", (socket) => {
       socketId: socket.id,
       username: username || "Kullanıcı",
     });
+
+    emitNotification(roomCode, {
+      type: "voice",
+      title: "Voice aktif",
+      message: `${username || "Kullanıcı"} sesli sohbete katıldı.`,
+    });
   });
 
   socket.on("voice-mute-state", ({ roomCode, muted }) => {
@@ -616,6 +671,12 @@ io.on("connection", (socket) => {
     io.to(voiceRoomName).emit("voice-users", {
       users: Object.values(voiceRooms[roomCode] || {}),
     });
+
+    emitNotification(roomCode, {
+      type: "voice",
+      title: "Voice ayrıldı",
+      message: "Bir kullanıcı sesli sohbetten ayrıldı.",
+    });
   });
 
 
@@ -653,6 +714,12 @@ io.on("connection", (socket) => {
       "system-message",
       `${username || "Kullanıcı"} ekran paylaşımı başlattı.`
     );
+
+    emitNotification(roomCode, {
+      type: "screen",
+      title: "Ekran paylaşımı",
+      message: `${username || "Kullanıcı"} ekran paylaşımı başlattı.`,
+    });
   });
 
   socket.on("screen-share-stop", ({ roomCode }) => {
@@ -674,6 +741,12 @@ io.on("connection", (socket) => {
     });
 
     io.to(roomCode).emit("system-message", "Ekran paylaşımı durduruldu.");
+
+    emitNotification(roomCode, {
+      type: "screen",
+      title: "Ekran paylaşımı durdu",
+      message: "Ekran paylaşımı durduruldu.",
+    });
   });
 
   socket.on("request-screen-stream", ({ roomCode }) => {

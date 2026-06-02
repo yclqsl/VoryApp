@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { socket } from "../services/socket";
 import Header from "../components/Header";
 import VorySidebar from "../components/VorySidebar";
+import NotificationCenter from "../components/NotificationCenter";
 import QuickActions from "../components/QuickActions";
 import RoomPanel from "../components/RoomPanel";
 import InviteBox from "../components/InviteBox";
@@ -29,6 +30,7 @@ export default function Home({ authUser, onLogout }) {
   const [pendingInviteRoom, setPendingInviteRoom] = useState("");
   const [activeMobileTab, setActiveMobileTab] = useState("watch");
   const [appSection, setAppSection] = useState("watch");
+  const [notifications, setNotifications] = useState([]);
   const [onlinePresence, setOnlinePresence] = useState([]);
 
   useEffect(() => {
@@ -200,6 +202,23 @@ export default function Home({ authUser, onLogout }) {
       setOnlinePresence(presenceUsers || []);
     });
 
+    socket.on("notification:new", (notification) => {
+      addLocalNotification(notification);
+
+      if (notification?.message) {
+        toast(notification.message, {
+          icon:
+            notification.type === "screen"
+              ? "📺"
+              : notification.type === "voice"
+                ? "🎤"
+                : notification.type === "video"
+                  ? "🎬"
+                  : "🔔",
+        });
+      }
+    });
+
     return () => {
       socket.off("room-created");
       socket.off("room-joined");
@@ -221,6 +240,7 @@ export default function Home({ authUser, onLogout }) {
       socket.off("room-error");
       socket.off("online-users");
       socket.off("presence-changed");
+      socket.off("notification:new");
     };
   }, []);
 
@@ -351,6 +371,34 @@ export default function Home({ authUser, onLogout }) {
 
 
 
+
+
+  function addLocalNotification(notification) {
+    const safeNotification = {
+      id: notification?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      type: notification?.type || "system",
+      title: notification?.title || "VoryApp",
+      message: notification?.message || "",
+      roomCode: notification?.roomCode || roomCode || "",
+      createdAt: notification?.createdAt || Date.now(),
+      read: false,
+    };
+
+    setNotifications((prev) => [safeNotification, ...prev].slice(0, 50));
+  }
+
+  function markNotificationsRead() {
+    setNotifications((prev) =>
+      prev.map((notification) => ({
+        ...notification,
+        read: true,
+      }))
+    );
+  }
+
+  function clearNotifications() {
+    setNotifications([]);
+  }
 
   function handleSectionChange(section) {
     setAppSection(section);
@@ -566,6 +614,14 @@ export default function Home({ authUser, onLogout }) {
             roomCode={roomCode}
             userCount={users.length}
           />
+
+          <div className="flex justify-end">
+            <NotificationCenter
+              notifications={notifications}
+              onMarkRead={markNotificationsRead}
+              onClear={clearNotifications}
+            />
+          </div>
 
           {pendingInviteRoom && !roomCode && (
             <div className="glass-panel flex flex-col gap-4 border-emerald-400/25 p-5 sm:flex-row sm:items-center sm:justify-between">

@@ -81,3 +81,14 @@
 .vory-left-click-safe * {
   pointer-events: auto;
 }
+
+
+/* Notification Center V1 */
+.notification-center-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-center-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+}
