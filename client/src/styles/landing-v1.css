@@ -1,0 +1,8 @@
+/* Landing Page V1 optional polish */
+html {
+  scroll-behavior: smooth;
+}
+
+.landing-glow {
+  box-shadow: 0 0 80px rgba(139, 92, 246, 0.25);
+}
