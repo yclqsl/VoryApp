@@ -7,6 +7,7 @@ import NotificationCenter from "../components/NotificationCenter";
 import MediaQueue from "../components/MediaQueue";
 import ConnectionBanner from "../components/ConnectionBanner";
 import DevHealthOverlay from "../components/DevHealthOverlay";
+import FeedbackWidget from "../components/FeedbackWidget";
 import QuickActions from "../components/QuickActions";
 import RoomPanel from "../components/RoomPanel";
 import InviteBox from "../components/InviteBox";
@@ -889,6 +890,12 @@ export default function Home({ authUser, onLogout }) {
               {renderMobilePanel()}
             </div>
           </main>
+
+          <FeedbackWidget
+            authUser={authUser}
+            roomCode={roomCode}
+            connectionStatus={connectionStatus}
+          />
 
           <DevHealthOverlay
             connectionStatus={connectionStatus}
