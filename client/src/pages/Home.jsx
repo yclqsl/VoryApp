@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { socket } from "../services/socket";
 import Header from "../components/Header";
-import LeftSidebar from "../components/LeftSidebar";
+import VorySidebar from "../components/VorySidebar";
 import QuickActions from "../components/QuickActions";
 import RoomPanel from "../components/RoomPanel";
 import InviteBox from "../components/InviteBox";
@@ -30,6 +30,7 @@ export default function Home({ authUser, onLogout }) {
   const [pendingInviteRoom, setPendingInviteRoom] = useState("");
   const [activeMobileTab, setActiveMobileTab] = useState("watch");
   const [desktopPanelTab, setDesktopPanelTab] = useState("chat");
+  const [appSection, setAppSection] = useState("watch");
   const [onlinePresence, setOnlinePresence] = useState([]);
 
   useEffect(() => {
@@ -352,6 +353,138 @@ export default function Home({ authUser, onLogout }) {
 
 
 
+
+  function handleSectionChange(section) {
+    setAppSection(section);
+
+    if (section === "watch") {
+      setActiveMobileTab("watch");
+      return;
+    }
+
+    if (section === "room") {
+      setDesktopPanelTab("room");
+      setActiveMobileTab("room");
+      return;
+    }
+
+    if (section === "voice") {
+      setDesktopPanelTab("voice");
+      setActiveMobileTab("voice");
+      return;
+    }
+
+    if (section === "friends") {
+      setDesktopPanelTab("social");
+      setActiveMobileTab("social");
+      return;
+    }
+
+    if (section === "chat") {
+      setDesktopPanelTab("chat");
+      setActiveMobileTab("chat");
+    }
+  }
+
+  function renderDesktopMain() {
+    if (appSection === "watch") {
+      return (
+        <>
+          <div className="vory-hero-panel">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.35em] text-violet-200/55">
+                  Vory Watch Party
+                </p>
+                <h1 className="mt-1 text-2xl font-black text-white xl:text-3xl">
+                  Birlikte izle, konuş, paylaş
+                </h1>
+              </div>
+
+              <div className="flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-200">
+                <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(52,211,153,0.9)]" />
+                {roomCode ? `ROOM ${roomCode}` : "LOBBY"}
+              </div>
+            </div>
+
+            <VideoPlayer
+              videoUrl={videoUrl}
+              videoInput={videoInput}
+              setVideoInput={setVideoInput}
+              onSetVideo={setRoomVideo}
+              onVideoControl={handleVideoControl}
+              onVideoSeek={handleVideoSeek}
+              playerRef={playerRef}
+              ignoreEventRef={ignoreEventRef}
+              isHost={isHost}
+            />
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <ScreenShare roomCode={roomCode} username={currentUserPayload.username} />
+
+            <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+          </div>
+        </>
+      );
+    }
+
+    if (appSection === "room") {
+      return (
+        <div className="grid gap-4 xl:grid-cols-2">
+          <RoomPanel
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
+          />
+
+          <InviteBox roomCode={roomCode} />
+
+          <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+
+          <UserList users={users} />
+        </div>
+      );
+    }
+
+    if (appSection === "voice") {
+      return (
+        <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
+          <UserList users={users} />
+        </div>
+      );
+    }
+
+    if (appSection === "friends") {
+      return (
+        <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+          <ProfileCard authUser={authUser} />
+          <PresenceFriendPanel
+            onlineUsers={onlinePresence}
+            currentSocketId={socket.id}
+            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <ChatPanel
+        messages={messages}
+        message={message}
+        setMessage={setMessage}
+        onSendMessage={sendMessage}
+      />
+    );
+  }
+
   function renderDesktopPanel() {
     if (desktopPanelTab === "chat") {
       return (
@@ -489,9 +622,13 @@ export default function Home({ authUser, onLogout }) {
       </div>
 
       <div className="relative flex min-h-screen gap-4 p-3 pb-24 sm:p-4 sm:pb-24 lg:gap-5 lg:p-5">
-        <div className="hidden lg:block">
-          <LeftSidebar />
-        </div>
+        <VorySidebar
+          activeSection={appSection}
+          onChange={handleSectionChange}
+          roomCode={roomCode}
+          onlineCount={onlinePresence.length}
+          userCount={users.length}
+        />
 
         <div className="flex min-w-0 flex-1 flex-col gap-4 lg:gap-5">
           <Header
@@ -521,41 +658,7 @@ export default function Home({ authUser, onLogout }) {
 
           <main className="hidden flex-1 gap-5 lg:grid xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
             <section className="flex min-w-0 flex-col gap-4">
-              <div className="vory-hero-panel">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.35em] text-violet-200/55">
-                      Vory Watch Party
-                    </p>
-                    <h1 className="mt-1 text-2xl font-black text-white xl:text-3xl">
-                      Birlikte izle, konuş, paylaş
-                    </h1>
-                  </div>
-
-                  <div className="flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-200">
-                    <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(52,211,153,0.9)]" />
-                    {roomCode ? `ROOM ${roomCode}` : "LOBBY"}
-                  </div>
-                </div>
-
-                <VideoPlayer
-                  videoUrl={videoUrl}
-                  videoInput={videoInput}
-                  setVideoInput={setVideoInput}
-                  onSetVideo={setRoomVideo}
-                  onVideoControl={handleVideoControl}
-                  onVideoSeek={handleVideoSeek}
-                  playerRef={playerRef}
-                  ignoreEventRef={ignoreEventRef}
-                  isHost={isHost}
-                />
-              </div>
-
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-                <ScreenShare roomCode={roomCode} username={currentUserPayload.username} />
-
-                <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
-              </div>
+              {renderDesktopMain()}
             </section>
 
             <aside className="vory-command-panel">

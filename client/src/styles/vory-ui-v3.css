@@ -61,3 +61,16 @@
     max-height: 54vh;
   }
 }
+
+
+/* VoryApp UI Revamp V3.1 Fix */
+.vory-hero-panel .glass,
+.vory-command-panel .glass {
+  background: rgba(255,255,255,0.045);
+}
+
+@media (min-width: 1280px) {
+  .vory-command-panel {
+    max-height: calc(100vh - 2.5rem);
+  }
+}
