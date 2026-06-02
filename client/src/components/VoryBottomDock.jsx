@@ -23,7 +23,7 @@ export default function VoryBottomDock({
         Chat
       </button>
 
-      <button type="button" onClick={() => setShowShare((v) => !v)} className="vory-v5-dock-btn">
+      <button type="button" onClick={() => setShowShare((value) => !value)} className="vory-v5-dock-btn">
         <MonitorUp size={17} />
         Share
       </button>

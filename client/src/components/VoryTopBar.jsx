@@ -25,18 +25,22 @@ export default function VoryTopBar({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="truncate text-lg font-black text-white">VoryApp</h1>
+
             <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-black text-white/45">
               {roomCode ? `ROOM ${roomCode}` : "LOBBY"}
             </span>
+
             <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-black text-white/45">
               👥 {userCount || 0}
             </span>
+
             {isHost && (
               <span className="rounded-full bg-amber-400/15 px-2.5 py-1 text-[11px] font-black text-amber-200">
                 HOST
               </span>
             )}
           </div>
+
           <p className="truncate text-xs text-white/35">
             @{authUser?.username || "user"} • Watch together
           </p>
