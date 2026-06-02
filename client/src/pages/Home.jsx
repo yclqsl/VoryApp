@@ -13,6 +13,7 @@ import VideoPlayer from "../components/VideoPlayer";
 import ProfileCard from "../components/ProfileCard";
 import VoiceChat from "../components/VoiceChat";
 import ScreenShare from "../components/ScreenShare";
+import MobileBottomNav from "../components/MobileBottomNav";
 
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
@@ -26,6 +27,7 @@ export default function Home({ authUser, onLogout }) {
   const [videoInput, setVideoInput] = useState("");
   const [isHost, setIsHost] = useState(false);
   const [pendingInviteRoom, setPendingInviteRoom] = useState("");
+  const [activeMobileTab, setActiveMobileTab] = useState("watch");
   const [onlinePresence, setOnlinePresence] = useState([]);
 
   useEffect(() => {
@@ -346,6 +348,83 @@ export default function Home({ authUser, onLogout }) {
     socket.emit("video-seek", { roomCode, currentTime });
   }
 
+
+  function renderMobilePanel() {
+    if (activeMobileTab === "watch") {
+      return (
+        <section className="flex min-w-0 flex-col gap-4">
+          <VideoPlayer
+            videoUrl={videoUrl}
+            videoInput={videoInput}
+            setVideoInput={setVideoInput}
+            onSetVideo={setRoomVideo}
+            onVideoControl={handleVideoControl}
+            onVideoSeek={handleVideoSeek}
+            playerRef={playerRef}
+            ignoreEventRef={ignoreEventRef}
+            isHost={isHost}
+          />
+
+          <ScreenShare roomCode={roomCode} username={currentUserPayload.username} />
+        </section>
+      );
+    }
+
+    if (activeMobileTab === "voice") {
+      return (
+        <section className="flex min-w-0 flex-col gap-4">
+          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
+          <UserList users={users} />
+        </section>
+      );
+    }
+
+    if (activeMobileTab === "chat") {
+      return (
+        <section className="flex min-w-0 flex-col gap-4">
+          <ChatPanel
+            messages={messages}
+            message={message}
+            setMessage={setMessage}
+            onSendMessage={sendMessage}
+          />
+          <InviteBox roomCode={roomCode} />
+        </section>
+      );
+    }
+
+    if (activeMobileTab === "room") {
+      return (
+        <section className="flex min-w-0 flex-col gap-4">
+          <RoomPanel
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
+          />
+
+          <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+        </section>
+      );
+    }
+
+    return (
+      <section className="flex min-w-0 flex-col gap-4">
+        <ProfileCard authUser={authUser} />
+        <PresenceFriendPanel
+          onlineUsers={onlinePresence}
+          currentSocketId={socket.id}
+          onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+        />
+      </section>
+    );
+  }
+
   return (
     <div className="app-shell min-h-screen text-white">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -354,10 +433,12 @@ export default function Home({ authUser, onLogout }) {
         <div className="absolute bottom-0 left-1/2 h-96 w-96 rounded-full bg-indigo-700/15 blur-3xl" />
       </div>
 
-      <div className="relative flex min-h-screen gap-5 p-4 lg:p-5">
-        <LeftSidebar />
+      <div className="relative flex min-h-screen gap-4 p-3 pb-24 sm:p-4 sm:pb-24 lg:gap-5 lg:p-5">
+        <div className="hidden lg:block">
+          <LeftSidebar />
+        </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-5">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 lg:gap-5">
           <Header
             authUser={authUser}
             onLogout={onLogout}
@@ -383,7 +464,7 @@ export default function Home({ authUser, onLogout }) {
             </div>
           )}
 
-          <main className="grid flex-1 gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+          <main className="hidden flex-1 gap-5 lg:grid xl:grid-cols-[minmax(0,1fr)_420px]">
             <section className="flex min-w-0 flex-col gap-5">
               <VideoPlayer
                 videoUrl={videoUrl}
@@ -437,6 +518,20 @@ export default function Home({ authUser, onLogout }) {
               />
             </aside>
           </main>
+
+          <main className="block flex-1 lg:hidden">
+            <div className="mobile-stage">
+              {renderMobilePanel()}
+            </div>
+          </main>
+
+          <MobileBottomNav
+            activeTab={activeMobileTab}
+            onChange={setActiveMobileTab}
+            unreadMessages={messages.length}
+            onlineCount={onlinePresence.length}
+            roomCode={roomCode}
+          />
         </div>
       </div>
     </div>

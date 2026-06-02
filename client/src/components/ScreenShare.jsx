@@ -363,7 +363,7 @@ export default function ScreenShare({ roomCode, username }) {
             autoPlay
             muted
             playsInline
-            className="aspect-video w-full bg-black object-contain"
+            className="aspect-video max-h-[58vh] w-full bg-black object-contain"
           />
         ) : activeBroadcaster ? (
           <video
@@ -371,10 +371,10 @@ export default function ScreenShare({ roomCode, username }) {
             autoPlay
             playsInline
             controls
-            className="aspect-video w-full bg-black object-contain"
+            className="aspect-video max-h-[58vh] w-full bg-black object-contain"
           />
         ) : (
-          <div className="flex aspect-video flex-col items-center justify-center gap-3 text-white/35">
+          <div className="flex aspect-video max-h-[58vh] flex-col items-center justify-center gap-3 text-white/35">
             <ScreenShareIcon size={42} />
             <p className="text-sm font-bold">Şu an aktif ekran paylaşımı yok.</p>
           </div>
