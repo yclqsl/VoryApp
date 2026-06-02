@@ -7,6 +7,7 @@ const rooms = {};
 const onlineUsers = new Map();
 const voiceRooms = {};
 const screenShares = {};
+const feedbackItems = [];
 
 const SYNC_DRIFT_WARN_SECONDS = 1.5;
 const SYNC_HARD_DRIFT_SECONDS = 3.5;
@@ -51,6 +52,69 @@ app.use("/api/friends", friendRoutes);
 app.use("/api/invites", inviteRoutes);
 
 app.use(express.static("public"));
+
+
+app.post("/api/feedback", (req, res) => {
+  const {
+    type,
+    title,
+    message,
+    roomCode,
+    username,
+    userId,
+    userAgent,
+    appVersion,
+    metadata,
+  } = req.body || {};
+
+  if (!title || !message) {
+    return res.status(400).json({
+      message: "Başlık ve açıklama gerekli.",
+    });
+  }
+
+  const feedback = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: type || "bug",
+    title: String(title).slice(0, 140),
+    message: String(message).slice(0, 3000),
+    roomCode: roomCode || "",
+    username: username || "Anonim",
+    userId: userId || "",
+    userAgent: userAgent || "",
+    appVersion: appVersion || "beta",
+    metadata: metadata || {},
+    status: "open",
+    createdAt: Date.now(),
+  };
+
+  feedbackItems.unshift(feedback);
+
+  if (feedbackItems.length > 500) {
+    feedbackItems.pop();
+  }
+
+  res.status(201).json({
+    message: "Feedback alındı.",
+    feedback,
+  });
+});
+
+app.get("/api/feedback", (req, res) => {
+  const adminKey = req.headers["x-admin-key"] || req.query.adminKey;
+
+  if (process.env.ADMIN_KEY && adminKey !== process.env.ADMIN_KEY) {
+    return res.status(401).json({
+      message: "Yetkisiz.",
+    });
+  }
+
+  res.json({
+    count: feedbackItems.length,
+    feedback: feedbackItems,
+  });
+});
+
 
 const server = http.createServer(app);
 
