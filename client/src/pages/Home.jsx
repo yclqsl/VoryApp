@@ -4,6 +4,7 @@ import { socket } from "../services/socket";
 import Header from "../components/Header";
 import VorySidebar from "../components/VorySidebar";
 import NotificationCenter from "../components/NotificationCenter";
+import MediaQueue from "../components/MediaQueue";
 import QuickActions from "../components/QuickActions";
 import RoomPanel from "../components/RoomPanel";
 import InviteBox from "../components/InviteBox";
@@ -31,6 +32,8 @@ export default function Home({ authUser, onLogout }) {
   const [activeMobileTab, setActiveMobileTab] = useState("watch");
   const [appSection, setAppSection] = useState("watch");
   const [notifications, setNotifications] = useState([]);
+  const [currentMedia, setCurrentMedia] = useState(null);
+  const [mediaQueue, setMediaQueue] = useState([]);
   const [onlinePresence, setOnlinePresence] = useState([]);
 
   useEffect(() => {
@@ -82,6 +85,8 @@ export default function Home({ authUser, onLogout }) {
       setUsers([]);
       setMessages([]);
       setVideoUrl("");
+      setCurrentMedia(null);
+      setMediaQueue([]);
       setStatus("");
       setIsHost(false);
       if (syncIntervalRef.current) {
@@ -219,6 +224,15 @@ export default function Home({ authUser, onLogout }) {
       }
     });
 
+    socket.on("media-queue-updated", ({ currentMedia, queue }) => {
+      setCurrentMedia(currentMedia || null);
+      setMediaQueue(queue || []);
+    });
+
+    socket.on("media-current-updated", (mediaItem) => {
+      setCurrentMedia(mediaItem || null);
+    });
+
     return () => {
       socket.off("room-created");
       socket.off("room-joined");
@@ -241,6 +255,8 @@ export default function Home({ authUser, onLogout }) {
       socket.off("online-users");
       socket.off("presence-changed");
       socket.off("notification:new");
+      socket.off("media-queue-updated");
+      socket.off("media-current-updated");
     };
   }, []);
 
@@ -339,7 +355,40 @@ export default function Home({ authUser, onLogout }) {
       return;
     }
 
-    socket.emit("set-video", { roomCode, videoUrl: videoInput.trim() });
+    socket.emit("set-video", {
+      roomCode,
+      videoUrl: videoInput.trim(),
+      title: videoInput.trim(),
+    });
+  }
+
+
+  function addToQueue(videoUrl, title) {
+    if (!roomCode) {
+      toast.error("Önce odaya gir");
+      return;
+    }
+
+    socket.emit("media-add-to-queue", {
+      roomCode,
+      videoUrl,
+      title,
+    });
+  }
+
+  function playNextMedia() {
+    if (!roomCode) return;
+    socket.emit("media-play-next", { roomCode });
+  }
+
+  function removeFromQueue(mediaId) {
+    if (!roomCode) return;
+    socket.emit("media-remove-from-queue", { roomCode, mediaId });
+  }
+
+  function clearMediaQueue() {
+    if (!roomCode) return;
+    socket.emit("media-clear-queue", { roomCode });
   }
 
   function sendMessage() {
@@ -443,6 +492,19 @@ export default function Home({ authUser, onLogout }) {
               ignoreEventRef={ignoreEventRef}
               isHost={isHost}
             />
+
+            <div className="mt-4">
+              <MediaQueue
+                roomCode={roomCode}
+                isHost={isHost}
+                currentMedia={currentMedia}
+                queue={mediaQueue}
+                onAdd={addToQueue}
+                onPlayNext={playNextMedia}
+                onRemove={removeFromQueue}
+                onClear={clearMediaQueue}
+              />
+            </div>
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -530,6 +592,17 @@ export default function Home({ authUser, onLogout }) {
           />
 
           <ScreenShare roomCode={roomCode} username={currentUserPayload.username} />
+
+          <MediaQueue
+            roomCode={roomCode}
+            isHost={isHost}
+            currentMedia={currentMedia}
+            queue={mediaQueue}
+            onAdd={addToQueue}
+            onPlayNext={playNextMedia}
+            onRemove={removeFromQueue}
+            onClear={clearMediaQueue}
+          />
         </section>
       );
     }

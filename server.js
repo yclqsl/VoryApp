@@ -169,6 +169,77 @@ function emitNotification(roomCode, payload = {}) {
   io.emit("notification:new", notification);
 }
 
+function detectMediaType(url = "") {
+  const cleanUrl = String(url).trim().toLowerCase();
+
+  if (!cleanUrl) return "unknown";
+
+  if (
+    cleanUrl.includes("youtube.com") ||
+    cleanUrl.includes("youtu.be")
+  ) {
+    return "youtube";
+  }
+
+  if (
+    cleanUrl.endsWith(".mp4") ||
+    cleanUrl.includes(".mp4?") ||
+    cleanUrl.endsWith(".webm") ||
+    cleanUrl.includes(".webm?") ||
+    cleanUrl.endsWith(".mov") ||
+    cleanUrl.includes(".mov?")
+  ) {
+    return "direct-video";
+  }
+
+  return "url";
+}
+
+function normalizeMediaItem({ videoUrl, title, addedBy }) {
+  const cleanUrl = String(videoUrl || "").trim();
+
+  if (!cleanUrl) return null;
+
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    url: cleanUrl,
+    title: String(title || "").trim() || cleanUrl,
+    type: detectMediaType(cleanUrl),
+    addedBy: addedBy || "Kullanıcı",
+    addedAt: Date.now(),
+  };
+}
+
+function emitMediaQueue(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return;
+
+  io.to(roomCode).emit("media-queue-updated", {
+    currentMedia: room.currentMedia || null,
+    queue: room.mediaQueue || [],
+  });
+}
+
+function setRoomMedia(roomCode, mediaItem) {
+  const room = rooms[roomCode];
+  if (!room || !mediaItem) return;
+
+  room.currentMedia = mediaItem;
+  room.videoUrl = mediaItem.url;
+  room.videoState = {
+    isPlaying: false,
+    currentTime: 0,
+    updatedAt: Date.now(),
+    version: Date.now(),
+    hostId: room.host,
+  };
+
+  io.to(roomCode).emit("video-updated", mediaItem.url);
+  io.to(roomCode).emit("video-sync", room.videoState);
+  io.to(roomCode).emit("media-current-updated", mediaItem);
+  emitMediaQueue(roomCode);
+}
+
 
 function removeUserFromRooms(socketId) {
   for (const roomCode in rooms) {
@@ -272,6 +343,8 @@ io.on("connection", (socket) => {
         updatedAt: Date.now(),
       },
       screenShare: null,
+      mediaQueue: [],
+      currentMedia: null,
       users: [
         {
           id: socket.id,
@@ -359,6 +432,11 @@ io.on("connection", (socket) => {
       socket.emit("video-sync", getSyncedVideoState(room));
     }
 
+    socket.emit("media-queue-updated", {
+      currentMedia: room.currentMedia || null,
+      queue: room.mediaQueue || [],
+    });
+
     if (screenShares[roomCode]) {
       socket.emit("screen-share-started", {
         broadcaster: screenShares[roomCode],
@@ -374,7 +452,7 @@ io.on("connection", (socket) => {
     socket.emit("room-left");
   });
 
-  socket.on("set-video", ({ roomCode, videoUrl }) => {
+  socket.on("set-video", ({ roomCode, videoUrl, title }) => {
     const room = rooms[roomCode];
 
     if (!room) return;
@@ -384,16 +462,18 @@ io.on("connection", (socket) => {
       return;
     }
 
-    room.videoUrl = videoUrl;
+    const mediaItem = normalizeMediaItem({
+      videoUrl,
+      title,
+      addedBy: room.users.find((user) => user.id === socket.id)?.username || "Host",
+    });
 
-    room.videoState = {
-      isPlaying: false,
-      currentTime: 0,
-      updatedAt: Date.now(),
-    };
+    if (!mediaItem) {
+      socket.emit("room-error", "Geçerli bir video linki gir.");
+      return;
+    }
 
-    io.to(roomCode).emit("video-updated", videoUrl);
-    io.to(roomCode).emit("video-sync", room.videoState);
+    setRoomMedia(roomCode, mediaItem);
 
     room.users.forEach((user) => {
       updateRoomPresence(user.id, roomCode, {
@@ -403,13 +483,102 @@ io.on("connection", (socket) => {
 
     emitPresence();
 
-    io.to(roomCode).emit("system-message", "Host yeni video ekledi.");
+    io.to(roomCode).emit("system-message", "Host yeni medya ekledi.");
 
     emitNotification(roomCode, {
       type: "video",
-      title: "Video değişti",
-      message: "Host yeni video ekledi.",
+      title: "Medya değişti",
+      message: `Host ${mediaItem.type === "direct-video" ? "MP4/direct video" : "video"} başlattı.`,
     });
+  });
+
+  socket.on("media-add-to-queue", ({ roomCode, videoUrl, title }) => {
+    const room = rooms[roomCode];
+
+    if (!room) return;
+
+    const user = room.users.find((roomUser) => roomUser.id === socket.id);
+
+    if (!user) {
+      socket.emit("room-error", "Önce odaya gir.");
+      return;
+    }
+
+    const mediaItem = normalizeMediaItem({
+      videoUrl,
+      title,
+      addedBy: user.username || "Kullanıcı",
+    });
+
+    if (!mediaItem) {
+      socket.emit("room-error", "Geçerli bir medya linki gir.");
+      return;
+    }
+
+    if (!room.currentMedia && isHost(roomCode, socket.id)) {
+      setRoomMedia(roomCode, mediaItem);
+    } else {
+      room.mediaQueue.push(mediaItem);
+      emitMediaQueue(roomCode);
+    }
+
+    emitNotification(roomCode, {
+      type: "video",
+      title: "Sıraya eklendi",
+      message: `${user.username || "Kullanıcı"} sıraya medya ekledi.`,
+    });
+  });
+
+  socket.on("media-remove-from-queue", ({ roomCode, mediaId }) => {
+    const room = rooms[roomCode];
+
+    if (!room) return;
+    if (!isHost(roomCode, socket.id)) {
+      socket.emit("room-error", "Sıradan sadece host kaldırabilir.");
+      return;
+    }
+
+    room.mediaQueue = (room.mediaQueue || []).filter((item) => item.id !== mediaId);
+    emitMediaQueue(roomCode);
+  });
+
+  socket.on("media-play-next", ({ roomCode }) => {
+    const room = rooms[roomCode];
+
+    if (!room) return;
+    if (!isHost(roomCode, socket.id)) {
+      socket.emit("room-error", "Sıradaki medyaya sadece host geçebilir.");
+      return;
+    }
+
+    const nextMedia = room.mediaQueue.shift();
+
+    if (!nextMedia) {
+      socket.emit("room-error", "Sırada medya yok.");
+      emitMediaQueue(roomCode);
+      return;
+    }
+
+    setRoomMedia(roomCode, nextMedia);
+
+    emitNotification(roomCode, {
+      type: "video",
+      title: "Sıradaki medya",
+      message: "Host sıradaki medyaya geçti.",
+    });
+  });
+
+  socket.on("media-clear-queue", ({ roomCode }) => {
+    const room = rooms[roomCode];
+
+    if (!room) return;
+    if (!isHost(roomCode, socket.id)) {
+      socket.emit("room-error", "Sırayı sadece host temizleyebilir.");
+      return;
+    }
+
+    room.mediaQueue = [];
+    emitMediaQueue(roomCode);
   });
 
   socket.on("video-control", ({ roomCode, action, currentTime }) => {
