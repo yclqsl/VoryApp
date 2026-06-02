@@ -7,11 +7,11 @@ import {
 } from "lucide-react";
 
 const items = [
-  { id: "watch", label: "Watch", desc: "Video + ekran", icon: Video },
-  { id: "room", label: "Room", desc: "Oda ayarları", icon: Home },
-  { id: "voice", label: "Voice", desc: "Sesli sohbet", icon: Radio },
-  { id: "chat", label: "Chat", desc: "Mesajlar", icon: MessageCircle },
-  { id: "friends", label: "Arkadaşlar", desc: "Online durum", icon: UsersRound },
+  { id: "watch", label: "Watch", desc: "Video", icon: Video },
+  { id: "room", label: "Room", desc: "Oda", icon: Home },
+  { id: "voice", label: "Voice", desc: "Ses", icon: Radio },
+  { id: "chat", label: "Chat", desc: "Mesaj", icon: MessageCircle },
+  { id: "friends", label: "Social", desc: "Arkadaş", icon: UsersRound },
 ];
 
 export default function VorySidebar({
@@ -21,38 +21,30 @@ export default function VorySidebar({
   onlineCount = 0,
   userCount = 0,
 }) {
-  function selectSection(section) {
-    if (typeof onChange === "function") {
-      onChange(section);
-    }
-  }
-
   return (
-    <aside className="relative z-40 hidden w-[92px] shrink-0 pointer-events-auto lg:flex xl:w-[270px]">
-      <div className="sticky top-5 flex h-[calc(100vh-2.5rem)] w-full flex-col rounded-[2rem] border border-white/10 bg-black/35 p-3 shadow-[0_20px_100px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+    <aside className="relative z-40 hidden w-[82px] shrink-0 pointer-events-auto lg:flex xl:w-[230px]">
+      <div className="sticky top-4 flex h-[calc(100vh-2rem)] w-full flex-col rounded-[1.75rem] border border-white/10 bg-black/30 p-2.5 shadow-[0_20px_90px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
         <button
           type="button"
-          onMouseDown={() => selectSection("watch")}
-          onClick={() => selectSection("watch")}
-          className="mb-4 flex items-center gap-3 rounded-3xl bg-white/[0.06] p-3 text-left transition hover:bg-white/[0.09]"
+          onClick={() => onChange?.("watch")}
+          className="mb-3 flex items-center gap-3 rounded-[1.35rem] bg-white/[0.055] p-2.5 text-left transition hover:bg-white/[0.085]"
         >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-500/25 text-xl font-black text-white shadow-[0_0_28px_rgba(139,92,246,0.25)]">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-500/25 text-lg font-black text-white shadow-[0_0_24px_rgba(139,92,246,0.22)]">
             V
           </div>
 
           <div className="hidden min-w-0 xl:block">
             <p className="truncate text-sm font-black text-white">VoryApp</p>
-            <p className="truncate text-xs text-white/35">
+            <p className="truncate text-[11px] text-white/35">
               {roomCode ? `Room ${roomCode}` : "Lobby"}
             </p>
           </div>
         </button>
 
-        <nav className="flex flex-1 flex-col gap-2">
+        <nav className="flex flex-1 flex-col gap-1.5">
           {items.map((item) => {
             const Icon = item.icon;
             const active = activeSection === item.id;
-
             const badge =
               item.id === "friends" && onlineCount > 0
                 ? onlineCount
@@ -64,25 +56,26 @@ export default function VorySidebar({
               <button
                 key={item.id}
                 type="button"
-                onMouseDown={() => selectSection(item.id)}
-                onClick={() => selectSection(item.id)}
-                className={`relative flex w-full items-center gap-3 rounded-3xl p-3 text-left transition active:scale-[0.98] ${
+                onClick={() => onChange?.(item.id)}
+                className={`relative flex w-full items-center gap-3 rounded-[1.35rem] p-2.5 text-left transition active:scale-[0.98] ${
                   active
-                    ? "bg-violet-500/25 text-white shadow-[0_0_30px_rgba(139,92,246,0.2)]"
-                    : "text-white/48 hover:bg-white/[0.08] hover:text-white"
+                    ? "bg-white text-black shadow-[0_12px_32px_rgba(255,255,255,0.08)]"
+                    : "text-white/48 hover:bg-white/[0.075] hover:text-white"
                 }`}
               >
                 <div
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition ${
-                    active ? "bg-white/12 text-white" : "bg-white/[0.06]"
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition ${
+                    active ? "bg-black/8 text-black" : "bg-white/[0.06]"
                   }`}
                 >
-                  <Icon size={20} />
+                  <Icon size={19} />
                 </div>
 
                 <div className="hidden min-w-0 xl:block">
                   <p className="truncate text-sm font-black">{item.label}</p>
-                  <p className="truncate text-xs text-white/35">{item.desc}</p>
+                  <p className={`truncate text-[11px] ${active ? "text-black/45" : "text-white/30"}`}>
+                    {item.desc}
+                  </p>
                 </div>
 
                 {badge ? (
@@ -95,16 +88,12 @@ export default function VorySidebar({
           })}
         </nav>
 
-        <div className="mt-4 rounded-3xl border border-emerald-400/10 bg-emerald-400/10 p-3 text-center xl:text-left">
+        <div className="mt-3 rounded-[1.35rem] border border-emerald-400/10 bg-emerald-400/10 p-3 text-center xl:text-left">
           <p className="text-xs font-black text-emerald-200">
-            {activeSection === "watch" && "Watch açık"}
-            {activeSection === "room" && "Room açık"}
-            {activeSection === "voice" && "Voice açık"}
-            {activeSection === "chat" && "Chat açık"}
-            {activeSection === "friends" && "Arkadaşlar açık"}
+            {roomCode ? "Live Room" : "Ready"}
           </p>
-          <p className="mt-1 hidden text-xs text-white/35 xl:block">
-            Menüden bölüm değiştir.
+          <p className="mt-1 hidden text-[11px] text-white/35 xl:block">
+            Beta build aktif.
           </p>
         </div>
       </div>

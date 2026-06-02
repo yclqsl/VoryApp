@@ -76,7 +76,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 left-4 z-[55] flex items-center gap-2 rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-sm font-black text-white shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition hover:bg-white/10 lg:bottom-5"
+        className="fixed bottom-24 right-4 z-[65] flex items-center gap-2 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/15 px-4 py-3 text-sm font-black text-white shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition hover:bg-fuchsia-500/25 lg:bottom-5"
       >
         <Bug size={17} className="text-fuchsia-300" />
         Feedback
