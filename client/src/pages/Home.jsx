@@ -5,6 +5,8 @@ import Header from "../components/Header";
 import VorySidebar from "../components/VorySidebar";
 import NotificationCenter from "../components/NotificationCenter";
 import MediaQueue from "../components/MediaQueue";
+import ConnectionBanner from "../components/ConnectionBanner";
+import DevHealthOverlay from "../components/DevHealthOverlay";
 import QuickActions from "../components/QuickActions";
 import RoomPanel from "../components/RoomPanel";
 import InviteBox from "../components/InviteBox";
@@ -34,11 +36,25 @@ export default function Home({ authUser, onLogout }) {
   const [notifications, setNotifications] = useState([]);
   const [currentMedia, setCurrentMedia] = useState(null);
   const [mediaQueue, setMediaQueue] = useState([]);
+  const [connectionStatus, setConnectionStatus] = useState(socket.connected ? "connected" : "offline");
+  const [lastRestoreMessage, setLastRestoreMessage] = useState("");
   const [onlinePresence, setOnlinePresence] = useState([]);
 
   useEffect(() => {
     window.currentRoomCode = roomCode;
+
+    if (roomCode) {
+      localStorage.setItem("vory-last-room", roomCode);
+    } else {
+      localStorage.removeItem("vory-last-room");
+    }
   }, [roomCode]);
+
+  useEffect(() => {
+    if (currentUserPayload.username) {
+      localStorage.setItem("vory-last-username", currentUserPayload.username);
+    }
+  }, [currentUserPayload.username]);
 
   const playerRef = useRef(null);
   const ignoreEventRef = useRef(false);
@@ -60,10 +76,77 @@ export default function Home({ authUser, onLogout }) {
       setRoomInput(cleanRoom);
       setPendingInviteRoom(cleanRoom);
       toast.success(`Davet odası hazır: ${cleanRoom}`);
+      return;
     }
+
+    const restoreTimer = setTimeout(() => {
+      restorePreviousSession("initial-load");
+    }, 500);
+
+    return () => clearTimeout(restoreTimer);
   }, []);
 
   useEffect(() => {
+    socket.on("connect", () => {
+      setConnectionStatus("connected");
+
+      const savedRoom = localStorage.getItem("vory-last-room");
+      const savedUsername = localStorage.getItem("vory-last-username") || currentUserPayload.username;
+
+      if (savedRoom && !roomCode) {
+        socket.emit("rejoin-session", {
+          roomCode: savedRoom,
+          username: savedUsername,
+          avatar: authUser?.avatar || "",
+          reason: "socket-connect",
+        });
+      }
+
+      if (roomCode) {
+        socket.emit("request-sync", {
+          roomCode,
+          reason: "socket-connect",
+        });
+      }
+    });
+
+    socket.on("disconnect", () => {
+      setConnectionStatus("offline");
+    });
+
+    socket.io.on("reconnect_attempt", () => {
+      setConnectionStatus("reconnecting");
+    });
+
+    socket.io.on("reconnect", () => {
+      setConnectionStatus("connected");
+    });
+
+    socket.on("restore-failed", ({ message }) => {
+      setLastRestoreMessage(message || "Oda geri yüklenemedi.");
+      localStorage.removeItem("vory-last-room");
+    });
+
+    socket.on("room-snapshot", (snapshot) => {
+      if (!snapshot) return;
+
+      if (snapshot.roomCode) {
+        setRoomCode(snapshot.roomCode);
+      }
+
+      setUsers(snapshot.users || []);
+      setCurrentMedia(snapshot.currentMedia || null);
+      setMediaQueue(snapshot.mediaQueue || []);
+
+      if (snapshot.videoUrl) {
+        setVideoUrl(snapshot.videoUrl);
+      }
+
+      const me = (snapshot.users || []).find((user) => user.id === socket.id);
+      setIsHost(!!me?.isHost);
+      setLastRestoreMessage(snapshot.reason === "session-restore" ? "Oda geri yüklendi." : "");
+    });
+
     socket.on("room-created", (data) => {
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
@@ -89,6 +172,7 @@ export default function Home({ authUser, onLogout }) {
       setMediaQueue([]);
       setStatus("");
       setIsHost(false);
+      setLastRestoreMessage("");
       if (syncIntervalRef.current) {
         clearInterval(syncIntervalRef.current);
         syncIntervalRef.current = null;
@@ -234,6 +318,12 @@ export default function Home({ authUser, onLogout }) {
     });
 
     return () => {
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("restore-failed");
+      socket.off("room-snapshot");
+      socket.io.off("reconnect_attempt");
+      socket.io.off("reconnect");
       socket.off("room-created");
       socket.off("room-joined");
       socket.off("room-left");
@@ -421,6 +511,32 @@ export default function Home({ authUser, onLogout }) {
 
 
 
+
+
+  function restorePreviousSession(reason = "manual") {
+    const savedRoom = localStorage.getItem("vory-last-room");
+    const savedUsername = localStorage.getItem("vory-last-username") || currentUserPayload.username;
+
+    if (!savedRoom || roomCode) return;
+
+    setLastRestoreMessage("Önceki oda geri yükleniyor...");
+
+    socket.emit("rejoin-session", {
+      roomCode: savedRoom,
+      username: savedUsername,
+      avatar: authUser?.avatar || "",
+      reason,
+    });
+  }
+
+  function requestHardSync(reason = "manual") {
+    if (!roomCode) return;
+
+    socket.emit("request-sync", {
+      roomCode,
+      reason,
+    });
+  }
 
   function addLocalNotification(notification) {
     const safeNotification = {
@@ -688,7 +804,15 @@ export default function Home({ authUser, onLogout }) {
             userCount={users.length}
           />
 
-          <div className="flex justify-end">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+            <ConnectionBanner
+              status={connectionStatus}
+              roomCode={roomCode}
+              message={lastRestoreMessage}
+              onRestore={() => restorePreviousSession("manual-click")}
+              onForceSync={requestHardSync}
+            />
+
             <NotificationCenter
               notifications={notifications}
               onMarkRead={markNotificationsRead}
@@ -765,6 +889,15 @@ export default function Home({ authUser, onLogout }) {
               {renderMobilePanel()}
             </div>
           </main>
+
+          <DevHealthOverlay
+            connectionStatus={connectionStatus}
+            roomCode={roomCode}
+            isHost={isHost}
+            userCount={users.length}
+            queueCount={mediaQueue.length}
+            currentMedia={currentMedia}
+          />
 
           <MobileBottomNav
             activeTab={activeMobileTab}

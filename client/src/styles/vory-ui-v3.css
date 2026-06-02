@@ -92,3 +92,14 @@
   border-radius: 999px;
   background: rgba(255,255,255,0.18);
 }
+
+
+/* Beta Hardening V1 */
+@keyframes voryPulseSoft {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+
+.vory-connection-reconnecting {
+  animation: voryPulseSoft 1.2s ease-in-out infinite;
+}

@@ -220,6 +220,58 @@ function emitMediaQueue(roomCode) {
   });
 }
 
+function buildRoomSnapshot(roomCode) {
+  const room = rooms[roomCode];
+
+  if (!room) return null;
+
+  return {
+    roomCode,
+    host: room.host,
+    users: room.users || [],
+    videoUrl: room.videoUrl || "",
+    videoState: getSyncedVideoState(room),
+    currentMedia: room.currentMedia || null,
+    mediaQueue: room.mediaQueue || [],
+    screenShare: room.screenShare || null,
+    roomSummary: getRoomSummary(roomCode),
+  };
+}
+
+function emitRoomSnapshot(socket, roomCode, reason = "snapshot") {
+  const snapshot = buildRoomSnapshot(roomCode);
+
+  if (!snapshot) {
+    socket.emit("room-error", "Oda bulunamadı");
+    return;
+  }
+
+  socket.emit("room-snapshot", {
+    ...snapshot,
+    reason,
+  });
+
+  if (snapshot.videoUrl) {
+    socket.emit("video-updated", snapshot.videoUrl);
+    socket.emit("video-sync", {
+      ...snapshot.videoState,
+      reason,
+    });
+  }
+
+  socket.emit("media-queue-updated", {
+    currentMedia: snapshot.currentMedia,
+    queue: snapshot.mediaQueue,
+  });
+
+  if (snapshot.screenShare?.broadcaster) {
+    socket.emit("screen-share-started", {
+      broadcaster: snapshot.screenShare.broadcaster,
+      username: snapshot.screenShare.username,
+    });
+  }
+}
+
 function setRoomMedia(roomCode, mediaItem) {
   const room = rooms[roomCode];
   if (!room || !mediaItem) return;
@@ -326,6 +378,83 @@ io.on("connection", (socket) => {
   socket.on("get-online-users", () => {
     socket.emit("online-users", Array.from(onlineUsers.values()));
     socket.emit("presence-changed", Array.from(onlineUsers.values()));
+  });
+
+  socket.on("request-room-snapshot", ({ roomCode }) => {
+    if (!roomCode || !rooms[roomCode]) {
+      socket.emit("room-error", "Oda bulunamadı");
+      return;
+    }
+
+    emitRoomSnapshot(socket, roomCode, "manual-snapshot");
+  });
+
+  socket.on("request-sync", ({ roomCode }) => {
+    if (!roomCode || !rooms[roomCode]) return;
+
+    emitRoomSnapshot(socket, roomCode, "sync-recovery");
+  });
+
+  socket.on("rejoin-session", ({ roomCode, username, avatar }) => {
+    const room = rooms[roomCode];
+
+    if (!room) {
+      socket.emit("restore-failed", {
+        reason: "room-not-found",
+        message: "Önceki oda artık bulunamadı.",
+      });
+      return;
+    }
+
+    socket.join(roomCode);
+
+    const existingIndex = room.users.findIndex((user) => user.username === username);
+    const alreadyInRoom = room.users.some((user) => user.id === socket.id);
+
+    if (!alreadyInRoom) {
+      if (existingIndex >= 0) {
+        room.users[existingIndex] = {
+          ...room.users[existingIndex],
+          id: socket.id,
+          avatar: avatar || room.users[existingIndex].avatar || "",
+        };
+      } else {
+        room.users.push({
+          id: socket.id,
+          username: username || "Misafir",
+          avatar: avatar || "",
+          isHost: false,
+        });
+      }
+    }
+
+    if (!room.host || !room.users.some((user) => user.id === room.host)) {
+      room.host = room.users[0]?.id || socket.id;
+    }
+
+    room.users = room.users.map((user) => ({
+      ...user,
+      isHost: user.id === room.host,
+    }));
+
+    updateRoomPresence(socket.id, roomCode, {
+      activity: room.videoUrl ? "watching" : "in-room",
+      voiceActive: false,
+      screenSharing: !!screenShares[roomCode],
+    });
+
+    emitPresence();
+
+    socket.emit("room-joined", {
+      roomCode,
+      isHost: room.host === socket.id,
+      restored: true,
+    });
+
+    io.to(roomCode).emit("room-users", room.users);
+    emitRoomSnapshot(socket, roomCode, "session-restore");
+
+    socket.to(roomCode).emit("system-message", `${username || "Misafir"} yeniden bağlandı.`);
   });
 
   socket.on("create-room", (user) => {
@@ -442,6 +571,8 @@ io.on("connection", (socket) => {
         broadcaster: screenShares[roomCode],
       });
     }
+
+    emitRoomSnapshot(socket, roomCode, "join-room");
   });
 
   socket.on("leave-room", ({ roomCode }) => {
