@@ -1,4 +1,4 @@
-import { Mic, MicOff, PhoneOff, Radio, Activity, Volume2 } from "lucide-react";
+import { Mic, MicOff, PhoneOff, Radio, Activity } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { socket } from "../services/socket";
@@ -13,77 +13,11 @@ const ICE_SERVERS = {
 export default function VoiceChat({ roomCode, username }) {
   const [isVoiceOn, setIsVoiceOn] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [voiceUsers, setVoiceUsers] = useState([]);
-  const [voiceLevels, setVoiceLevels] = useState({});
+  const [participantCount, setParticipantCount] = useState(0);
   const localStreamRef = useRef(null);
   const peersRef = useRef({});
   const audioRefs = useRef({});
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const levelIntervalRef = useRef(null);
-
-  function participantCount() {
-    return isVoiceOn ? Math.max(voiceUsers.length, 1) : 0;
-  }
-
-  function updateLocalLevel(level) {
-    setVoiceLevels((prev) => ({
-      ...prev,
-      [socket.id]: level,
-    }));
-  }
-
-  function startLevelMeter(stream) {
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      const audioContext = new AudioContext();
-      const analyser = audioContext.createAnalyser();
-      const source = audioContext.createMediaStreamSource(stream);
-
-      analyser.fftSize = 256;
-      source.connect(analyser);
-
-      audioContextRef.current = audioContext;
-      analyserRef.current = analyser;
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-      clearInterval(levelIntervalRef.current);
-
-      levelIntervalRef.current = setInterval(() => {
-        if (!analyserRef.current) return;
-
-        analyserRef.current.getByteFrequencyData(dataArray);
-
-        const average =
-          dataArray.reduce((total, value) => total + value, 0) / dataArray.length;
-
-        const level = Math.min(100, Math.round(average * 1.8));
-        const finalLevel = isMuted ? 0 : level;
-
-        updateLocalLevel(finalLevel);
-
-        socket.emit("voice-level", {
-          roomCode,
-          level: finalLevel,
-        });
-      }, 140);
-    } catch (error) {
-      console.error("Voice meter error:", error);
-    }
-  }
-
-  function stopLevelMeter() {
-    clearInterval(levelIntervalRef.current);
-    levelIntervalRef.current = null;
-
-    try {
-      audioContextRef.current?.close();
-    } catch {}
-
-    audioContextRef.current = null;
-    analyserRef.current = null;
-  }
+  const isMutedRef = useRef(false);
 
   async function startVoice() {
     try {
@@ -100,8 +34,7 @@ export default function VoiceChat({ roomCode, username }) {
       localStreamRef.current = stream;
       setIsVoiceOn(true);
       setIsMuted(false);
-
-      startLevelMeter(stream);
+      isMutedRef.current = false;
 
       socket.emit("voice-join", {
         roomCode,
@@ -134,14 +67,12 @@ export default function VoiceChat({ roomCode, username }) {
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
 
-    stopLevelMeter();
-
     socket.emit("voice-leave", { roomCode });
 
-    setVoiceUsers([]);
-    setVoiceLevels({});
+    setParticipantCount(0);
     setIsVoiceOn(false);
     setIsMuted(false);
+    isMutedRef.current = false;
     toast.success("Mikrofon kapatıldı.");
   }
 
@@ -189,6 +120,7 @@ export default function VoiceChat({ roomCode, username }) {
     };
 
     peersRef.current[targetSocketId] = peer;
+    setParticipantCount(Object.keys(peersRef.current).length);
 
     if (initiator) {
       peer
@@ -224,11 +156,7 @@ export default function VoiceChat({ roomCode, username }) {
       delete audioRefs.current[socketId];
     }
 
-    setVoiceLevels((prev) => {
-      const next = { ...prev };
-      delete next[socketId];
-      return next;
-    });
+    setParticipantCount(Object.keys(peersRef.current).length);
   }
 
   function toggleMute() {
@@ -236,52 +164,12 @@ export default function VoiceChat({ roomCode, username }) {
     if (!track) return;
 
     track.enabled = !track.enabled;
-    const muted = !track.enabled;
-
-    setIsMuted(muted);
-
-    socket.emit("voice-mute-state", {
-      roomCode,
-      muted,
-    });
-
-    if (muted) {
-      updateLocalLevel(0);
-      socket.emit("voice-level", {
-        roomCode,
-        level: 0,
-      });
-    }
-
+    isMutedRef.current = !track.enabled;
+    setIsMuted(!track.enabled);
     toast.success(track.enabled ? "Mikrofon açıldı" : "Mikrofon kapandı");
   }
 
   useEffect(() => {
-    socket.on("voice-users", ({ users }) => {
-      const safeUsers = users || [];
-
-      setVoiceUsers(safeUsers);
-
-      setVoiceLevels((prev) => {
-        const next = { ...prev };
-
-        safeUsers.forEach((user) => {
-          if (typeof next[user.socketId] !== "number") {
-            next[user.socketId] = user.level || 0;
-          }
-        });
-
-        return next;
-      });
-    });
-
-    socket.on("voice-level-update", ({ socketId, level }) => {
-      setVoiceLevels((prev) => ({
-        ...prev,
-        [socketId]: level || 0,
-      }));
-    });
-
     socket.on("voice-peers", ({ peers }) => {
       if (!localStreamRef.current) return;
       (peers || []).forEach((peerId) => createPeer(peerId, true));
@@ -328,8 +216,6 @@ export default function VoiceChat({ roomCode, username }) {
     });
 
     return () => {
-      socket.off("voice-users");
-      socket.off("voice-level-update");
       socket.off("voice-peers");
       socket.off("voice-user-joined");
       socket.off("voice-offer");
@@ -339,7 +225,7 @@ export default function VoiceChat({ roomCode, username }) {
 
       if (localStreamRef.current) stopVoice();
     };
-  }, [roomCode, isMuted]);
+  }, [roomCode]);
 
   return (
     <section className="glass">
@@ -347,15 +233,11 @@ export default function VoiceChat({ roomCode, username }) {
         <div>
           <h2 className="text-lg font-black">Sesli Sohbet</h2>
           <p className="mt-1 text-xs text-white/40">
-            Kim konuşuyor canlı olarak görünür.
+            Odadakilerle mikrofon üzerinden konuş.
           </p>
         </div>
 
-        <div
-          className={`rounded-2xl p-3 ${
-            isVoiceOn ? "bg-emerald-500/15 text-emerald-300" : "bg-white/8 text-white/35"
-          }`}
-        >
+        <div className={`rounded-2xl p-3 ${isVoiceOn ? "bg-emerald-500/15 text-emerald-300" : "bg-white/8 text-white/35"}`}>
           <Radio size={18} />
         </div>
       </div>
@@ -363,7 +245,9 @@ export default function VoiceChat({ roomCode, username }) {
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-3xl bg-black/25 p-4">
           <p className="text-xs text-white/35">Bağlı Kişi</p>
-          <p className="mt-1 text-2xl font-black">{participantCount()}</p>
+          <p className="mt-1 text-2xl font-black">
+            {isVoiceOn ? participantCount + 1 : 0}
+          </p>
         </div>
 
         <div className="rounded-3xl bg-black/25 p-4">
@@ -374,74 +258,6 @@ export default function VoiceChat({ roomCode, username }) {
           </div>
         </div>
       </div>
-
-      {isVoiceOn && (
-        <div className="mt-4 space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-white/35">
-            Voice Channel
-          </p>
-
-          {voiceUsers.length === 0 ? (
-            <div className="rounded-2xl bg-black/25 p-3 text-sm text-white/35">
-              Katılımcılar yükleniyor...
-            </div>
-          ) : (
-            voiceUsers.map((user) => {
-              const level = voiceLevels[user.socketId] || 0;
-              const speaking = level > 14;
-              const isMe = user.socketId === socket.id;
-
-              return (
-                <div
-                  key={user.socketId}
-                  className={`rounded-2xl border p-3 transition ${
-                    speaking
-                      ? "border-emerald-400/35 bg-emerald-400/10 shadow-lg shadow-emerald-950/20"
-                      : "border-white/5 bg-black/25"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-black ${
-                          speaking
-                            ? "bg-emerald-400 text-black ring-4 ring-emerald-400/20"
-                            : "bg-white/10 text-white"
-                        }`}
-                      >
-                        {(user.username || "V").charAt(0).toUpperCase()}
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black">
-                          {user.username || "Kullanıcı"} {isMe ? "(Sen)" : ""}
-                        </p>
-                        <p className="text-xs text-white/35">
-                          {user.muted ? "🔇 Sessiz" : speaking ? "🟢 Konuşuyor" : "🎙️ Dinliyor"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <Volume2
-                      size={16}
-                      className={speaking ? "text-emerald-300" : "text-white/25"}
-                    />
-                  </div>
-
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        speaking ? "bg-emerald-300" : "bg-white/25"
-                      }`}
-                      style={{ width: `${Math.min(100, level)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
 
       {!isVoiceOn ? (
         <button
