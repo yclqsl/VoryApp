@@ -14,7 +14,6 @@ import ProfileCard from "../components/ProfileCard";
 import VoiceChat from "../components/VoiceChat";
 import ScreenShare from "../components/ScreenShare";
 import MobileBottomNav from "../components/MobileBottomNav";
-import VoryPanelTabs from "../components/VoryPanelTabs";
 
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
@@ -29,7 +28,6 @@ export default function Home({ authUser, onLogout }) {
   const [isHost, setIsHost] = useState(false);
   const [pendingInviteRoom, setPendingInviteRoom] = useState("");
   const [activeMobileTab, setActiveMobileTab] = useState("watch");
-  const [desktopPanelTab, setDesktopPanelTab] = useState("chat");
   const [appSection, setAppSection] = useState("watch");
   const [onlinePresence, setOnlinePresence] = useState([]);
 
@@ -357,33 +355,12 @@ export default function Home({ authUser, onLogout }) {
   function handleSectionChange(section) {
     setAppSection(section);
 
-    if (section === "watch") {
-      setActiveMobileTab("watch");
-      return;
-    }
-
-    if (section === "room") {
-      setDesktopPanelTab("room");
-      setActiveMobileTab("room");
-      return;
-    }
-
-    if (section === "voice") {
-      setDesktopPanelTab("voice");
-      setActiveMobileTab("voice");
-      return;
-    }
-
     if (section === "friends") {
-      setDesktopPanelTab("social");
       setActiveMobileTab("social");
       return;
     }
 
-    if (section === "chat") {
-      setDesktopPanelTab("chat");
-      setActiveMobileTab("chat");
-    }
+    setActiveMobileTab(section);
   }
 
   function renderDesktopMain() {
@@ -420,10 +397,13 @@ export default function Home({ authUser, onLogout }) {
             />
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
             <ScreenShare roomCode={roomCode} username={currentUserPayload.username} />
 
-            <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+            <div className="flex flex-col gap-4">
+              <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+              <ProfileCard authUser={authUser} />
+            </div>
           </div>
         </>
       );
@@ -481,58 +461,6 @@ export default function Home({ authUser, onLogout }) {
         message={message}
         setMessage={setMessage}
         onSendMessage={sendMessage}
-      />
-    );
-  }
-
-  function renderDesktopPanel() {
-    if (desktopPanelTab === "chat") {
-      return (
-        <ChatPanel
-          messages={messages}
-          message={message}
-          setMessage={setMessage}
-          onSendMessage={sendMessage}
-        />
-      );
-    }
-
-    if (desktopPanelTab === "voice") {
-      return (
-        <>
-          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
-          <UserList users={users} />
-        </>
-      );
-    }
-
-    if (desktopPanelTab === "room") {
-      return (
-        <>
-          <RoomPanel
-            username={username}
-            setUsername={setUsername}
-            roomInput={roomInput}
-            setRoomInput={setRoomInput}
-            roomCode={roomCode}
-            status={status}
-            onCreateRoom={createRoom}
-            onJoinRoom={() => joinRoom()}
-            onLeaveRoom={leaveRoom}
-          />
-
-          <InviteBox roomCode={roomCode} />
-
-          <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
-        </>
-      );
-    }
-
-    return (
-      <PresenceFriendPanel
-        onlineUsers={onlinePresence}
-        currentSocketId={socket.id}
-        onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
       />
     );
   }
@@ -656,26 +584,34 @@ export default function Home({ authUser, onLogout }) {
             </div>
           )}
 
-          <main className="hidden flex-1 gap-5 lg:grid xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
+          <main className="hidden flex-1 lg:block">
             <section className="flex min-w-0 flex-col gap-4">
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-3 rounded-[1.75rem] border border-white/10 bg-white/[0.04] px-5 py-4 backdrop-blur-2xl">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.32em] text-violet-200/50">
+                    {appSection === "watch" && "Watch Party"}
+                    {appSection === "room" && "Room Control"}
+                    {appSection === "voice" && "Voice Channel"}
+                    {appSection === "chat" && "Live Chat"}
+                    {appSection === "friends" && "Arkadaşlar"}
+                  </p>
+                  <h1 className="mt-1 text-2xl font-black">
+                    {appSection === "watch" && "Birlikte izle"}
+                    {appSection === "room" && "Odayı yönet"}
+                    {appSection === "voice" && "Sesli sohbet"}
+                    {appSection === "chat" && "Mesajlar"}
+                    {appSection === "friends" && "Sosyal durum"}
+                  </h1>
+                </div>
+
+                <div className="flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-200">
+                  <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(52,211,153,0.9)]" />
+                  {roomCode ? `ROOM ${roomCode}` : "LOBBY"}
+                </div>
+              </div>
+
               {renderDesktopMain()}
             </section>
-
-            <aside className="vory-command-panel">
-              <ProfileCard authUser={authUser} />
-
-              <VoryPanelTabs
-                activeTab={desktopPanelTab}
-                onChange={setDesktopPanelTab}
-                messageCount={messages.length}
-                onlineCount={onlinePresence.length}
-                userCount={users.length}
-              />
-
-              <div className="flex min-h-0 flex-col gap-4">
-                {renderDesktopPanel()}
-              </div>
-            </aside>
           </main>
 
           <main className="block flex-1 lg:hidden">

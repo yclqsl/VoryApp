@@ -74,3 +74,10 @@
     max-height: calc(100vh - 2.5rem);
   }
 }
+
+
+/* VoryApp UI Revamp V3.2 left nav fix */
+.vory-left-click-safe,
+.vory-left-click-safe * {
+  pointer-events: auto;
+}
