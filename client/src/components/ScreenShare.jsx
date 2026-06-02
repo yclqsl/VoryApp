@@ -326,7 +326,7 @@ export default function ScreenShare({ roomCode, username }) {
   }
 
   return (
-    <section className="glass overflow-hidden">
+    <section className="glass overflow-hidden border-white/10 bg-white/[0.045]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex items-center gap-2">

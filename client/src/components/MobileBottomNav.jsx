@@ -36,7 +36,7 @@ export default function MobileBottomNav({
   roomCode,
 }) {
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-50 rounded-[2rem] border border-white/10 bg-black/80 p-2 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-2xl lg:hidden">
+    <nav className="fixed inset-x-3 bottom-3 z-50 rounded-[1.75rem] border border-white/10 bg-black/85 p-2 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-2xl lg:hidden">
       <div className="grid grid-cols-5 gap-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;

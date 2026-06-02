@@ -14,6 +14,7 @@ import ProfileCard from "../components/ProfileCard";
 import VoiceChat from "../components/VoiceChat";
 import ScreenShare from "../components/ScreenShare";
 import MobileBottomNav from "../components/MobileBottomNav";
+import VoryPanelTabs from "../components/VoryPanelTabs";
 
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
@@ -28,6 +29,7 @@ export default function Home({ authUser, onLogout }) {
   const [isHost, setIsHost] = useState(false);
   const [pendingInviteRoom, setPendingInviteRoom] = useState("");
   const [activeMobileTab, setActiveMobileTab] = useState("watch");
+  const [desktopPanelTab, setDesktopPanelTab] = useState("chat");
   const [onlinePresence, setOnlinePresence] = useState([]);
 
   useEffect(() => {
@@ -349,6 +351,59 @@ export default function Home({ authUser, onLogout }) {
   }
 
 
+
+  function renderDesktopPanel() {
+    if (desktopPanelTab === "chat") {
+      return (
+        <ChatPanel
+          messages={messages}
+          message={message}
+          setMessage={setMessage}
+          onSendMessage={sendMessage}
+        />
+      );
+    }
+
+    if (desktopPanelTab === "voice") {
+      return (
+        <>
+          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
+          <UserList users={users} />
+        </>
+      );
+    }
+
+    if (desktopPanelTab === "room") {
+      return (
+        <>
+          <RoomPanel
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
+          />
+
+          <InviteBox roomCode={roomCode} />
+
+          <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+        </>
+      );
+    }
+
+    return (
+      <PresenceFriendPanel
+        onlineUsers={onlinePresence}
+        currentSocketId={socket.id}
+        onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+      />
+    );
+  }
+
   function renderMobilePanel() {
     if (activeMobileTab === "watch") {
       return (
@@ -426,7 +481,7 @@ export default function Home({ authUser, onLogout }) {
   }
 
   return (
-    <div className="app-shell min-h-screen text-white">
+    <div className="app-shell min-h-screen overflow-x-hidden text-white">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-32 top-0 h-96 w-96 rounded-full bg-violet-700/25 blur-3xl" />
         <div className="absolute right-10 top-20 h-96 w-96 rounded-full bg-fuchsia-700/20 blur-3xl" />
@@ -464,63 +519,81 @@ export default function Home({ authUser, onLogout }) {
             </div>
           )}
 
-          <main className="hidden flex-1 gap-5 lg:grid xl:grid-cols-[minmax(0,1fr)_420px]">
-            <section className="flex min-w-0 flex-col gap-5">
-              <VideoPlayer
-                videoUrl={videoUrl}
-                videoInput={videoInput}
-                setVideoInput={setVideoInput}
-                onSetVideo={setRoomVideo}
-                onVideoControl={handleVideoControl}
-                onVideoSeek={handleVideoSeek}
-                playerRef={playerRef}
-                ignoreEventRef={ignoreEventRef}
-                isHost={isHost}
-              />
+          <main className="hidden flex-1 gap-5 lg:grid xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
+            <section className="flex min-w-0 flex-col gap-4">
+              <div className="vory-hero-panel">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.35em] text-violet-200/55">
+                      Vory Watch Party
+                    </p>
+                    <h1 className="mt-1 text-2xl font-black text-white xl:text-3xl">
+                      Birlikte izle, konuş, paylaş
+                    </h1>
+                  </div>
 
-              <ScreenShare roomCode={roomCode} username={currentUserPayload.username} />
+                  <div className="flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-200">
+                    <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(52,211,153,0.9)]" />
+                    {roomCode ? `ROOM ${roomCode}` : "LOBBY"}
+                  </div>
+                </div>
 
-              <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+                <VideoPlayer
+                  videoUrl={videoUrl}
+                  videoInput={videoInput}
+                  setVideoInput={setVideoInput}
+                  onSetVideo={setRoomVideo}
+                  onVideoControl={handleVideoControl}
+                  onVideoSeek={handleVideoSeek}
+                  playerRef={playerRef}
+                  ignoreEventRef={ignoreEventRef}
+                  isHost={isHost}
+                />
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <ScreenShare roomCode={roomCode} username={currentUserPayload.username} />
+
+                <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+              </div>
             </section>
 
-            <aside className="right-rail">
+            <aside className="vory-command-panel">
               <ProfileCard authUser={authUser} />
 
-              <RoomPanel
-                username={username}
-                setUsername={setUsername}
-                roomInput={roomInput}
-                setRoomInput={setRoomInput}
-                roomCode={roomCode}
-                status={status}
-                onCreateRoom={createRoom}
-                onJoinRoom={() => joinRoom()}
-                onLeaveRoom={leaveRoom}
+              <VoryPanelTabs
+                activeTab={desktopPanelTab}
+                onChange={setDesktopPanelTab}
+                messageCount={messages.length}
+                onlineCount={onlinePresence.length}
+                userCount={users.length}
               />
 
-              <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
-
-              <UserList users={users} />
-
-              <InviteBox roomCode={roomCode} />
-
-              <ChatPanel
-                messages={messages}
-                message={message}
-                setMessage={setMessage}
-                onSendMessage={sendMessage}
-              />
-
-              <PresenceFriendPanel
-                onlineUsers={onlinePresence}
-                currentSocketId={socket.id}
-                onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-              />
+              <div className="flex min-h-0 flex-col gap-4">
+                {renderDesktopPanel()}
+              </div>
             </aside>
           </main>
 
           <main className="block flex-1 lg:hidden">
-            <div className="mobile-stage">
+            <div className="mobile-stage space-y-4">
+              <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.28em] text-violet-200/50">
+                      Vory Mobile
+                    </p>
+                    <h1 className="mt-1 text-xl font-black">
+                      {roomCode ? `Room ${roomCode}` : "Lobby"}
+                    </h1>
+                  </div>
+
+                  <div className="rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-black text-emerald-200">
+                    👥 {users.length || onlinePresence.length}
+                  </div>
+                </div>
+              </div>
+
               {renderMobilePanel()}
             </div>
           </main>
