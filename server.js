@@ -5,6 +5,7 @@ dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 const rooms = {};
 const onlineUsers = new Map();
+const voiceRooms = {};
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -294,16 +295,54 @@ io.on("connection", (socket) => {
   socket.on("voice-join", ({ roomCode, username }) => {
     if (!roomCode || !rooms[roomCode]) return;
 
-    socket.join(`voice-${roomCode}`);
+    const voiceRoomName = `voice-${roomCode}`;
 
-    const peers = Array.from(io.sockets.adapter.rooms.get(`voice-${roomCode}`) || [])
-      .filter((id) => id !== socket.id);
+    socket.join(voiceRoomName);
+
+    if (!voiceRooms[roomCode]) {
+      voiceRooms[roomCode] = {};
+    }
+
+    voiceRooms[roomCode][socket.id] = {
+      socketId: socket.id,
+      username: username || "Kullanıcı",
+      muted: false,
+      level: 0,
+    };
+
+    const peers = Object.keys(voiceRooms[roomCode]).filter((id) => id !== socket.id);
 
     socket.emit("voice-peers", { peers });
 
-    socket.to(`voice-${roomCode}`).emit("voice-user-joined", {
+    io.to(voiceRoomName).emit("voice-users", {
+      users: Object.values(voiceRooms[roomCode]),
+    });
+
+    socket.to(voiceRoomName).emit("voice-user-joined", {
       socketId: socket.id,
       username: username || "Kullanıcı",
+    });
+  });
+
+  socket.on("voice-mute-state", ({ roomCode, muted }) => {
+    if (!roomCode || !voiceRooms[roomCode]?.[socket.id]) return;
+
+    voiceRooms[roomCode][socket.id].muted = !!muted;
+
+    io.to(`voice-${roomCode}`).emit("voice-users", {
+      users: Object.values(voiceRooms[roomCode]),
+    });
+  });
+
+  socket.on("voice-level", ({ roomCode, level }) => {
+    if (!roomCode || !voiceRooms[roomCode]?.[socket.id]) return;
+
+    const safeLevel = Math.max(0, Math.min(100, Number(level) || 0));
+    voiceRooms[roomCode][socket.id].level = safeLevel;
+
+    socket.to(`voice-${roomCode}`).emit("voice-level-update", {
+      socketId: socket.id,
+      level: safeLevel,
     });
   });
 
@@ -337,10 +376,24 @@ io.on("connection", (socket) => {
   socket.on("voice-leave", ({ roomCode }) => {
     if (!roomCode) return;
 
-    socket.leave(`voice-${roomCode}`);
+    const voiceRoomName = `voice-${roomCode}`;
 
-    socket.to(`voice-${roomCode}`).emit("voice-user-left", {
+    socket.leave(voiceRoomName);
+
+    if (voiceRooms[roomCode]) {
+      delete voiceRooms[roomCode][socket.id];
+
+      if (Object.keys(voiceRooms[roomCode]).length === 0) {
+        delete voiceRooms[roomCode];
+      }
+    }
+
+    socket.to(voiceRoomName).emit("voice-user-left", {
       socketId: socket.id,
+    });
+
+    io.to(voiceRoomName).emit("voice-users", {
+      users: Object.values(voiceRooms[roomCode] || {}),
     });
   });
 
@@ -358,8 +411,22 @@ io.on("connection", (socket) => {
 
     for (const roomName of socket.rooms) {
       if (roomName.startsWith("voice-")) {
+        const roomCode = roomName.replace("voice-", "");
+
+        if (voiceRooms[roomCode]) {
+          delete voiceRooms[roomCode][socket.id];
+
+          if (Object.keys(voiceRooms[roomCode]).length === 0) {
+            delete voiceRooms[roomCode];
+          }
+        }
+
         socket.to(roomName).emit("voice-user-left", {
           socketId: socket.id,
+        });
+
+        io.to(roomName).emit("voice-users", {
+          users: Object.values(voiceRooms[roomCode] || {}),
         });
       }
     }
