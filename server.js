@@ -8,9 +8,8 @@ const rooms = {};
 const onlineUsers = new Map();
 const voiceRooms = {};
 const screenShares = {};
-const partyInvites = new Map();
-const PARTY_INVITE_TTL_MS = 60 * 1000;
-const PARTY_INVITE_COOLDOWN_MS = 15 * 1000;
+const partyInviteCooldowns = new Map();
+const PARTY_INVITE_COOLDOWN_MS = 60 * 1000;
 
 const SYNC_DRIFT_WARN_SECONDS = 1.5;
 const SYNC_HARD_DRIFT_SECONDS = 3.5;
@@ -332,44 +331,6 @@ function clearSocketRoomPresence(socketId) {
     voiceActive: false,
     screenSharing: false,
   });
-}
-
-function getPresenceBySocketId(socketId) {
-  return Array.from(onlineUsers.values()).find((user) => user.socketId === socketId) || null;
-}
-
-function cleanupExpiredPartyInvites() {
-  const now = Date.now();
-
-  for (const [inviteId, invite] of partyInvites.entries()) {
-    if ((invite.expiresAt || 0) <= now) {
-      partyInvites.delete(inviteId);
-    }
-  }
-}
-
-function buildPartyInviteKey(fromSocketId, targetSocketId, roomCode) {
-  return `${fromSocketId}:${targetSocketId}:${normalizeRoomCode(roomCode)}`;
-}
-
-function getActivePartyInviteByKey(key) {
-  cleanupExpiredPartyInvites();
-
-  return Array.from(partyInvites.values()).find((invite) => invite.key === key) || null;
-}
-
-function resolvePartyInvite(inviteId, status = "resolved") {
-  const invite = partyInvites.get(inviteId);
-
-  if (!invite) return null;
-
-  partyInvites.delete(inviteId);
-
-  return {
-    ...invite,
-    status,
-    resolvedAt: Date.now(),
-  };
 }
 
 function emitActivity(roomCode, payload = {}) {
@@ -1430,79 +1391,64 @@ io.on("connection", (socket) => {
 
 
 
+  socket.on("party-invite-send", ({ targetSocketId, roomCode, fromUsername }, ack) => {
+    const reply = (payload) => {
+      if (typeof ack === "function") ack(payload);
+    };
 
-  socket.on("party-invite-send", (payload = {}, ack) => {
-    const { targetSocketId, roomCode, fromUsername } = payload || {};
     const targetRoomCode = normalizeRoomCode(roomCode);
 
-    function reply(ok, data = {}) {
-      const response = {
-        ok,
-        ...data,
-      };
-
-      if (typeof ack === "function") {
-        ack(response);
-      }
-
-      socket.emit(ok ? "party-invite-sent" : "party-invite-error", response);
-    }
-
-    cleanupExpiredPartyInvites();
-
     if (!targetSocketId || !targetRoomCode) {
-      reply(false, { message: "Davet için kullanıcı ve oda gerekli." });
-      return;
-    }
-
-    if (targetSocketId === socket.id) {
-      reply(false, { message: "Kendine davet gönderemezsin." });
+      reply({ ok: false, message: "Davet gönderilemedi." });
       return;
     }
 
     const room = rooms[targetRoomCode];
 
     if (!room) {
-      reply(false, { message: "Davet gönderilecek oda aktif değil." });
+      reply({ ok: false, message: "Davet gönderilecek oda bulunamadı." });
       return;
     }
 
-    const senderInRoom = room.users?.some((user) => user.id === socket.id);
-
-    if (!senderInRoom) {
-      reply(false, { message: "Davet göndermek için önce odada olmalısın." });
+    if (targetSocketId === socket.id) {
+      reply({ ok: false, message: "Kendine davet gönderemezsin." });
       return;
     }
 
-    const targetPresence = getPresenceBySocketId(targetSocketId);
+    const targetPresence = Array.from(onlineUsers.values()).find(
+      (user) => user.socketId === targetSocketId
+    );
 
     if (!targetPresence) {
-      reply(false, { message: "Arkadaş offline görünüyor." });
+      reply({ ok: false, message: "Kullanıcı offline görünüyor." });
       return;
     }
 
-    const targetCurrentRoom = normalizeRoomCode(targetPresence.roomCode || "");
-
-    if (targetCurrentRoom === targetRoomCode) {
-      reply(false, { message: "Arkadaşın zaten aynı odada." });
+    if (normalizeRoomCode(targetPresence.roomCode) === targetRoomCode) {
+      reply({ ok: false, message: "Bu kullanıcı zaten aynı odada." });
       return;
     }
 
-    const key = buildPartyInviteKey(socket.id, targetSocketId, targetRoomCode);
-    const existingInvite = getActivePartyInviteByKey(key);
+    const cooldownKey = `${socket.id}:${targetSocketId}:${targetRoomCode}`;
+    const lastInviteAt = partyInviteCooldowns.get(cooldownKey) || 0;
+    const elapsed = Date.now() - lastInviteAt;
 
-    if (existingInvite) {
-      const remainingSeconds = Math.max(1, Math.ceil(((existingInvite.expiresAt || Date.now()) - Date.now()) / 1000));
-      reply(false, {
-        message: `Bu arkadaşına zaten davet gönderdin. ${remainingSeconds} sn sonra tekrar dene.`,
-        invite: existingInvite,
+    if (elapsed < PARTY_INVITE_COOLDOWN_MS) {
+      const remainingSeconds = Math.ceil((PARTY_INVITE_COOLDOWN_MS - elapsed) / 1000);
+      reply({
+        ok: false,
+        cooldown: true,
+        remainingSeconds,
+        message: `Çok sık davet gönderemezsin. ${remainingSeconds} sn bekle.`,
       });
       return;
     }
 
+    partyInviteCooldowns.set(cooldownKey, Date.now());
+    setTimeout(() => partyInviteCooldowns.delete(cooldownKey), PARTY_INVITE_COOLDOWN_MS + 1000);
+
     const invite = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      key,
       type: "invite",
       title: "Party Invite",
       message: `${fromUsername || "Kullanıcı"} seni odaya davet etti.`,
@@ -1511,25 +1457,9 @@ io.on("connection", (socket) => {
       targetSocketId,
       roomCode: targetRoomCode,
       createdAt: Date.now(),
-      expiresAt: Date.now() + PARTY_INVITE_TTL_MS,
+      expiresAt: Date.now() + PARTY_INVITE_COOLDOWN_MS,
       read: false,
     };
-
-    partyInvites.set(invite.id, invite);
-
-    setTimeout(() => {
-      const activeInvite = partyInvites.get(invite.id);
-
-      if (!activeInvite) return;
-
-      partyInvites.delete(invite.id);
-
-      io.to(targetSocketId).emit("party-invite-expired", activeInvite);
-      io.to(socket.id).emit("party-invite-expired", {
-        ...activeInvite,
-        message: "Davet süresi doldu.",
-      });
-    }, PARTY_INVITE_TTL_MS + 500);
 
     io.to(targetSocketId).emit("party-invite-received", invite);
     io.to(targetSocketId).emit("notification:new", invite);
@@ -1541,26 +1471,11 @@ io.on("connection", (socket) => {
       username: fromUsername || "Kullanıcı",
     });
 
-    reply(true, {
-      message: `${targetPresence.username || "Kullanıcı"} davet edildi 🎉`,
-      invite,
+    reply({
+      ok: true,
+      message: "Davet gönderildi 🎉",
+      cooldownMs: PARTY_INVITE_COOLDOWN_MS,
     });
-  });
-
-  socket.on("party-invite-response", ({ inviteId, accepted }) => {
-    const resolvedInvite = resolvePartyInvite(inviteId, accepted ? "accepted" : "rejected");
-
-    if (!resolvedInvite) return;
-
-    if (resolvedInvite.fromSocketId) {
-      io.to(resolvedInvite.fromSocketId).emit("party-invite-response", {
-        ...resolvedInvite,
-        accepted: !!accepted,
-        message: accepted
-          ? `${resolvedInvite.fromUsername || "Kullanıcı"} daveti kabul etti.`
-          : "Davet reddedildi.",
-      });
-    }
   });
 
   socket.on("reaction:send", ({ roomCode, emoji, username }) => {

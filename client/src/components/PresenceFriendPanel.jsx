@@ -175,6 +175,7 @@ export default function PresenceFriendPanel({
   onlineUsers = [],
   currentSocketId,
   currentRoomCode = "",
+  inviteCooldowns = {},
   onJoinRoom,
   onInviteFriend,
 }) {
@@ -233,6 +234,9 @@ export default function PresenceFriendPanel({
               !!user.roomCode &&
               !!currentRoomCode &&
               String(user.roomCode).toUpperCase() === String(currentRoomCode).toUpperCase();
+            const inviteCooldownKey = user.userId || user._id || user.id || user.socketId;
+            const inviteCooldownActive =
+              Number(inviteCooldowns?.[inviteCooldownKey] || 0) > Date.now();
 
             return (
               <div
@@ -332,16 +336,16 @@ export default function PresenceFriendPanel({
                       <button
                         className="rounded-2xl bg-fuchsia-500/15 px-3 py-2 text-xs font-black text-fuchsia-200 transition hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-40"
                         onClick={() => onInviteFriend?.(user)}
-                        disabled={!currentRoomCode || !user.isOnline || !user.socketId || !onInviteFriend}
+                        disabled={!user.isOnline || !user.socketId || !onInviteFriend || inviteCooldownActive}
                         title={
-                          !currentRoomCode
-                            ? "Önce oda oluştur veya odaya gir"
-                            : !user.isOnline
-                              ? "Arkadaş offline"
+                          !user.isOnline
+                            ? "Arkadaş offline"
+                            : inviteCooldownActive
+                              ? "Davet için biraz bekle"
                               : "Arkadaşını odana davet et"
                         }
                       >
-                        Davet Et
+                        {inviteCooldownActive ? "Bekle" : "Davet Et"}
                       </button>
                     )}
                   </div>

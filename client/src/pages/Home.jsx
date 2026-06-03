@@ -125,6 +125,7 @@ export default function Home({ authUser, onLogout }) {
   const [reactions, setReactions] = useState([]);
   const [typingUser, setTypingUser] = useState("");
   const [partyInvite, setPartyInvite] = useState(null);
+  const [inviteCooldowns, setInviteCooldowns] = useState({});
   const [watchHistory, setWatchHistory] = useState(() =>
     readLocalJson("vory-watch-history", [])
   );
@@ -231,6 +232,21 @@ export default function Home({ authUser, onLogout }) {
   useEffect(() => {
     writeLocalJson("vory-profile-stats", profileStats);
   }, [profileStats]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setInviteCooldowns((prev) => {
+        const now = Date.now();
+        const next = Object.fromEntries(
+          Object.entries(prev || {}).filter(([, expiresAt]) => Number(expiresAt) > now)
+        );
+
+        return Object.keys(next).length === Object.keys(prev || {}).length ? prev : next;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const playerRef = useRef(null);
   const ignoreEventRef = useRef(false);
@@ -563,33 +579,6 @@ export default function Home({ authUser, onLogout }) {
       toast.success(`${invite.fromUsername || "Kullanıcı"} seni davet etti 🎉`);
     });
 
-    socket.on("party-invite-sent", ({ message }) => {
-      if (message) {
-        toast.success(message);
-      }
-    });
-
-    socket.on("party-invite-error", ({ message }) => {
-      toast.error(message || "Davet gönderilemedi.");
-    });
-
-    socket.on("party-invite-expired", (invite) => {
-      setPartyInvite((currentInvite) => {
-        if (!currentInvite || currentInvite.id !== invite?.id) return currentInvite;
-        return null;
-      });
-
-      if (invite?.message) {
-        toast(invite.message, { icon: "⏱️" });
-      }
-    });
-
-    socket.on("party-invite-response", ({ accepted, message }) => {
-      toast(message || (accepted ? "Davet kabul edildi." : "Davet reddedildi."), {
-        icon: accepted ? "🎉" : "✋",
-      });
-    });
-
     socket.on("reaction:new", (reaction) => {
       addVisualReaction(reaction);
     });
@@ -627,10 +616,6 @@ export default function Home({ authUser, onLogout }) {
       socket.off("media-queue-updated");
       socket.off("media-current-updated");
       socket.off("party-invite-received");
-      socket.off("party-invite-sent");
-      socket.off("party-invite-error");
-      socket.off("party-invite-expired");
-      socket.off("party-invite-response");
       socket.off("reaction:new");
     };
   }, []);
@@ -1093,13 +1078,8 @@ export default function Home({ authUser, onLogout }) {
       return;
     }
 
-    if (!targetUser?.socketId) {
-      toast.error("Davet gönderilecek kullanıcı bulunamadı.");
-      return;
-    }
-
-    if (targetUser.socketId === socket.id) {
-      toast.error("Kendine davet gönderemezsin.");
+    if (!targetUser?.socketId || !targetUser?.isOnline) {
+      toast.error("Davet gönderilecek kullanıcı online değil.");
       return;
     }
 
@@ -1107,7 +1087,16 @@ export default function Home({ authUser, onLogout }) {
       targetUser?.roomCode &&
       String(targetUser.roomCode).toUpperCase() === String(roomCode).toUpperCase()
     ) {
-      toast("Arkadaşın zaten aynı odada 👥");
+      toast("Zaten aynı odadasınız 👥");
+      return;
+    }
+
+    const cooldownKey = targetUser.userId || targetUser._id || targetUser.id || targetUser.socketId;
+    const cooldownUntil = Number(inviteCooldowns?.[cooldownKey] || 0);
+
+    if (cooldownUntil > Date.now()) {
+      const remainingSeconds = Math.ceil((cooldownUntil - Date.now()) / 1000);
+      toast.error(`Çok sık davet gönderemezsin. ${remainingSeconds} sn bekle.`);
       return;
     }
 
@@ -1120,11 +1109,24 @@ export default function Home({ authUser, onLogout }) {
       },
       (response) => {
         if (!response?.ok) {
+          if (response?.cooldown && response?.remainingSeconds) {
+            setInviteCooldowns((prev) => ({
+              ...prev,
+              [cooldownKey]: Date.now() + Number(response.remainingSeconds) * 1000,
+            }));
+          }
+
           toast.error(response?.message || "Davet gönderilemedi.");
           return;
         }
 
+        setInviteCooldowns((prev) => ({
+          ...prev,
+          [cooldownKey]: Date.now() + Number(response.cooldownMs || 60000),
+        }));
+
         bumpProfileStat("invitesSent", 1);
+        toast.success(response?.message || `${targetUser.username || "Kullanıcı"} davet edildi 🎉`);
       }
     );
   }
@@ -1132,23 +1134,11 @@ export default function Home({ authUser, onLogout }) {
   function acceptPartyInvite() {
     if (!partyInvite?.roomCode) return;
 
-    socket.emit("party-invite-response", {
-      inviteId: partyInvite.id,
-      accepted: true,
-    });
-
     joinRoom(partyInvite.roomCode);
     setPartyInvite(null);
   }
 
   function rejectPartyInvite() {
-    if (partyInvite?.id) {
-      socket.emit("party-invite-response", {
-        inviteId: partyInvite.id,
-        accepted: false,
-      });
-    }
-
     setPartyInvite(null);
   }
 
@@ -1283,6 +1273,7 @@ export default function Home({ authUser, onLogout }) {
             onlineUsers={onlinePresence}
             currentSocketId={socket.id}
             currentRoomCode={roomCode}
+            inviteCooldowns={inviteCooldowns}
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onInviteFriend={sendPartyInvite}
           />
@@ -1330,6 +1321,7 @@ export default function Home({ authUser, onLogout }) {
           onlinePresence={onlinePresence}
           currentSocketId={socket.id}
           currentRoomCode={roomCode}
+          inviteCooldowns={inviteCooldowns}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
           onInviteFriend={sendPartyInvite}
         />
@@ -1442,6 +1434,7 @@ export default function Home({ authUser, onLogout }) {
           onlineUsers={onlinePresence}
           currentSocketId={socket.id}
           currentRoomCode={roomCode}
+          inviteCooldowns={inviteCooldowns}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
           onInviteFriend={sendPartyInvite}
         />
@@ -1494,17 +1487,16 @@ export default function Home({ authUser, onLogout }) {
                   Party Invite
                 </p>
                 <h2 className="mt-1 text-xl font-black text-white">
-                  {partyInvite.fromUsername || "Kullanıcı"} seni odaya davet etti
+                  {partyInvite.fromUsername || "Kullanıcı"} seni davet etti
                 </h2>
                 <p className="mt-1 text-sm text-white/45">
                   Room {partyInvite.roomCode}
-                  {partyInvite.expiresAt ? " • 60 sn içinde cevapla" : ""}
                 </p>
               </div>
 
               <div className="flex gap-2">
                 <button className="btn-primary w-auto" onClick={acceptPartyInvite}>
-                  Kabul Et
+                  Katıl
                 </button>
                 <button className="btn-secondary w-auto" onClick={rejectPartyInvite}>
                   Reddet
