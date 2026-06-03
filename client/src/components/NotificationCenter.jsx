@@ -12,7 +12,6 @@ import {
 import { useMemo, useState } from "react";
 
 function getNotificationIcon(type) {
-  if (type === "dm") return MessageCircle;
   if (type === "screen") return Monitor;
   if (type === "voice") return Radio;
   if (type === "video") return Video;
@@ -41,6 +40,7 @@ export default function NotificationCenter({
   notifications = [],
   onMarkRead,
   onClear,
+  onNotificationClick,
 }) {
   const [open, setOpen] = useState(false);
 
@@ -55,6 +55,16 @@ export default function NotificationCenter({
 
     if (nextOpen) {
       onMarkRead?.();
+    }
+  }
+
+  function handleNotificationClick(notification) {
+    if (!notification) return;
+
+    onNotificationClick?.(notification);
+
+    if (notification.type === "dm") {
+      setOpen(false);
     }
   }
 
@@ -117,9 +127,13 @@ export default function NotificationCenter({
                   const Icon = getNotificationIcon(notification.type);
 
                   return (
-                    <div
+                    <button
                       key={notification.id}
-                      className={`rounded-3xl border p-3 transition ${
+                      type="button"
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`w-full rounded-3xl border p-3 text-left transition ${
+                        notification.type === "dm" ? "cursor-pointer hover:border-sky-300/25 hover:bg-sky-400/10" : "cursor-default"
+                      } ${
                         notification.read
                           ? "border-white/5 bg-white/[0.035]"
                           : "border-violet-400/20 bg-violet-400/10"
@@ -151,7 +165,7 @@ export default function NotificationCenter({
                           ) : null}
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

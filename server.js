@@ -1775,6 +1775,7 @@ io.on("connection", (socket) => {
           createdAt: dmMessage.createdAt,
           read: false,
           fromUserId: dmMessage.fromUserId,
+          fromUsername: dmMessage.fromUsername,
         });
       }
 

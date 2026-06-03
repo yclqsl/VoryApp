@@ -18,6 +18,7 @@ export default function VoryTopBar({
   notifications,
   onMarkNotificationsRead,
   onClearNotifications,
+  onNotificationClick,
 }) {
   return (
     <header className="vory-v5-topbar">
@@ -110,6 +111,7 @@ export default function VoryTopBar({
           notifications={notifications}
           onMarkRead={onMarkNotificationsRead}
           onClear={onClearNotifications}
+          onNotificationClick={onNotificationClick}
         />
 
         <button
