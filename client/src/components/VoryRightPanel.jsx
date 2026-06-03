@@ -31,6 +31,7 @@ export default function VoryRightPanel({
   onlinePresence,
   currentSocketId,
   onJoinRoom,
+  onInviteFriend,
   activities = [],
 }) {
   return (
@@ -84,6 +85,7 @@ export default function VoryRightPanel({
               onlineUsers={onlinePresence}
               currentSocketId={currentSocketId}
               onJoinRoom={onJoinRoom}
+              onInviteFriend={onInviteFriend}
             />
           </div>
         )}

@@ -359,30 +359,18 @@ export default function Home({ authUser, onLogout }) {
       setPartyInvite(invite);
 
       addLocalNotification({
+        ...invite,
         type: "invite",
         title: "Party Invite",
-        message: `${invite.fromUsername} seni davet etti.`,
+        message: `${invite.fromUsername || "Kullanıcı"} seni odaya davet etti.`,
         roomCode: invite.roomCode,
       });
 
-      toast.success(`${invite.fromUsername} seni davet etti 🎉`);
+      toast.success(`${invite.fromUsername || "Kullanıcı"} seni davet etti 🎉`);
     });
 
     socket.on("reaction:new", (reaction) => {
-      const visualReaction = {
-        ...reaction,
-        visualId: `${reaction.id}-${Math.random().toString(36).slice(2, 6)}`,
-        x: 18 + Math.random() * 64,
-        delay: Math.random() * 120,
-      };
-
-      setReactions((prev) => [...prev.slice(-14), visualReaction]);
-
-      setTimeout(() => {
-        setReactions((prev) =>
-          prev.filter((item) => item.visualId !== visualReaction.visualId)
-        );
-      }, 2400);
+      addVisualReaction(reaction);
     });
 
     return () => {
@@ -417,6 +405,7 @@ export default function Home({ authUser, onLogout }) {
       socket.off("notification:new");
       socket.off("media-queue-updated");
       socket.off("media-current-updated");
+      socket.off("party-invite-received");
       socket.off("reaction:new");
     };
   }, []);
@@ -649,11 +638,38 @@ export default function Home({ authUser, onLogout }) {
     setNotifications([]);
   }
 
+  function addVisualReaction(reaction) {
+    const visualReaction = {
+      ...reaction,
+      visualId: `${reaction.id || Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      x: 18 + Math.random() * 64,
+      delay: Math.random() * 120,
+    };
+
+    setReactions((prev) => [...prev.slice(-14), visualReaction]);
+
+    setTimeout(() => {
+      setReactions((prev) =>
+        prev.filter((item) => item.visualId !== visualReaction.visualId)
+      );
+    }, 2400);
+  }
+
   function sendReaction(emoji) {
     if (!roomCode) {
       toast.error("Önce odaya gir.");
       return;
     }
+
+    const localReaction = {
+      id: `local-${Date.now()}`,
+      emoji,
+      username: currentUserPayload.username,
+      roomCode,
+      createdAt: Date.now(),
+    };
+
+    addVisualReaction(localReaction);
 
     socket.emit("reaction:send", {
       roomCode,
@@ -662,9 +678,29 @@ export default function Home({ authUser, onLogout }) {
     });
   }
 
-  
+  function sendPartyInvite(targetUser) {
+    if (!roomCode) {
+      toast.error("Önce oda oluştur veya odaya gir.");
+      return;
+    }
+
+    if (!targetUser?.socketId) {
+      toast.error("Davet gönderilecek kullanıcı bulunamadı.");
+      return;
+    }
+
+    socket.emit("party-invite-send", {
+      targetSocketId: targetUser.socketId,
+      roomCode,
+      fromUsername: currentUserPayload.username,
+    });
+
+    toast.success(`${targetUser.username || "Kullanıcı"} davet edildi 🎉`);
+  }
+
   function acceptPartyInvite() {
-    if (!partyInvite) return;
+    if (!partyInvite?.roomCode) return;
+
     joinRoom(partyInvite.roomCode);
     setPartyInvite(null);
   }
@@ -753,6 +789,7 @@ export default function Home({ authUser, onLogout }) {
             onlineUsers={onlinePresence}
             currentSocketId={socket.id}
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+          onInviteFriend={sendPartyInvite}
           />
         </div>
       );
@@ -793,6 +830,7 @@ export default function Home({ authUser, onLogout }) {
           onlinePresence={onlinePresence}
           currentSocketId={socket.id}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+          onInviteFriend={sendPartyInvite}
         />
       </div>
     );
@@ -882,7 +920,8 @@ export default function Home({ authUser, onLogout }) {
           onlineUsers={onlinePresence}
           currentSocketId={socket.id}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-        />
+        onInviteFriend={sendPartyInvite}
+          />
       </section>
     );
   }
@@ -924,14 +963,26 @@ export default function Home({ authUser, onLogout }) {
           />
 
           {partyInvite && (
-            <div className="glass-panel flex items-center justify-between border-fuchsia-400/25 p-5">
+            <div className="vory-party-invite-banner glass-panel">
               <div>
-                <h3 className="text-lg font-black">🎉 Party Invite</h3>
-                <p>{partyInvite.fromUsername} seni {partyInvite.roomCode} odasına davet etti.</p>
+                <p className="text-xs font-black uppercase tracking-[0.25em] text-fuchsia-200/70">
+                  Party Invite
+                </p>
+                <h2 className="mt-1 text-xl font-black text-white">
+                  {partyInvite.fromUsername || "Kullanıcı"} seni davet etti
+                </h2>
+                <p className="mt-1 text-sm text-white/45">
+                  Room {partyInvite.roomCode}
+                </p>
               </div>
+
               <div className="flex gap-2">
-                <button className="btn-primary" onClick={acceptPartyInvite}>Katıl</button>
-                <button className="btn-secondary" onClick={rejectPartyInvite}>Reddet</button>
+                <button className="btn-primary w-auto" onClick={acceptPartyInvite}>
+                  Katıl
+                </button>
+                <button className="btn-secondary w-auto" onClick={rejectPartyInvite}>
+                  Reddet
+                </button>
               </div>
             </div>
           )}

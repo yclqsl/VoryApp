@@ -17,6 +17,7 @@ function getNotificationIcon(type) {
   if (type === "video") return Video;
   if (type === "room") return Users;
   if (type === "host") return Crown;
+  if (type === "invite") return Users;
   return MessageCircle;
 }
 

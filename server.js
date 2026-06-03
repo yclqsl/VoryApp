@@ -1184,12 +1184,28 @@ io.on("connection", (socket) => {
 
 
   socket.on("party-invite-send", ({ targetSocketId, roomCode, fromUsername }) => {
-    if (!targetSocketId || !roomCode) return;
+    if (!targetSocketId || !roomCode || !rooms[roomCode]) return;
 
-    io.to(targetSocketId).emit("party-invite-received", {
-      roomCode,
+    const invite = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      type: "invite",
+      title: "Party Invite",
+      message: `${fromUsername || "Kullanıcı"} seni odaya davet etti.`,
       fromUsername: fromUsername || "Kullanıcı",
+      targetSocketId,
+      roomCode,
       createdAt: Date.now(),
+      read: false,
+    };
+
+    io.to(targetSocketId).emit("party-invite-received", invite);
+    io.to(targetSocketId).emit("notification:new", invite);
+
+    emitActivity(roomCode, {
+      type: "invite",
+      title: "Davet gönderildi",
+      message: `${fromUsername || "Kullanıcı"} bir arkadaşını odaya davet etti.`,
+      username: fromUsername || "Kullanıcı",
     });
   });
 

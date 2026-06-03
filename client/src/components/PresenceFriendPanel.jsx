@@ -35,7 +35,7 @@ function getActivityLabel(user) {
   };
 }
 
-export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId, onJoinRoom }) {
+export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId, onJoinRoom, onInviteFriend }) {
   const users = onlineUsers
     .filter((user) => user?.socketId && user.socketId !== currentSocketId)
     .sort((a, b) => {
@@ -114,15 +114,24 @@ export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId,
                     )}
                   </div>
 
-                  {user.roomCode && (
+                  <div className="flex shrink-0 flex-col gap-2">
+                    {user.roomCode && (
+                      <button
+                        className="rounded-2xl bg-violet-500/15 px-3 py-2 text-xs font-black text-violet-200 transition hover:bg-violet-500/25"
+                        onClick={() => onJoinRoom?.(user.roomCode)}
+                      >
+                        Katıl
+                      </button>
+                    )}
+
                     <button
-                      className="shrink-0 rounded-2xl bg-violet-500/15 px-3 py-2 text-xs font-black text-violet-200 transition hover:bg-violet-500/25"
-                      onClick={() => onJoinRoom?.(user.roomCode)}
+                      className="rounded-2xl bg-fuchsia-500/15 px-3 py-2 text-xs font-black text-fuchsia-200 transition hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={() => onInviteFriend?.(user)}
+                      disabled={!onInviteFriend}
                     >
-                      Katıl
+                      Davet Et
                     </button>
-                    <button className="ml-2 shrink-0 rounded-2xl bg-fuchsia-500/15 px-3 py-2 text-xs font-black text-fuchsia-200">Davet Et</button>
-                  )}
+                  </div>
                 </div>
               </div>
             );
