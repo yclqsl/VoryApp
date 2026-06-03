@@ -489,8 +489,20 @@ export default function Home({ authUser, onLogout }) {
     });
 
     socket.on("room-error", (message) => {
-      toast.error(message);
-    });
+  toast.error(message);
+
+  const lower = String(message || "").toLowerCase();
+
+  if (
+    lower.includes("oda bulunamadı") ||
+    lower.includes("room not found")
+  ) {
+    setPendingInviteRoom("");
+    setLastRestoreMessage(
+      "Bu oda artık aktif değil. Yeni bir davet linki iste."
+    );
+  }
+});
 
     socket.on("online-users", (presenceUsers) => {
       setOnlinePresence(presenceUsers || []);
@@ -1434,7 +1446,9 @@ export default function Home({ authUser, onLogout }) {
                   Room Link Algılandı
                 </p>
                 <h2 className="mt-1 text-xl font-black text-white">
-                  {pendingInviteRoom} odasına yönlendiriliyorsun
+                  {pendingInviteRoom
+                    ? `${pendingInviteRoom} odasına yönlendiriliyorsun`
+                    : "Bu oda artık aktif değil"}
                 </h2>
               </div>
 
