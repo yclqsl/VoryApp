@@ -1048,6 +1048,20 @@ io.on("connection", (socket) => {
 
     if (!nextMedia) {
       socket.emit("room-error", "Sırada medya yok.");
+
+      emitNotification(roomCode, {
+        type: "video",
+        title: "Playlist tamamlandı",
+        message: "Sıradaki medya bulunamadı.",
+      });
+
+      emitActivity(roomCode, {
+        type: "video",
+        title: "Playlist tamamlandı",
+        message: "Sıradaki medya bulunamadı.",
+        username: "VoryApp",
+      });
+
       emitMediaQueue(roomCode);
       return;
     }

@@ -65,6 +65,9 @@ export default function MediaQueue({
             <p className="truncate text-xs text-white/40">
               {currentMedia ? `Şu an: ${currentMedia.title}` : nextTitle}
             </p>
+            <p className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300/70">
+              Auto Next aktif 🎬
+            </p>
           </div>
         </div>
 

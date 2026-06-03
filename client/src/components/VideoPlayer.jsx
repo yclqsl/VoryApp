@@ -17,8 +17,7 @@ export default function VideoPlayer({
 }) {
   const heartbeatRef = useRef(null);
   const driftCheckRef = useRef(null);
-  const qualityLockRef = useRef(false);
-  const lastStateEmitRef = useRef({ action: "", time: 0, emittedAt: 0 });
+  const autoNextLockRef = useRef(false);
 
   function getYouTubeVideoId(url) {
     try {
@@ -59,6 +58,23 @@ export default function VideoPlayer({
     socket.emit("force-video-sync", { roomCode });
   }
 
+  function requestAutoNext() {
+    if (!isHost) return;
+    if (autoNextLockRef.current) return;
+
+    const roomCode = getRoomCode();
+    if (!roomCode) return;
+
+    autoNextLockRef.current = true;
+
+    socket.emit("media-play-next", { roomCode });
+    toast("Sıradaki medya otomatik başlatılıyor 🎬", { icon: "⏭️" });
+
+    setTimeout(() => {
+      autoNextLockRef.current = false;
+    }, 2500);
+  }
+
   function handleReady(event) {
     playerRef.current = event.target;
 
@@ -73,42 +89,20 @@ export default function VideoPlayer({
   function handleStateChange(event) {
     if (!playerRef.current || ignoreEventRef.current) return;
 
-    // YouTube kalite değişimi / buffer sırasında iframe kısa süreli pause-play eventleri üretir.
-    // Bu sırada sync yayarsak viewer tarafında mikro seek ve çift ses hissi oluşur.
-    if (event.data === 3) {
-      qualityLockRef.current = true;
-      window.voryPlayerBufferingUntil = Date.now() + 8000;
-
-      setTimeout(() => {
-        qualityLockRef.current = false;
-      }, 8000);
-
-      return;
-    }
-
     // Viewer'ın local play/pause yapması hostu etkilemez.
-    if (!isHost || qualityLockRef.current) return;
+    // Sürekli geri çekmeyiz; 30 sn drift kontrolü bunu gerekirse düzeltir.
+    if (!isHost) return;
 
     const currentTime = playerRef.current.getCurrentTime();
-    const action = event.data === 1 ? "play" : event.data === 2 || event.data === 0 ? "pause" : "";
 
-    if (!action) return;
+    if (event.data === 1) onVideoControl("play", currentTime);
+    if (event.data === 2) onVideoControl("pause", currentTime);
 
-    const now = Date.now();
-    const last = lastStateEmitRef.current;
-    const sameAction = last.action === action;
-    const closeTime = Math.abs((last.time || 0) - currentTime) < 0.8;
-    const tooSoon = now - (last.emittedAt || 0) < 1200;
-
-    if (sameAction && closeTime && tooSoon) return;
-
-    lastStateEmitRef.current = {
-      action,
-      time: currentTime,
-      emittedAt: now,
-    };
-
-    onVideoControl(action, currentTime);
+    // YouTube state 0 = video bitti. Host bitişi algılayınca sıradaki medyayı açar.
+    if (event.data === 0) {
+      onVideoControl("pause", currentTime);
+      requestAutoNext();
+    }
   }
 
   function handleError(event) {
@@ -120,17 +114,6 @@ export default function VideoPlayer({
     }
 
     toast.error("Video yüklenemedi. Farklı bir YouTube linki dene.");
-  }
-
-  function handlePlaybackQualityChange() {
-    // 2K/4K kaliteye geçerken YouTube iframe uzun süre buffer/rebuild yapabiliyor.
-    // Bu pencerede heartbeat/state eventlerini kilitliyoruz.
-    qualityLockRef.current = true;
-    window.voryPlayerBufferingUntil = Date.now() + 9000;
-
-    setTimeout(() => {
-      qualityLockRef.current = false;
-    }, 9000);
   }
 
   function syncTime() {
@@ -156,12 +139,9 @@ export default function VideoPlayer({
     // Bu emit viewer'a seek yaptırmaz, sadece state saklar.
     heartbeatRef.current = setInterval(() => {
       if (!playerRef.current) return;
-      if (Date.now() < (window.voryPlayerBufferingUntil || 0)) return;
 
       const roomCode = getRoomCode();
       if (!roomCode) return;
-
-      if (qualityLockRef.current) return;
 
       socket.emit("video-heartbeat", {
         roomCode,
@@ -221,7 +201,6 @@ export default function VideoPlayer({
             iframeClassName="h-full w-full"
             onReady={handleReady}
             onStateChange={handleStateChange}
-            onPlaybackQualityChange={handlePlaybackQualityChange}
             onError={handleError}
             opts={{
               width: "100%",
