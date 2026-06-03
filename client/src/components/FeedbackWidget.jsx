@@ -90,12 +90,12 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-3 backdrop-blur-md sm:p-4">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md">
           <form
             onSubmit={submitFeedback}
-            className="max-h-[88vh] w-full max-w-lg overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0c0a16] text-white shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
+            className="w-full max-w-[560px] overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0c0a16] text-white shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
           >
-            <div className="border-b border-white/10 bg-white/[0.03] p-4">
+            <div className="border-b border-white/10 bg-white/[0.03] px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-fuchsia-400/20 bg-fuchsia-500/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-fuchsia-200">
@@ -103,8 +103,8 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                   </div>
 
                   <h2 className="text-xl font-black">Feedback Center</h2>
-                  <p className="mt-1 text-xs text-white/45">
-                    Bug, öneri veya deneyimini direkt VoryApp beta ekibine gönder.
+                  <p className="mt-1 text-sm text-white/45">
+                    Bug, öneri veya deneyimini gönder.
                   </p>
                 </div>
 
@@ -118,7 +118,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
               </div>
             </div>
 
-            <div className="max-h-[72vh] space-y-3 overflow-y-auto p-4 pr-3">
+            <div className="space-y-3 p-5">
               <div className="grid gap-2 sm:grid-cols-3">
                 {feedbackTypes.map((item) => {
                   const Icon = item.icon;
@@ -152,7 +152,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                       Deneyim puanı
                     </p>
                     <p className="mt-1 text-xs text-white/35">
-                      Closed beta hissi nasıl?
+                      Beta hissi nasıl?
                     </p>
                   </div>
 
@@ -167,7 +167,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                       key={value}
                       type="button"
                       onClick={() => setRating(value)}
-                      className={`flex h-10 w-10 items-center justify-center rounded-2xl border transition ${
+                      className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${
                         value <= rating
                           ? "border-amber-300/25 bg-amber-400/15 text-amber-200"
                           : "border-white/10 bg-black/20 text-white/25 hover:text-white/60"
@@ -187,7 +187,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="Örn: Invite link tıklayınca oda açılmadı"
-                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/40"
+                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/40"
                   maxLength={140}
                 />
               </label>
@@ -200,12 +200,12 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
                   placeholder="Ne yaptın, ne oldu, ne bekliyordun?"
-                  className="min-h-28 w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/40"
+                  className="min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/40"
                   maxLength={3000}
                 />
               </label>
 
-              <div className="grid gap-2 rounded-3xl bg-white/[0.04] p-3 text-xs text-white/35 sm:grid-cols-3">
+              <div className="grid gap-2 rounded-2xl bg-white/[0.04] p-2.5 text-[11px] text-white/35 sm:grid-cols-3">
                 <div>
                   Room: <span className="font-bold text-white/60">{roomCode || "yok"}</span>
                 </div>
@@ -220,7 +220,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
               <button
                 type="submit"
                 disabled={sending}
-                className="sticky bottom-0 flex w-full items-center justify-center gap-2 rounded-3xl bg-white px-5 py-3 font-black text-black transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 font-black text-black transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Send size={17} />
                 {sending ? "Gönderiliyor..." : "Feedback Gönder"}
