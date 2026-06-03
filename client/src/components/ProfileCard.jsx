@@ -54,6 +54,9 @@ export default function ProfileCard({ authUser, onUserUpdate }) {
     }
   }
 
+  const username = authUser?.username || "user";
+  const email = authUser?.email || "Closed beta user";
+
   return (
     <section className="glass overflow-hidden p-0">
       <div className="h-20 bg-gradient-to-r from-violet-600/80 via-fuchsia-600/60 to-indigo-600/70" />
@@ -68,6 +71,7 @@ export default function ProfileCard({ authUser, onUserUpdate }) {
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}
               title="Profil fotoğrafı değiştir"
+              type="button"
             >
               {loading ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />}
             </button>
@@ -88,8 +92,50 @@ export default function ProfileCard({ authUser, onUserUpdate }) {
         </div>
 
         <div className="mt-4 min-w-0">
-          <h2 className="truncate text-xl font-black">@{authUser?.username}</h2>
-          <p className="truncate text-sm text-white/40">{authUser?.email}</p>
+          <h2 className="truncate text-xl font-black">@{username}</h2>
+          <p className="truncate text-sm text-white/40">{email}</p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="rounded-full bg-fuchsia-500/15 px-3 py-1 text-xs font-black text-fuchsia-200">
+              🧪 Closed Beta Tester
+            </span>
+
+            <span className="rounded-full bg-yellow-500/15 px-3 py-1 text-xs font-black text-yellow-200">
+              ⭐ Level 1 Explorer
+            </span>
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="rounded-2xl border border-white/8 bg-white/5 p-3 text-center">
+              <p className="text-lg font-black text-white">0</p>
+              <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/35">
+                Rooms
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/8 bg-white/5 p-3 text-center">
+              <p className="text-lg font-black text-white">0h</p>
+              <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/35">
+                Watch
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/8 bg-white/5 p-3 text-center">
+              <p className="text-lg font-black text-white">0</p>
+              <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/35">
+                Friends
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-3xl border border-violet-400/10 bg-violet-500/10 p-3">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-200/55">
+              Profile Status
+            </p>
+            <p className="mt-1 text-sm font-bold text-white/70">
+              VoryApp closed beta explorer profile is active.
+            </p>
+          </div>
         </div>
       </div>
     </section>
