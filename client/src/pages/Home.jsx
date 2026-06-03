@@ -20,6 +20,7 @@ import ProfileCard from "../components/ProfileCard";
 import VoiceChat from "../components/VoiceChat";
 import ScreenShare from "../components/ScreenShare";
 import MobileBottomNav from "../components/MobileBottomNav";
+import AdminFeedbackPanel from "../components/AdminFeedbackPanel";
 
 function getRoomCodeFromLocation() {
   const pathMatch = window.location.pathname.match(/^\/room\/([^/?#]+)/i);
@@ -940,6 +941,11 @@ export default function Home({ authUser, onLogout }) {
       return;
     }
 
+    if (section === "admin") {
+      setActiveMobileTab("admin");
+      return;
+    }
+
     setActiveMobileTab(section);
   }
 
@@ -1028,6 +1034,10 @@ export default function Home({ authUser, onLogout }) {
           />
         </div>
       );
+    }
+
+    if (appSection === "admin") {
+      return <AdminFeedbackPanel authUser={authUser} />;
     }
 
     return (
@@ -1145,6 +1155,14 @@ export default function Home({ authUser, onLogout }) {
 
           {renderRoomInviteCard()}
           <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+        </section>
+      );
+    }
+
+    if (activeMobileTab === "admin") {
+      return (
+        <section className="flex min-w-0 flex-col gap-4">
+          <AdminFeedbackPanel authUser={authUser} />
         </section>
       );
     }

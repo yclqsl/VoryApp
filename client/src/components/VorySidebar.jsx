@@ -1,4 +1,4 @@
-import { Home, MessageCircle, Radio, UsersRound, Video } from "lucide-react";
+import { Home, MessageCircle, Radio, ShieldCheck, UsersRound, Video } from "lucide-react";
 
 const items = [
   { id: "watch", label: "Watch", icon: Video },
@@ -6,6 +6,7 @@ const items = [
   { id: "voice", label: "Voice", icon: Radio },
   { id: "chat", label: "Chat", icon: MessageCircle },
   { id: "friends", label: "Social", icon: UsersRound },
+  { id: "admin", label: "Admin", icon: ShieldCheck },
 ];
 
 export default function VorySidebar({
