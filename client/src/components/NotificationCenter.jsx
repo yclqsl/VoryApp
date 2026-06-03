@@ -57,7 +57,7 @@ export default function NotificationCenter({
   }
 
   return (
-    <div className="relative z-50">
+    <div className="relative z-[9999]">
       <button
         type="button"
         onClick={toggleOpen}
@@ -74,7 +74,7 @@ export default function NotificationCenter({
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-3 w-[min(92vw,390px)] overflow-hidden rounded-[2rem] border border-white/10 bg-black/90 shadow-[0_24px_100px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+        <div className="absolute right-0 top-full z-[9999] mt-3 w-[390px] max-w-[90vw] overflow-hidden rounded-[2rem] border border-white/10 bg-black/90 shadow-[0_24px_100px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
           <div className="flex items-center justify-between border-b border-white/10 p-4">
             <div>
               <h2 className="text-base font-black text-white">Bildirim Merkezi</h2>
