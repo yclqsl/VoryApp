@@ -27,7 +27,7 @@ export default function VoryTopBar({
         </div>
 
         <div className="vory-top-title">
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h1>VoryApp</h1>
 
             {isHost && (
@@ -35,12 +35,30 @@ export default function VoryTopBar({
                 HOST
               </span>
             )}
+
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                borderRadius: 999,
+                border: "1px solid rgba(244,114,182,0.22)",
+                background: "rgba(217,70,239,0.15)",
+                padding: "4px 8px",
+                fontSize: 10,
+                fontWeight: 900,
+                letterSpacing: "0.08em",
+                color: "rgb(251,207,232)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              🧪 CLOSED BETA
+            </span>
           </div>
 
           <span>
             {roomCode ? `Room ${roomCode}` : "Lobby"}
             {" • "}
-            {userCount || 0} Online
+            👥 {userCount || 0} Online
             {" • "}
             @{authUser?.username || "user"}
           </span>
@@ -48,22 +66,34 @@ export default function VoryTopBar({
       </div>
 
       <div className="hidden items-center gap-2 xl:flex">
-        <div className="vory-live-pill">
+        <div
+          className="vory-live-pill"
+          style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}
+        >
           <UsersRound size={15} />
-          <strong>{watchingCount || 0}</strong>
-          <span>Watching</span>
+          <span style={{ fontWeight: 900, lineHeight: 1 }}>
+            {watchingCount || 0} Watching
+          </span>
         </div>
 
-        <div className="vory-live-pill">
+        <div
+          className="vory-live-pill"
+          style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}
+        >
           <Radio size={15} />
-          <strong>{voiceCount || 0}</strong>
-          <span>Voice</span>
+          <span style={{ fontWeight: 900, lineHeight: 1 }}>
+            {voiceCount || 0} Voice
+          </span>
         </div>
 
-        <div className={`vory-live-pill ${screenCount > 0 ? "vory-live-pill-on" : ""}`}>
+        <div
+          className={`vory-live-pill ${screenCount > 0 ? "vory-live-pill-on" : ""}`}
+          style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}
+        >
           <MonitorUp size={15} />
-          <strong>{screenCount || 0}</strong>
-          <span>Screen</span>
+          <span style={{ fontWeight: 900, lineHeight: 1 }}>
+            {screenCount || 0} Screen
+          </span>
         </div>
       </div>
 
