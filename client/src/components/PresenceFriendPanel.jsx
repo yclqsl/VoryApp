@@ -136,6 +136,19 @@ function getLastSeenText(updatedAt, isOnline) {
   return `${diffHours} sa önce`;
 }
 
+function formatWatchProgress(seconds = 0) {
+  const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const secs = safeSeconds % 60;
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
 async function copyRoomLink(roomCode) {
   if (!roomCode) return;
 
@@ -314,6 +327,17 @@ export default function PresenceFriendPanel({
                         {getLastSeenText(user.updatedAt, user.isOnline)}
                       </span>
                     </div>
+
+                    {user.watchTitle ? (
+                      <div className="mt-3 rounded-2xl border border-sky-300/10 bg-sky-400/5 px-3 py-2">
+                        <p className="truncate text-xs font-black text-sky-200">
+                          🎬 {user.watchTitle}
+                        </p>
+                        <p className="mt-1 text-[11px] font-bold text-white/45">
+                          ⏱ {formatWatchProgress(user.watchTime)}
+                        </p>
+                      </div>
+                    ) : null}
 
                     {lastDM?.message ? (
                       <div className="mt-3 rounded-2xl border border-sky-300/10 bg-sky-400/5 px-3 py-2 text-xs font-bold text-sky-100/65">

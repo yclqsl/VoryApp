@@ -1208,7 +1208,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("video-heartbeat", ({ roomCode, currentTime, isPlaying }) => {
+  socket.on("video-heartbeat", ({ roomCode, currentTime, isPlaying, watchTitle }) => {
     const room = rooms[roomCode];
 
     if (!room) return;
@@ -1231,10 +1231,19 @@ io.on("connection", (socket) => {
       hostId: socket.id,
     };
 
+    updateRoomPresence(socket.id, roomCode, {
+      activity: room.videoUrl ? "watching" : "in-room",
+      watchTitle: String(watchTitle || room.currentMedia?.title || room.videoUrl || "").slice(0, 120),
+      watchTime: safeTime,
+      watchingUpdatedAt: now,
+    });
+
+    emitPresence();
+
     socket.to(roomCode).emit("video-sync-pulse", getSyncedVideoState(room));
   });
 
-  socket.on("client-sync-state", ({ roomCode, currentTime, isPlaying }) => {
+  socket.on("client-sync-state", ({ roomCode, currentTime, isPlaying, watchTitle }) => {
     const room = rooms[roomCode];
 
     if (!room || !rooms[roomCode]?.users?.some((user) => user.id === socket.id)) return;
@@ -1242,6 +1251,15 @@ io.on("connection", (socket) => {
     const targetState = getSyncedVideoState(room);
     const safeTime = Math.max(0, Number(currentTime) || 0);
     const drift = Math.abs(safeTime - (targetState.currentTime || 0));
+
+    updateRoomPresence(socket.id, roomCode, {
+      activity: room.videoUrl ? "watching" : "in-room",
+      watchTitle: String(watchTitle || room.currentMedia?.title || room.videoUrl || "").slice(0, 120),
+      watchTime: safeTime,
+      watchingUpdatedAt: Date.now(),
+    });
+
+    emitPresence();
 
     if (!syncClients[roomCode]) syncClients[roomCode] = {};
 
@@ -1564,11 +1582,14 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("presence-update", ({ roomCode, activity, voiceActive, screenSharing }) => {
+  socket.on("presence-update", ({ roomCode, activity, voiceActive, screenSharing, watchTitle, watchTime }) => {
     updateRoomPresence(socket.id, roomCode || "", {
       activity: activity || "idle",
       voiceActive: !!voiceActive,
       screenSharing: !!screenSharing,
+      watchTitle: String(watchTitle || "").slice(0, 120),
+      watchTime: Math.max(0, Number(watchTime) || 0),
+      watchingUpdatedAt: Date.now(),
     });
 
     emitPresence();

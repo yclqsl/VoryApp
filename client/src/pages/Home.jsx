@@ -767,17 +767,24 @@ export default function Home({ authUser, onLogout }) {
         bumpProfileStat("watchSeconds", isHost ? 6 : 7);
       }
 
+      const watchTitle =
+        currentMedia?.title ||
+        normalizeHistoryTitle(videoUrl) ||
+        "Vory Media";
+
       if (isHost) {
         socket.emit("video-heartbeat", {
           roomCode,
           currentTime,
           isPlaying: playing,
+          watchTitle,
         });
       } else {
         socket.emit("client-sync-state", {
           roomCode,
           currentTime,
           isPlaying: playing,
+          watchTitle,
         });
       }
     }, isHost ? 1000 : 1500);
@@ -788,7 +795,7 @@ export default function Home({ authUser, onLogout }) {
         syncIntervalRef.current = null;
       }
     };
-  }, [roomCode, isHost]);
+  }, [roomCode, isHost, currentMedia, videoUrl]);
 
 
   useEffect(() => {
@@ -797,8 +804,10 @@ export default function Home({ authUser, onLogout }) {
       activity: roomCode ? (videoUrl ? "watching" : "in-room") : "idle",
       voiceActive: false,
       screenSharing: false,
+      watchTitle: videoUrl ? (currentMedia?.title || normalizeHistoryTitle(videoUrl)) : "",
+      watchTime: 0,
     });
-  }, [roomCode, videoUrl]);
+  }, [roomCode, videoUrl, currentMedia]);
 
   function bumpProfileStat(key, amount = 1) {
     setProfileStats((prev) => ({
