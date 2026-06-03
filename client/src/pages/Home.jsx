@@ -121,6 +121,7 @@ export default function Home({ authUser, onLogout }) {
   const [mediaQueue, setMediaQueue] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState(socket.connected ? "connected" : "offline");
   const [lastRestoreMessage, setLastRestoreMessage] = useState("");
+  const [hostTransferMessage, setHostTransferMessage] = useState("");
   const [onlinePresence, setOnlinePresence] = useState([]);
   const [reactions, setReactions] = useState([]);
   const [typingUser, setTypingUser] = useState("");
@@ -410,6 +411,44 @@ export default function Home({ authUser, onLogout }) {
       setUsers(roomUsers);
       const me = roomUsers.find((user) => user.id === socket.id);
       setIsHost(!!me?.isHost);
+    });
+
+    socket.on("room-host-changed", (payload) => {
+      if (!payload) return;
+
+      const becameHost = payload.newHostId === socket.id;
+      const message = becameHost
+        ? "Artık host sensin 👑"
+        : `${payload.newHostUsername || "Yeni kullanıcı"} yeni host oldu 👑`;
+
+      setIsHost(becameHost);
+      setHostTransferMessage(message);
+      setLastRestoreMessage(message);
+
+      addLocalNotification({
+        type: "host",
+        title: "Host Transfer",
+        message,
+        roomCode: payload.roomCode || roomCode || "",
+        createdAt: payload.createdAt || Date.now(),
+      });
+
+      if (becameHost) {
+        toast.success(message);
+      } else {
+        toast(message, { icon: "👑" });
+      }
+
+      if (payload.videoState && playerRef.current) {
+        applySyncState({
+          ...payload.videoState,
+          soft: true,
+        });
+      }
+
+      setTimeout(() => {
+        setHostTransferMessage("");
+      }, 6500);
     });
 
     socket.on("video-updated", (url) => {
@@ -709,6 +748,7 @@ export default function Home({ authUser, onLogout }) {
       socket.off("room-joined");
       socket.off("room-left");
       socket.off("room-users");
+      socket.off("room-host-changed");
       socket.off("video-updated");
       socket.off("video-control");
       socket.off("video-seek");
@@ -1845,6 +1885,7 @@ export default function Home({ authUser, onLogout }) {
             screenCount={liveScreenCount}
             connectionStatus={connectionStatus}
             lastRestoreMessage={lastRestoreMessage}
+            hostTransferMessage={hostTransferMessage}
             onRestore={() => restorePreviousSession("manual-click")}
             onForceSync={requestHardSync}
             notifications={notifications}

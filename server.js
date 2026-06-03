@@ -632,23 +632,61 @@ function removeUserFromRooms(socketId) {
     }
 
     if (room.host === socketId && room.users.length > 0) {
-      room.host = room.users[0].id;
+      const previousHost = leavingUser;
+      const newHost = room.users[0];
 
-      room.users = room.users.map((user, index) => ({
+      room.host = newHost.id;
+
+      room.users = room.users.map((user) => ({
         ...user,
-        isHost: index === 0,
+        isHost: user.id === room.host,
       }));
+
+      room.videoState = {
+        ...(room.videoState || {}),
+        hostId: room.host,
+        version: Date.now(),
+        updatedAt: room.videoState?.updatedAt || Date.now(),
+      };
+
+      const hostTransferPayload = {
+        roomCode,
+        previousHostId: previousHost.id,
+        previousHostUsername: previousHost.username || "Eski host",
+        newHostId: newHost.id,
+        newHostUsername: newHost.username || "Yeni host",
+        createdAt: Date.now(),
+        videoState: getSyncedVideoState(room),
+        currentMedia: room.currentMedia || null,
+      };
+
+      io.to(roomCode).emit("room-host-changed", hostTransferPayload);
 
       io.to(roomCode).emit(
         "system-message",
-        `${room.users[0].username} yeni host oldu.`
+        `${hostTransferPayload.previousHostUsername} ayrıldı. ${hostTransferPayload.newHostUsername} yeni host oldu.`
       );
 
       emitNotification(roomCode, {
         type: "host",
         title: "Yeni host",
-        message: `${room.users[0].username} yeni host oldu.`,
+        message: `${hostTransferPayload.newHostUsername} yeni host oldu.`,
       });
+
+      emitActivity(roomCode, {
+        type: "host",
+        title: "Host Transfer",
+        username: hostTransferPayload.newHostUsername,
+        message: `${hostTransferPayload.newHostUsername} yeni host oldu.`,
+      });
+
+      const snapshot = buildRoomSnapshot(roomCode);
+      if (snapshot) {
+        io.to(roomCode).emit("room-snapshot", {
+          ...snapshot,
+          reason: "host-transfer",
+        });
+      }
     }
 
     io.to(roomCode).emit(

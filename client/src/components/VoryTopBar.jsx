@@ -1,4 +1,4 @@
-import { MonitorUp, Radio, UsersRound } from "lucide-react";
+import { Crown, MonitorUp, Radio, UsersRound } from "lucide-react";
 import ConnectionBanner from "./ConnectionBanner";
 import NotificationCenter from "./NotificationCenter";
 
@@ -13,6 +13,7 @@ export default function VoryTopBar({
   screenCount = 0,
   connectionStatus,
   lastRestoreMessage,
+  hostTransferMessage = "",
   onRestore,
   onForceSync,
   notifications,
@@ -97,6 +98,15 @@ export default function VoryTopBar({
           </span>
         </div>
       </div>
+
+      {hostTransferMessage ? (
+        <div className="hidden items-center gap-2 rounded-2xl border border-yellow-300/20 bg-yellow-400/10 px-3 py-2 text-xs font-black text-yellow-100 shadow-[0_0_24px_rgba(250,204,21,0.12)] lg:flex">
+          <Crown size={14} />
+          <span className="max-w-[220px] truncate">
+            {hostTransferMessage}
+          </span>
+        </div>
+      ) : null}
 
       <div className="flex min-w-0 items-center justify-end gap-2">
         <ConnectionBanner
