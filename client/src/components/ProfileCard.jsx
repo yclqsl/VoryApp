@@ -1,6 +1,7 @@
 import {
   Camera,
   Clock3,
+  PlayCircle,
   Film,
   Loader2,
   ShieldCheck,
@@ -42,6 +43,19 @@ function compactNumber(value = 0) {
   return String(safeValue);
 }
 
+function formatPlaybackTime(seconds = 0) {
+  const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const secs = safeSeconds % 60;
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
 function getProfileLevel(stats = {}) {
   const rooms = Number(stats?.roomsJoined || 0);
   const media = Number(stats?.mediaPlayed || 0);
@@ -68,6 +82,7 @@ export default function ProfileCard({
   connectionStatus = "unknown",
   stats,
   watchHistory = [],
+  continueWatching = null,
   onResumeWatch,
 }) {
   const fileInputRef = useRef(null);
@@ -122,6 +137,9 @@ export default function ProfileCard({
   const bio = authUser?.bio?.trim()
     ? authUser.bio.trim()
     : "VoryApp beta kullanıcısı. Watch party, voice chat ve arkadaş sistemiyle takılıyor.";
+
+  const canContinueWatching = !!continueWatching?.url;
+  const continueTime = Number(continueWatching?.currentTime || 0);
 
   return (
     <section className="glass overflow-hidden p-0">
@@ -256,6 +274,35 @@ export default function ProfileCard({
               ))}
             </div>
           </div>
+
+
+          {canContinueWatching ? (
+            <div className="mt-4 overflow-hidden rounded-3xl border border-emerald-300/15 bg-emerald-400/10 p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-200/65">
+                    <PlayCircle size={13} />
+                    Continue Watching
+                  </div>
+                  <p className="mt-2 truncate text-sm font-black text-white">
+                    {continueWatching.title || continueWatching.url}
+                  </p>
+                  <p className="mt-1 text-xs font-bold text-white/45">
+                    ⏱ {continueTime > 5 ? formatPlaybackTime(continueTime) : "Başlangıç"}
+                    {continueWatching.roomCode || continueWatching.meta ? ` • ${continueWatching.roomCode || continueWatching.meta}` : ""}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onResumeWatch?.(continueWatching)}
+                  className="shrink-0 rounded-2xl bg-emerald-400/15 px-4 py-3 text-xs font-black text-emerald-100 transition hover:bg-emerald-400/25"
+                >
+                  Devam Et
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <WatchHistory
             items={watchHistory}

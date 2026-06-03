@@ -82,6 +82,20 @@ function formatWatchTime(seconds = 0) {
   return minutes > 0 ? `${minutes}m` : "0h";
 }
 
+
+function formatPlaybackTime(seconds = 0) {
+  const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const secs = safeSeconds % 60;
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
 function normalizeHistoryTitle(value = "") {
   try {
     const url = new URL(value);
@@ -270,6 +284,7 @@ export default function Home({ authUser, onLogout }) {
   const typingTimeoutRef = useRef(null);
   const activeDMRef = useRef(null);
   const currentUserIdRef = useRef(currentUserId);
+  const pendingResumeRef = useRef(null);
 
   useEffect(() => {
     activeDMRef.current = activeDM;
@@ -453,13 +468,38 @@ export default function Home({ authUser, onLogout }) {
 
     socket.on("video-updated", (url) => {
       setVideoUrl(url);
+
+      const pendingResume = pendingResumeRef.current;
+      const shouldResume =
+        pendingResume?.url &&
+        String(pendingResume.url).trim() === String(url || "").trim() &&
+        Number(pendingResume.currentTime || 0) > 5;
+
       recordWatchItem({
         url,
-        title: normalizeHistoryTitle(url),
+        title: pendingResume?.title || normalizeHistoryTitle(url),
         meta: roomCode ? `Room ${roomCode}` : "Vory watch session",
+        currentTime: shouldResume ? Number(pendingResume.currentTime || 0) : 0,
+        roomCode,
       });
-      setStatus("Video odaya eklendi.");
-      toast.success("Video odaya eklendi 🎬");
+
+      if (shouldResume) {
+        const resumeTime = Number(pendingResume.currentTime || 0);
+        setTimeout(() => {
+          if (!playerRef.current) return;
+          ignoreEventRef.current = true;
+          playerRef.current.seekTo(resumeTime, true);
+          setTimeout(() => {
+            ignoreEventRef.current = false;
+          }, 650);
+        }, 900);
+
+        pendingResumeRef.current = null;
+        toast.success(`Devam ediliyor: ${formatPlaybackTime(resumeTime)} 🎬`);
+      } else {
+        setStatus("Video odaya eklendi.");
+        toast.success("Video odaya eklendi 🎬");
+      }
     });
 
     socket.on("video-control", ({ action, currentTime }) => {
@@ -807,6 +847,16 @@ export default function Home({ authUser, onLogout }) {
         bumpProfileStat("watchSeconds", isHost ? 6 : 7);
       }
 
+      if (videoUrl) {
+        updateContinueWatching({
+          url: videoUrl,
+          title: currentMedia?.title || normalizeHistoryTitle(videoUrl),
+          currentTime,
+          roomCode,
+          playing,
+        });
+      }
+
       const watchTitle =
         currentMedia?.title ||
         normalizeHistoryTitle(videoUrl) ||
@@ -856,23 +906,69 @@ export default function Home({ authUser, onLogout }) {
     }));
   }
 
-  function recordWatchItem({ url, title, meta = "Vory watch session" }) {
+  function updateContinueWatching({ url, title, currentTime = 0, roomCode: targetRoomCode = "", playing = false }) {
+    const cleanUrl = String(url || "").trim();
+    if (!cleanUrl) return;
+
+    const safeTime = Math.max(0, Number(currentTime) || 0);
+    const progressLabel = safeTime > 5 ? formatPlaybackTime(safeTime) : "Ready";
+
+    setWatchHistory((prev) => {
+      const existing = (prev || []).find((oldItem) => oldItem.url === cleanUrl) || {};
+      const nextItem = {
+        ...existing,
+        id: existing.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        url: cleanUrl,
+        title: title || existing.title || normalizeHistoryTitle(cleanUrl),
+        meta: targetRoomCode ? `Room ${targetRoomCode}` : existing.meta || "Vory watch session",
+        currentTime: safeTime,
+        progress: progressLabel,
+        playing: !!playing,
+        updatedAt: Date.now(),
+        createdAt: existing.createdAt || Date.now(),
+      };
+
+      const filtered = (prev || []).filter((oldItem) => oldItem.url !== cleanUrl);
+      return [nextItem, ...filtered].slice(0, 10);
+    });
+  }
+
+  function recordWatchItem({ url, title, meta = "Vory watch session", currentTime = 0, roomCode: targetRoomCode = "" }) {
     const cleanUrl = String(url || "").trim();
 
     if (!cleanUrl) return;
+
+    const safeTime = Math.max(0, Number(currentTime) || 0);
 
     const item = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       url: cleanUrl,
       title: title || normalizeHistoryTitle(cleanUrl),
       meta,
-      progress: "Ready",
+      roomCode: targetRoomCode || roomCode || "",
+      currentTime: safeTime,
+      progress: safeTime > 5 ? formatPlaybackTime(safeTime) : "Ready",
+      updatedAt: Date.now(),
       createdAt: Date.now(),
     };
 
     setWatchHistory((prev) => {
+      const existing = (prev || []).find((oldItem) => oldItem.url === cleanUrl);
+      const mergedItem = existing
+        ? {
+            ...existing,
+            ...item,
+            id: existing.id || item.id,
+            createdAt: existing.createdAt || item.createdAt,
+            currentTime: Math.max(Number(existing.currentTime || 0), safeTime),
+            progress: Math.max(Number(existing.currentTime || 0), safeTime) > 5
+              ? formatPlaybackTime(Math.max(Number(existing.currentTime || 0), safeTime))
+              : "Ready",
+          }
+        : item;
+
       const filtered = (prev || []).filter((oldItem) => oldItem.url !== cleanUrl);
-      return [item, ...filtered].slice(0, 10);
+      return [mergedItem, ...filtered].slice(0, 10);
     });
 
     bumpProfileStat("mediaPlayed", 1);
@@ -880,6 +976,13 @@ export default function Home({ authUser, onLogout }) {
 
   function resumeWatchItem(item) {
     if (!item?.url) return;
+
+    const resumeTime = Math.max(0, Number(item.currentTime || 0));
+
+    pendingResumeRef.current = {
+      ...item,
+      currentTime: resumeTime,
+    };
 
     setVideoInput(item.url);
     setAppSection("watch");
@@ -899,7 +1002,7 @@ export default function Home({ authUser, onLogout }) {
       title: item.title || item.url,
     });
 
-    toast.success("Geçmişten medya başlatıldı 🎬");
+    toast.success(resumeTime > 5 ? `Devam Et hazırlanıyor: ${formatPlaybackTime(resumeTime)} 🎬` : "Geçmişten medya başlatıldı 🎬");
   }
 
   function createRoom() {
@@ -1064,11 +1167,33 @@ export default function Home({ authUser, onLogout }) {
 
   function handleVideoControl(action, currentTime) {
     if (!roomCode) return;
+
+    if (videoUrl) {
+      updateContinueWatching({
+        url: videoUrl,
+        title: currentMedia?.title || normalizeHistoryTitle(videoUrl),
+        currentTime,
+        roomCode,
+        playing: action === "play",
+      });
+    }
+
     socket.emit("video-control", { roomCode, action, currentTime });
   }
 
   function handleVideoSeek(currentTime) {
     if (!roomCode) return;
+
+    if (videoUrl) {
+      updateContinueWatching({
+        url: videoUrl,
+        title: currentMedia?.title || normalizeHistoryTitle(videoUrl),
+        currentTime,
+        roomCode,
+        playing: true,
+      });
+    }
+
     socket.emit("video-seek", { roomCode, currentTime });
   }
 
@@ -1629,7 +1754,7 @@ export default function Home({ authUser, onLogout }) {
         <div className="vory-v5-page-grid">
           <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
           <UserList users={users} />
-          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
+          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
         </div>
       );
     }
@@ -1678,7 +1803,7 @@ export default function Home({ authUser, onLogout }) {
             onInviteFriend={sendPartyInvite}
             onOpenDM={openDM}
           />
-          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
+          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
         </div>
       );
     }
@@ -1850,7 +1975,7 @@ export default function Home({ authUser, onLogout }) {
           onInviteFriend={sendPartyInvite}
           onOpenDM={openDM}
         />
-        <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
+        <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
       </section>
     );
   }
