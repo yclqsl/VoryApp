@@ -20,10 +20,11 @@ export default function MediaQueue({
   onClear,
   onVote,
   currentUserId,
+  defaultOpen = true,
 }) {
   const [mediaUrl, setMediaUrl] = useState("");
   const [title, setTitle] = useState("");
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(defaultOpen);
 
   const canUse = !!roomCode;
 

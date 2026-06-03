@@ -157,6 +157,7 @@ export default function Home({ authUser, onLogout }) {
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
   const [friendSearchResults, setFriendSearchResults] = useState([]);
   const [friendsLoading, setFriendsLoading] = useState(false);
+  const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
 
   const currentUserId = authUser?._id || authUser?.id || "";
 
@@ -1876,7 +1877,7 @@ export default function Home({ authUser, onLogout }) {
   function renderMobilePanel() {
     if (activeMobileTab === "watch") {
       return (
-        <section className="flex min-w-0 flex-col gap-4">
+        <section className="flex min-w-0 flex-col gap-4 pb-28">
           <VideoPlayer
             videoUrl={videoUrl}
             videoInput={videoInput}
@@ -1891,18 +1892,77 @@ export default function Home({ authUser, onLogout }) {
 
           <ScreenShare roomCode={roomCode} username={currentUserPayload.username} />
 
-          <MediaQueue
-            roomCode={roomCode}
-            isHost={isHost}
-            currentMedia={currentMedia}
-            queue={mediaQueue}
-            onAdd={addToQueue}
-            onPlayNext={playNextMedia}
-            onRemove={removeFromQueue}
-            onClear={clearMediaQueue}
-            onVote={voteMedia}
-            currentUserId={currentUserId || socket.id}
-          />
+          <button
+            type="button"
+            onClick={() => setMobileQueueOpen(true)}
+            className="rounded-[1.75rem] border border-violet-300/15 bg-violet-500/10 p-4 text-left shadow-[0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl"
+          >
+            <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-white/20" />
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-violet-200/55">
+              Swipe Up Queue
+            </p>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-black text-white">
+                  {currentMedia?.title || "Queue hazır"}
+                </h2>
+                <p className="mt-1 text-sm font-bold text-white/45">
+                  {mediaQueue.length ? `${mediaQueue.length} medya sırada` : "Sırada medya yok"}
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full bg-violet-500/20 px-3 py-2 text-xs font-black text-violet-100">
+                Aç
+              </span>
+            </div>
+          </button>
+
+          {mobileQueueOpen && (
+            <div className="fixed inset-0 z-[9997] flex items-end bg-black/55 backdrop-blur-sm lg:hidden">
+              <button
+                type="button"
+                aria-label="Queue kapat"
+                className="absolute inset-0"
+                onClick={() => setMobileQueueOpen(false)}
+              />
+
+              <div className="relative max-h-[82vh] w-full overflow-auto rounded-t-[2rem] border border-white/10 bg-[#070712] p-3 pb-6 shadow-[0_-24px_90px_rgba(0,0,0,0.65)]">
+                <div className="sticky top-0 z-10 mb-3 rounded-[1.5rem] border border-white/10 bg-black/70 p-3 backdrop-blur-2xl">
+                  <div className="mx-auto mb-3 h-1 w-14 rounded-full bg-white/25" />
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-black uppercase tracking-[0.24em] text-violet-200/55">
+                        Mobile Watch Queue
+                      </p>
+                      <h2 className="mt-1 truncate text-lg font-black text-white">
+                        {currentMedia?.title || "Media Queue"}
+                      </h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMobileQueueOpen(false)}
+                      className="rounded-2xl bg-white/10 px-4 py-2 text-xs font-black text-white/70"
+                    >
+                      Kapat
+                    </button>
+                  </div>
+                </div>
+
+                <MediaQueue
+                  roomCode={roomCode}
+                  isHost={isHost}
+                  currentMedia={currentMedia}
+                  queue={mediaQueue}
+                  onAdd={addToQueue}
+                  onPlayNext={playNextMedia}
+                  onRemove={removeFromQueue}
+                  onClear={clearMediaQueue}
+                  onVote={voteMedia}
+                  currentUserId={currentUserId || socket.id}
+                  defaultOpen
+                />
+              </div>
+            </div>
+          )}
         </section>
       );
     }
