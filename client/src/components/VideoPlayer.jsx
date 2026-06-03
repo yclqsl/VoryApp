@@ -17,6 +17,8 @@ export default function VideoPlayer({
 }) {
   const heartbeatRef = useRef(null);
   const driftCheckRef = useRef(null);
+  const qualityLockRef = useRef(false);
+  const lastStateEmitRef = useRef({ action: "", time: 0, emittedAt: 0 });
 
   function getYouTubeVideoId(url) {
     try {
@@ -71,15 +73,41 @@ export default function VideoPlayer({
   function handleStateChange(event) {
     if (!playerRef.current || ignoreEventRef.current) return;
 
+    // YouTube kalite değişimi / buffer sırasında iframe kısa süreli pause-play eventleri üretir.
+    // Bu sırada sync yayarsak viewer tarafında mikro seek ve çift ses hissi oluşur.
+    if (event.data === 3) {
+      qualityLockRef.current = true;
+
+      setTimeout(() => {
+        qualityLockRef.current = false;
+      }, 3500);
+
+      return;
+    }
+
     // Viewer'ın local play/pause yapması hostu etkilemez.
-    // Sürekli geri çekmeyiz; 30 sn drift kontrolü bunu gerekirse düzeltir.
-    if (!isHost) return;
+    if (!isHost || qualityLockRef.current) return;
 
     const currentTime = playerRef.current.getCurrentTime();
+    const action = event.data === 1 ? "play" : event.data === 2 || event.data === 0 ? "pause" : "";
 
-    if (event.data === 1) onVideoControl("play", currentTime);
-    if (event.data === 2) onVideoControl("pause", currentTime);
-    if (event.data === 0) onVideoControl("pause", currentTime);
+    if (!action) return;
+
+    const now = Date.now();
+    const last = lastStateEmitRef.current;
+    const sameAction = last.action === action;
+    const closeTime = Math.abs((last.time || 0) - currentTime) < 0.8;
+    const tooSoon = now - (last.emittedAt || 0) < 1200;
+
+    if (sameAction && closeTime && tooSoon) return;
+
+    lastStateEmitRef.current = {
+      action,
+      time: currentTime,
+      emittedAt: now,
+    };
+
+    onVideoControl(action, currentTime);
   }
 
   function handleError(event) {
@@ -119,6 +147,8 @@ export default function VideoPlayer({
 
       const roomCode = getRoomCode();
       if (!roomCode) return;
+
+      if (qualityLockRef.current) return;
 
       socket.emit("video-heartbeat", {
         roomCode,

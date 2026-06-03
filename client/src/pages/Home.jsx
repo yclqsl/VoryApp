@@ -279,11 +279,11 @@ export default function Home({ authUser, onLogout }) {
       if (soft) {
         const now = Date.now();
 
-        if (now - lastSoftSyncRef.current > 1200 && drift > 1.2) {
+        if (now - lastSoftSyncRef.current > 3000 && drift > 2) {
           lastSoftSyncRef.current = now;
           playerRef.current.seekTo(targetTime, true);
         }
-      } else if (drift > 0.75) {
+      } else if (drift > 2.5) {
         playerRef.current.seekTo(targetTime, true);
       }
 
@@ -477,7 +477,7 @@ export default function Home({ authUser, onLogout }) {
           isPlaying: playing,
         });
       }
-    }, isHost ? 1000 : 1500);
+    }, isHost ? 4000 : 5000);
 
     return () => {
       if (syncIntervalRef.current) {
