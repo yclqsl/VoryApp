@@ -284,6 +284,34 @@ function getSyncedVideoState(room) {
 }
 
 
+function getOnlineUserBySocketId(socketId) {
+  for (const user of onlineUsers.values()) {
+    if (user.socketId === socketId) return user;
+  }
+
+  return null;
+}
+
+function normalizePresenceActivity(activity = "idle") {
+  const cleanActivity = String(activity || "idle").toLowerCase();
+  const allowedActivities = new Set([
+    "online",
+    "idle",
+    "away",
+    "in-room",
+    "watching",
+    "voice",
+    "sharing-screen",
+  ]);
+
+  return allowedActivities.has(cleanActivity) ? cleanActivity : "idle";
+}
+
+function getPresenceStatusFromActivity(activity = "idle") {
+  const cleanActivity = normalizePresenceActivity(activity);
+  return cleanActivity === "away" || cleanActivity === "idle" ? "idle" : "online";
+}
+
 function getOnlineUserById(userId) {
   return onlineUsers.get(String(userId || ""));
 }
@@ -402,10 +430,16 @@ function updateSocketPresence(socketId, patch = {}) {
   for (const [userId, user] of onlineUsers.entries()) {
     if (user.socketId !== socketId) continue;
 
+    const nextActivity = normalizePresenceActivity(patch.activity || user.activity || "online");
+    const now = Date.now();
+
     onlineUsers.set(userId, {
       ...user,
       ...patch,
-      updatedAt: Date.now(),
+      activity: nextActivity,
+      status: patch.status || getPresenceStatusFromActivity(nextActivity),
+      lastActiveAt: patch.lastActiveAt || (nextActivity === "away" ? user.lastActiveAt || now : now),
+      updatedAt: now,
     });
 
     return onlineUsers.get(userId);
@@ -731,7 +765,7 @@ function removeUserFromRooms(socketId) {
 io.on("connection", (socket) => {
   console.log("Yeni kullanıcı bağlandı:", socket.id);
 
-  socket.on("user-online", async ({ userId, username }) => {
+  socket.on("user-online", async ({ userId, username, avatar }) => {
     if (!userId) return;
 
     const existing = onlineUsers.get(String(userId)) || {};
@@ -741,12 +775,14 @@ io.on("connection", (socket) => {
       socketId: socket.id,
       userId: String(userId),
       username: username || existing.username || "Kullanıcı",
-      status: "online",
+      avatar: avatar || existing.avatar || "",
+      status: getPresenceStatusFromActivity(existing.activity || "online"),
       roomCode: existing.roomCode || "",
       roomSummary: existing.roomSummary || null,
-      activity: existing.activity || "idle",
+      activity: existing.activity || "online",
       voiceActive: !!existing.voiceActive,
       screenSharing: !!existing.screenSharing,
+      lastActiveAt: Date.now(),
       updatedAt: Date.now(),
     });
 
@@ -1643,12 +1679,31 @@ io.on("connection", (socket) => {
   });
 
   socket.on("presence-update", ({ roomCode, activity, voiceActive, screenSharing, watchTitle, watchTime }) => {
-    updateRoomPresence(socket.id, roomCode || "", {
-      activity: activity || "idle",
-      voiceActive: !!voiceActive,
-      screenSharing: !!screenSharing,
-      watchTitle: String(watchTitle || "").slice(0, 120),
-      watchTime: Math.max(0, Number(watchTime) || 0),
+    const existingPresence = getOnlineUserBySocketId(socket.id) || {};
+    const nextActivity = normalizePresenceActivity(activity || existingPresence.activity || "idle");
+
+    updateRoomPresence(socket.id, roomCode || existingPresence.roomCode || "", {
+      activity: nextActivity,
+      voiceActive: typeof voiceActive === "boolean" ? voiceActive : !!existingPresence.voiceActive,
+      screenSharing: typeof screenSharing === "boolean" ? screenSharing : !!existingPresence.screenSharing,
+      watchTitle: String(watchTitle || existingPresence.watchTitle || "").slice(0, 120),
+      watchTime: Math.max(0, Number(watchTime ?? existingPresence.watchTime) || 0),
+      watchingUpdatedAt: Date.now(),
+    });
+
+    emitPresence();
+  });
+
+  socket.on("presence-heartbeat", ({ roomCode, activity, watchTitle, watchTime } = {}) => {
+    const existingPresence = getOnlineUserBySocketId(socket.id) || {};
+    const nextActivity = normalizePresenceActivity(activity || existingPresence.activity || "online");
+
+    updateRoomPresence(socket.id, roomCode || existingPresence.roomCode || "", {
+      activity: nextActivity,
+      voiceActive: !!existingPresence.voiceActive,
+      screenSharing: !!existingPresence.screenSharing,
+      watchTitle: String(watchTitle || existingPresence.watchTitle || "").slice(0, 120),
+      watchTime: Math.max(0, Number(watchTime ?? existingPresence.watchTime) || 0),
       watchingUpdatedAt: Date.now(),
     });
 

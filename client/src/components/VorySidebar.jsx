@@ -57,7 +57,10 @@ export default function VorySidebar({
         })}
       </nav>
 
-      <div className={`vory-v5-status-dot ${roomCode ? "bg-emerald-300" : "bg-white/25"}`} />
+      <div
+        className={`vory-v5-status-dot ${roomCode ? "bg-emerald-300 shadow-[0_0_16px_rgba(110,231,183,0.75)]" : onlineCount > 0 ? "bg-violet-300 shadow-[0_0_16px_rgba(196,181,253,0.55)]" : "bg-white/25"}`}
+        title={roomCode ? `Live in ${roomCode}` : onlineCount > 0 ? `${onlineCount} online` : "Offline"}
+      />
     </aside>
   );
 }

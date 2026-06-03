@@ -14,6 +14,14 @@ function getPresenceStatus(user) {
     };
   }
 
+  if (user.status === "idle" || user.activity === "away" || user.activity === "idle") {
+    return {
+      dot: "bg-amber-300 shadow-[0_0_14px_rgba(252,211,77,0.75)]",
+      badge: "bg-amber-300/10 text-amber-200 border-amber-300/15",
+      label: "Idle",
+    };
+  }
+
   if (user.screenSharing || user.activity === "sharing-screen") {
     return {
       dot: "bg-fuchsia-400 shadow-[0_0_14px_rgba(232,121,249,0.85)]",
@@ -58,6 +66,13 @@ function getActivityLabel(user) {
     return {
       icon: <Activity size={14} className="text-white/25" />,
       text: "Offline",
+    };
+  }
+
+  if (user.status === "idle" || user.activity === "away" || user.activity === "idle") {
+    return {
+      icon: <Clock size={14} className="text-amber-300" />,
+      text: "Boşta / Away",
     };
   }
 
@@ -229,6 +244,7 @@ export default function PresenceFriendPanel({
   const watchingCount = users.filter((user) => user.isOnline && user.activity === "watching").length;
   const roomCount = users.filter((user) => user.isOnline && user.roomCode).length;
   const voiceCount = users.filter((user) => user.isOnline && (user.voiceActive || user.activity === "voice")).length;
+  const idleCount = users.filter((user) => user.isOnline && (user.status === "idle" || user.activity === "away" || user.activity === "idle")).length;
   const visibleActivityFeed = (activityFeed || []).slice(0, 6);
 
   return (
@@ -259,7 +275,7 @@ export default function PresenceFriendPanel({
           <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">Watching</p>
         </div>
         <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/5 p-3 text-center">
-          <p className="text-base font-black text-emerald-200">{voiceCount || roomCount}</p>
+          <p className="text-base font-black text-emerald-200">{voiceCount || roomCount || idleCount}</p>
           <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">Active</p>
         </div>
       </div>

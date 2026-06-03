@@ -189,6 +189,7 @@ export default function Home({ authUser, onLogout }) {
   const [currentMedia, setCurrentMedia] = useState(null);
   const [mediaQueue, setMediaQueue] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState(socket.connected ? "connected" : "offline");
+  const [presenceIdle, setPresenceIdle] = useState(false);
   const [lastRestoreMessage, setLastRestoreMessage] = useState("");
   const [hostTransferMessage, setHostTransferMessage] = useState("");
   const [onlinePresence, setOnlinePresence] = useState([]);
@@ -313,6 +314,63 @@ export default function Home({ authUser, onLogout }) {
       localStorage.setItem("vory-last-username", currentUserPayload.username);
     }
   }, [currentUserPayload.username]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const announcePresence = () => {
+      socket.emit("user-online", {
+        userId: currentUserId,
+        username: currentUserPayload.username,
+        avatar: authUser?.avatar || "",
+      });
+
+      socket.emit("get-online-users");
+    };
+
+    announcePresence();
+    socket.on("connect", announcePresence);
+
+    return () => {
+      socket.off("connect", announcePresence);
+    };
+  }, [currentUserId, currentUserPayload.username, authUser?.avatar]);
+
+  useEffect(() => {
+    let idleTimer = null;
+
+    const markActive = () => {
+      setPresenceIdle(false);
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => setPresenceIdle(true), 45000);
+    };
+
+    const markVisibility = () => {
+      if (document.hidden) {
+        setPresenceIdle(true);
+        return;
+      }
+
+      markActive();
+    };
+
+    markActive();
+
+    window.addEventListener("mousemove", markActive);
+    window.addEventListener("mousedown", markActive);
+    window.addEventListener("keydown", markActive);
+    window.addEventListener("touchstart", markActive);
+    document.addEventListener("visibilitychange", markVisibility);
+
+    return () => {
+      clearTimeout(idleTimer);
+      window.removeEventListener("mousemove", markActive);
+      window.removeEventListener("mousedown", markActive);
+      window.removeEventListener("keydown", markActive);
+      window.removeEventListener("touchstart", markActive);
+      document.removeEventListener("visibilitychange", markVisibility);
+    };
+  }, []);
 
   useEffect(() => {
     writeLocalJson("vory-watch-history", watchHistory);
@@ -975,15 +1033,37 @@ export default function Home({ authUser, onLogout }) {
 
 
   useEffect(() => {
+    const activity = presenceIdle
+      ? "away"
+      : roomCode
+        ? (videoUrl ? "watching" : "in-room")
+        : "online";
+
     socket.emit("presence-update", {
       roomCode,
-      activity: roomCode ? (videoUrl ? "watching" : "in-room") : "idle",
-      voiceActive: false,
-      screenSharing: false,
+      activity,
       watchTitle: videoUrl ? (currentMedia?.title || normalizeHistoryTitle(videoUrl)) : "",
       watchTime: 0,
     });
-  }, [roomCode, videoUrl, currentMedia]);
+  }, [roomCode, videoUrl, currentMedia, presenceIdle]);
+
+  useEffect(() => {
+    const heartbeat = setInterval(() => {
+      const activity = presenceIdle
+        ? "away"
+        : roomCode
+          ? (videoUrl ? "watching" : "in-room")
+          : "online";
+
+      socket.emit("presence-heartbeat", {
+        roomCode,
+        activity,
+        watchTitle: videoUrl ? (currentMedia?.title || normalizeHistoryTitle(videoUrl)) : "",
+      });
+    }, 15000);
+
+    return () => clearInterval(heartbeat);
+  }, [roomCode, videoUrl, currentMedia, presenceIdle]);
 
   function bumpProfileStat(key, amount = 1) {
     setProfileStats((prev) => ({
