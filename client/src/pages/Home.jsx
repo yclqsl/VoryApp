@@ -170,6 +170,13 @@ export default function Home({ authUser, onLogout }) {
     ? currentRoomPresence.filter((user) => user.screenSharing || user.activity === "sharing-screen").length
     : 0;
 
+  const dmLastMessages = Object.fromEntries(
+    Object.entries(dmMessages || {}).map(([threadId, messages]) => {
+      const lastMessage = Array.isArray(messages) ? messages[messages.length - 1] : null;
+      return [threadId, lastMessage || null];
+    })
+  );
+
 
   async function loadFriendState() {
     if (!currentUserId) return;
@@ -1526,6 +1533,9 @@ export default function Home({ authUser, onLogout }) {
             currentRoomCode={roomCode}
             activityFeed={activityFeed}
             inviteCooldowns={inviteCooldowns}
+            dmUnread={dmUnread}
+            activeDM={activeDM}
+            dmLastMessages={dmLastMessages}
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onInviteFriend={sendPartyInvite}
             onOpenDM={openDM}
@@ -1575,6 +1585,9 @@ export default function Home({ authUser, onLogout }) {
           currentSocketId={socket.id}
           currentRoomCode={roomCode}
           inviteCooldowns={inviteCooldowns}
+          dmUnread={dmUnread}
+          activeDM={activeDM}
+          dmLastMessages={dmLastMessages}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
           onInviteFriend={sendPartyInvite}
           onOpenDM={openDM}
@@ -1689,6 +1702,9 @@ export default function Home({ authUser, onLogout }) {
           currentSocketId={socket.id}
           currentRoomCode={roomCode}
           inviteCooldowns={inviteCooldowns}
+          dmUnread={dmUnread}
+          activeDM={activeDM}
+          dmLastMessages={dmLastMessages}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
           onInviteFriend={sendPartyInvite}
           onOpenDM={openDM}

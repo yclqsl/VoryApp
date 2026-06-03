@@ -202,6 +202,9 @@ export default function PresenceFriendPanel({
   currentRoomCode = "",
   activityFeed = [],
   inviteCooldowns = {},
+  dmUnread = {},
+  activeDM = null,
+  dmLastMessages = {},
   onJoinRoom,
   onInviteFriend,
   onOpenDM,
@@ -265,6 +268,12 @@ export default function PresenceFriendPanel({
             const inviteCooldownKey = user.userId || user._id || user.id || user.socketId;
             const inviteCooldownActive =
               Number(inviteCooldowns?.[inviteCooldownKey] || 0) > Date.now();
+            const dmUserId = String(user.userId || user._id || user.id || "");
+            const unreadCount = Number(dmUnread?.[dmUserId] || 0);
+            const lastDM = dmLastMessages?.[dmUserId] || null;
+            const isActiveDM =
+              !!activeDM &&
+              String(activeDM.userId || activeDM._id || activeDM.id || "") === dmUserId;
 
             return (
               <div
@@ -278,6 +287,19 @@ export default function PresenceFriendPanel({
                       <p className="truncate text-sm font-black text-white">
                         {user.username || "Kullanıcı"}
                       </p>
+
+                      {unreadCount > 0 ? (
+                        <span className="rounded-full bg-fuchsia-500 px-2 py-1 text-[10px] font-black text-white shadow-[0_0_16px_rgba(217,70,239,0.45)]">
+                          {Math.min(99, unreadCount)}
+                        </span>
+                      ) : null}
+
+                      {isActiveDM ? (
+                        <span className="rounded-full bg-sky-500/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-sky-200">
+                          DM Açık
+                        </span>
+                      ) : null}
+
                       <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${presence.badge}`}>
                         {presence.label}
                       </span>
@@ -292,6 +314,17 @@ export default function PresenceFriendPanel({
                         {getLastSeenText(user.updatedAt, user.isOnline)}
                       </span>
                     </div>
+
+                    {lastDM?.message ? (
+                      <div className="mt-3 rounded-2xl border border-sky-300/10 bg-sky-400/5 px-3 py-2 text-xs font-bold text-sky-100/65">
+                        <span className="text-sky-200/90">Son mesaj:</span>{" "}
+                        <span className="text-white/55">
+                          {String(lastDM.message).length > 44
+                            ? `${String(lastDM.message).slice(0, 44)}...`
+                            : lastDM.message}
+                        </span>
+                      </div>
+                    ) : null}
 
                     {user.roomCode && (
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-bold text-white/35">
@@ -329,17 +362,7 @@ export default function PresenceFriendPanel({
                   <div className="flex shrink-0 flex-col gap-2">
                     {user.roomCode && (
                       <>
-                        <button
-                      className="inline-flex items-center justify-center gap-1 rounded-2xl bg-sky-500/15 px-3 py-2 text-xs font-black text-sky-200 transition hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-40"
-                      onClick={() => onOpenDM?.(user)}
-                      disabled={!onOpenDM}
-                      title="Arkadaşına mesaj gönder"
-                    >
-                      <MessageCircle size={13} />
-                      Mesaj
-                    </button>
-
-                    {sameRoom ? (
+                        {sameRoom ? (
                           <div className="rounded-2xl bg-emerald-500/15 px-3 py-2 text-center text-xs font-black text-emerald-200">
                             Aynı Odada
                           </div>
