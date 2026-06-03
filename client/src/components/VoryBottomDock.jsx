@@ -27,6 +27,15 @@ export default function VoryBottomDock({
         Chat
       </button>
 
+      <button
+        type="button"
+        onClick={() => setShowReactions((value) => !value)}
+        className="vory-v5-dock-btn"
+      >
+        <SmilePlus size={17} />
+        React
+      </button>
+
       <button type="button" onClick={() => setShowShare((value) => !value)} className="vory-v5-dock-btn">
         <MonitorUp size={17} />
         Share
