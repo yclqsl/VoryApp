@@ -52,7 +52,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
         username: authUser?.username || "Anonim",
         userId: authUser?.id || authUser?._id || "",
         userAgent: navigator.userAgent,
-        appVersion: "v13.7.3-mobile-feedback-ux",
+        appVersion: "v13.7.3.1-mobile-feedback-fit-polish",
         metadata: {
           rating,
           url: window.location.href,
@@ -83,20 +83,20 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-3 z-[65] flex items-center gap-2 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/15 px-3 py-2.5 text-xs font-black text-white shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:bg-fuchsia-500/25 sm:bottom-24 sm:right-4 sm:px-4 sm:py-3 sm:text-sm lg:bottom-5"
+        className="fixed bottom-[5.75rem] right-4 z-[65] flex items-center gap-2 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/15 px-3.5 py-2.5 text-xs font-black text-white shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:bg-fuchsia-500/25 sm:bottom-24 sm:right-4 sm:px-4 sm:py-3 sm:text-sm lg:bottom-5"
       >
         <Bug size={17} className="text-fuchsia-300" />
         Feedback
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[99999] flex items-end justify-center bg-black/90 p-0 backdrop-blur-xl sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[99999] flex items-stretch justify-center bg-black/90 p-0 backdrop-blur-xl sm:items-center sm:p-4">
           <form
             onSubmit={submitFeedback}
-            className="relative z-[100000] flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[2rem] border border-white/10 bg-[#0c0a16] text-white shadow-[0_-20px_90px_rgba(0,0,0,0.65)] sm:max-h-[88vh] sm:max-w-[560px] sm:rounded-[1.75rem] sm:shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
+            className="relative z-[100000] flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden rounded-none border-0 bg-[#0c0a16] text-white shadow-[0_-20px_90px_rgba(0,0,0,0.65)] sm:h-auto sm:max-h-[88vh] sm:max-w-[560px] sm:rounded-[1.75rem] sm:border sm:border-white/10 sm:shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
           >
-            <div className="shrink-0 border-b border-white/10 bg-white/[0.03] px-4 py-3 sm:px-5 sm:py-4">
-              <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-white/15 sm:hidden" />
+            <div className="shrink-0 border-b border-white/10 bg-white/[0.03] px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:py-4">
+              
 
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -120,7 +120,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 sm:p-5">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3 sm:p-5">
               <div className="grid grid-cols-3 gap-2">
                 {feedbackTypes.map((item) => {
                   const Icon = item.icon;
@@ -202,7 +202,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
                   placeholder="Ne yaptın, ne oldu, ne bekliyordun?"
-                  className="min-h-[132px] w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/40 sm:min-h-[150px]"
+                  className="min-h-[120px] w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/40 sm:min-h-[150px]"
                   maxLength={3000}
                 />
               </label>
