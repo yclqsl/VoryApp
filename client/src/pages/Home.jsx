@@ -2194,7 +2194,7 @@ export default function Home({ authUser, onLogout }) {
   }
 
   return (
-    <div className={`app-shell min-h-screen overflow-x-hidden bg-gradient-to-br ${getThemeShellClass(roomTheme)} text-white`}>
+    <div className={`app-shell theme-${roomTheme} min-h-screen overflow-x-hidden bg-gradient-to-br ${getThemeShellClass(roomTheme)} text-white`}>
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className={`absolute -left-32 top-0 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 1)} blur-3xl`} />
         <div className={`absolute right-10 top-20 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 2)} blur-3xl`} />
