@@ -1182,6 +1182,17 @@ io.on("connection", (socket) => {
 
 
 
+
+  socket.on("party-invite-send", ({ targetSocketId, roomCode, fromUsername }) => {
+    if (!targetSocketId || !roomCode) return;
+
+    io.to(targetSocketId).emit("party-invite-received", {
+      roomCode,
+      fromUsername: fromUsername || "Kullanıcı",
+      createdAt: Date.now(),
+    });
+  });
+
   socket.on("reaction:send", ({ roomCode, emoji, username }) => {
     if (!roomCode || !rooms[roomCode]) return;
 

@@ -121,6 +121,7 @@ export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId,
                     >
                       Katıl
                     </button>
+                    <button className="ml-2 shrink-0 rounded-2xl bg-fuchsia-500/15 px-3 py-2 text-xs font-black text-fuchsia-200">Davet Et</button>
                   )}
                 </div>
               </div>

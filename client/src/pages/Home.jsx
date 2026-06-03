@@ -44,6 +44,7 @@ export default function Home({ authUser, onLogout }) {
   const [onlinePresence, setOnlinePresence] = useState([]);
   const [reactions, setReactions] = useState([]);
   const [typingUser, setTypingUser] = useState("");
+  const [partyInvite, setPartyInvite] = useState(null);
 
   const currentUserPayload = {
     username: username || authUser?.username || "Misafir",
@@ -354,6 +355,19 @@ export default function Home({ authUser, onLogout }) {
       setCurrentMedia(mediaItem || null);
     });
 
+    socket.on("party-invite-received", (invite) => {
+      setPartyInvite(invite);
+
+      addLocalNotification({
+        type: "invite",
+        title: "Party Invite",
+        message: `${invite.fromUsername} seni davet etti.`,
+        roomCode: invite.roomCode,
+      });
+
+      toast.success(`${invite.fromUsername} seni davet etti 🎉`);
+    });
+
     socket.on("reaction:new", (reaction) => {
       const visualReaction = {
         ...reaction,
@@ -648,6 +662,17 @@ export default function Home({ authUser, onLogout }) {
     });
   }
 
+  
+  function acceptPartyInvite() {
+    if (!partyInvite) return;
+    joinRoom(partyInvite.roomCode);
+    setPartyInvite(null);
+  }
+
+  function rejectPartyInvite() {
+    setPartyInvite(null);
+  }
+
   function handleSectionChange(section) {
     setAppSection(section);
 
@@ -897,6 +922,19 @@ export default function Home({ authUser, onLogout }) {
             onMarkNotificationsRead={markNotificationsRead}
             onClearNotifications={clearNotifications}
           />
+
+          {partyInvite && (
+            <div className="glass-panel flex items-center justify-between border-fuchsia-400/25 p-5">
+              <div>
+                <h3 className="text-lg font-black">🎉 Party Invite</h3>
+                <p>{partyInvite.fromUsername} seni {partyInvite.roomCode} odasına davet etti.</p>
+              </div>
+              <div className="flex gap-2">
+                <button className="btn-primary" onClick={acceptPartyInvite}>Katıl</button>
+                <button className="btn-secondary" onClick={rejectPartyInvite}>Reddet</button>
+              </div>
+            </div>
+          )}
 
           {pendingInviteRoom && !roomCode && (
             <div className="glass-panel flex flex-col gap-4 border-emerald-400/25 p-5 sm:flex-row sm:items-center sm:justify-between">
