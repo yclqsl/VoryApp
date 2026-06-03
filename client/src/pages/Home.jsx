@@ -1766,7 +1766,7 @@ export default function Home({ authUser, onLogout }) {
     if (appSection === "voice") {
       return (
         <div className="vory-v5-page-grid">
-          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
+          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
           <UserList users={users} />
           <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
         </div>
@@ -1970,7 +1970,7 @@ export default function Home({ authUser, onLogout }) {
     if (activeMobileTab === "voice") {
       return (
         <section className="flex min-w-0 flex-col gap-4">
-          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
+          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
           <UserList users={users} />
         </section>
       );

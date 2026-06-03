@@ -10,7 +10,7 @@ const ICE_SERVERS = {
   ],
 };
 
-export default function VoiceChat({ roomCode, username }) {
+export default function VoiceChat({ roomCode, username, onReaction }) {
   const [isVoiceOn, setIsVoiceOn] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [voiceUsers, setVoiceUsers] = useState([]);
@@ -311,6 +311,16 @@ export default function VoiceChat({ roomCode, username }) {
     toast.success(track.enabled ? "Mikrofon açıldı" : "Mikrofon kapandı");
   }
 
+  function sendQuickReaction(emoji) {
+    if (!roomCode) {
+      toast.error("Önce odaya gir.");
+      return;
+    }
+
+    onReaction?.(emoji);
+  }
+
+
   useEffect(() => {
     socket.on("voice-users", ({ users }) => {
       const safeUsers = users || [];
@@ -520,35 +530,109 @@ export default function VoiceChat({ roomCode, username }) {
         </div>
       )}
 
-      {!isVoiceOn ? (
-        <button
-          className="btn mt-4 flex items-center justify-center gap-2"
-          onClick={startVoice}
-        >
-          <Mic size={18} />
-          Mikrofona Katıl
-        </button>
-      ) : (
-        <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-4 hidden rounded-[1.75rem] border border-white/10 bg-black/30 p-3 lg:block">
+        {!isVoiceOn ? (
           <button
-            className="btn-secondary flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={toggleMute}
-            disabled={forceMutedByHost}
-            title={forceMutedByHost ? "Host Mute All açık" : ""}
+            className="btn flex items-center justify-center gap-2"
+            onClick={startVoice}
           >
-            <MicOff size={17} />
-            {forceMutedByHost ? "Host Susturdu" : isMuted ? "Aç" : "Sustur"}
+            <Mic size={18} />
+            Mikrofona Katıl
+          </button>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              className="btn-secondary flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={toggleMute}
+              disabled={forceMutedByHost}
+              title={forceMutedByHost ? "Host Mute All açık" : ""}
+            >
+              <MicOff size={17} />
+              {forceMutedByHost ? "Host Susturdu" : isMuted ? "Aç" : "Sustur"}
+            </button>
+
+            <button
+              className="flex items-center justify-center gap-2 rounded-2xl bg-red-500/15 px-4 py-3 font-bold text-red-300 transition hover:bg-red-500/25"
+              onClick={stopVoice}
+            >
+              <PhoneOff size={17} />
+              Çık
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 rounded-[1.75rem] border border-emerald-300/10 bg-emerald-400/5 p-3 lg:hidden">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-200/55">
+              Mobile Voice Dock
+            </p>
+            <p className="mt-1 text-sm font-black text-white">
+              {isVoiceOn ? (isMuted ? "Mikrofon sessiz" : "Mikrofon aktif") : "Voice kapalı"}
+            </p>
+          </div>
+
+          <span className={`rounded-full px-3 py-1 text-[11px] font-black ${
+            isVoiceOn
+              ? isMuted
+                ? "bg-amber-400/15 text-amber-200"
+                : "bg-emerald-400/15 text-emerald-200"
+              : "bg-white/8 text-white/35"
+          }`}>
+            {participantCount()} kişi
+          </span>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2">
+          <button
+            type="button"
+            onClick={isVoiceOn ? toggleMute : startVoice}
+            disabled={isVoiceOn && forceMutedByHost}
+            className={`flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-2xl border text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              !isVoiceOn
+                ? "border-emerald-300/20 bg-emerald-400/15 text-emerald-100"
+                : isMuted || forceMutedByHost
+                  ? "border-amber-300/20 bg-amber-400/15 text-amber-100"
+                  : "border-emerald-300/25 bg-emerald-400/20 text-emerald-100 shadow-[0_0_24px_rgba(52,211,153,0.16)]"
+            }`}
+          >
+            {isVoiceOn && (isMuted || forceMutedByHost) ? <MicOff size={22} /> : <Mic size={22} />}
+            <span>{!isVoiceOn ? "Katıl" : forceMutedByHost ? "Host" : isMuted ? "Aç" : "Mic"}</span>
           </button>
 
           <button
-            className="flex items-center justify-center gap-2 rounded-2xl bg-red-500/15 px-4 py-3 font-bold text-red-300 transition hover:bg-red-500/25"
-            onClick={stopVoice}
+            type="button"
+            onClick={() => sendQuickReaction("🔥")}
+            className="flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-2xl border border-orange-300/15 bg-orange-400/10 text-lg font-black text-orange-100 transition hover:bg-orange-400/20"
           >
-            <PhoneOff size={17} />
-            Çık
+            🔥
+            <span className="text-[10px]">React</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => sendQuickReaction("😂")}
+            className="flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-2xl border border-yellow-300/15 bg-yellow-400/10 text-lg font-black text-yellow-100 transition hover:bg-yellow-400/20"
+          >
+            😂
+            <span className="text-[10px]">LOL</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={isVoiceOn ? stopVoice : startVoice}
+            className={`flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-2xl border text-xs font-black transition ${
+              isVoiceOn
+                ? "border-red-300/20 bg-red-500/15 text-red-200 hover:bg-red-500/25"
+                : "border-white/10 bg-white/8 text-white/55 hover:bg-white/12"
+            }`}
+          >
+            {isVoiceOn ? <PhoneOff size={22} /> : <Radio size={22} />}
+            <span>{isVoiceOn ? "Çık" : "Voice"}</span>
           </button>
         </div>
-      )}
+      </div>
     </section>
   );
 }
