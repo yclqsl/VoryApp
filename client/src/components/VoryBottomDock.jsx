@@ -16,7 +16,7 @@ export default function VoryBottomDock({
   const [showReactions, setShowReactions] = useState(false);
 
   return (
-    <div className="vory-v5-bottom-dock">
+    <div className="vory-v5-bottom-dock" style={{ zIndex: 9999, overflow: "visible" }}>
       <button type="button" onClick={onOpenVoice} className="vory-v5-dock-btn">
         <Radio size={17} />
         Voice
@@ -36,7 +36,11 @@ export default function VoryBottomDock({
         React
       </button>
 
-      <button type="button" onClick={() => setShowShare((value) => !value)} className="vory-v5-dock-btn">
+      <button
+        type="button"
+        onClick={() => setShowShare((value) => !value)}
+        className="vory-v5-dock-btn"
+      >
         <MonitorUp size={17} />
         Share
       </button>
@@ -51,7 +55,16 @@ export default function VoryBottomDock({
       </div>
 
       {showReactions && (
-        <div className="vory-reaction-picker">
+        <div
+          className="vory-reaction-picker"
+          style={{
+            position: "absolute",
+            bottom: "calc(100% + 12px)",
+            left: "96px",
+            zIndex: 99999,
+            pointerEvents: "auto",
+          }}
+        >
           {reactionEmojis.map((emoji) => (
             <button
               key={emoji}
@@ -69,7 +82,10 @@ export default function VoryBottomDock({
       )}
 
       {showShare && (
-        <div className="absolute bottom-full left-0 mb-3 w-[min(720px,90vw)]">
+        <div
+          className="absolute bottom-full left-0 mb-3 w-[min(720px,90vw)]"
+          style={{ zIndex: 99999 }}
+        >
           {screenShare}
         </div>
       )}
