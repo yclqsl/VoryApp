@@ -77,10 +77,11 @@ export default function VideoPlayer({
     // Bu sırada sync yayarsak viewer tarafında mikro seek ve çift ses hissi oluşur.
     if (event.data === 3) {
       qualityLockRef.current = true;
+      window.voryPlayerBufferingUntil = Date.now() + 8000;
 
       setTimeout(() => {
         qualityLockRef.current = false;
-      }, 3500);
+      }, 8000);
 
       return;
     }
@@ -121,6 +122,17 @@ export default function VideoPlayer({
     toast.error("Video yüklenemedi. Farklı bir YouTube linki dene.");
   }
 
+  function handlePlaybackQualityChange() {
+    // 2K/4K kaliteye geçerken YouTube iframe uzun süre buffer/rebuild yapabiliyor.
+    // Bu pencerede heartbeat/state eventlerini kilitliyoruz.
+    qualityLockRef.current = true;
+    window.voryPlayerBufferingUntil = Date.now() + 9000;
+
+    setTimeout(() => {
+      qualityLockRef.current = false;
+    }, 9000);
+  }
+
   function syncTime() {
     if (!isHost) {
       toast.error("Sadece host senkron yapabilir.");
@@ -144,6 +156,7 @@ export default function VideoPlayer({
     // Bu emit viewer'a seek yaptırmaz, sadece state saklar.
     heartbeatRef.current = setInterval(() => {
       if (!playerRef.current) return;
+      if (Date.now() < (window.voryPlayerBufferingUntil || 0)) return;
 
       const roomCode = getRoomCode();
       if (!roomCode) return;
@@ -208,6 +221,7 @@ export default function VideoPlayer({
             iframeClassName="h-full w-full"
             onReady={handleReady}
             onStateChange={handleStateChange}
+            onPlaybackQualityChange={handlePlaybackQualityChange}
             onError={handleError}
             opts={{
               width: "100%",

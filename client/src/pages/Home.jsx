@@ -269,21 +269,32 @@ export default function Home({ authUser, onLogout }) {
     function applySyncState({ isPlaying, currentTime, soft = false }) {
       if (!playerRef.current) return;
 
+      const bufferingUntil = window.voryPlayerBufferingUntil || 0;
+
+      // YouTube 2K/4K kalite değişiminde iframe uzun buffer yapabiliyor.
+      // Bu sırada dışarıdan play/seek vermek çift ses / ghost playback hissi yaratıyor.
+      if (Date.now() < bufferingUntil) return;
+
       const targetTime = Math.max(0, Number(currentTime) || 0);
       const localTime = playerRef.current.getCurrentTime?.() || 0;
       const localState = playerRef.current.getPlayerState?.();
       const drift = Math.abs(localTime - targetTime);
+
+      if (localState === 3) {
+        window.voryPlayerBufferingUntil = Date.now() + 8000;
+        return;
+      }
 
       ignoreEventRef.current = true;
 
       if (soft) {
         const now = Date.now();
 
-        if (now - lastSoftSyncRef.current > 3000 && drift > 2) {
+        if (now - lastSoftSyncRef.current > 5000 && drift > 3.5) {
           lastSoftSyncRef.current = now;
           playerRef.current.seekTo(targetTime, true);
         }
-      } else if (drift > 2.5) {
+      } else if (drift > 5) {
         playerRef.current.seekTo(targetTime, true);
       }
 
@@ -477,7 +488,7 @@ export default function Home({ authUser, onLogout }) {
           isPlaying: playing,
         });
       }
-    }, isHost ? 4000 : 5000);
+    }, isHost ? 6000 : 7000);
 
     return () => {
       if (syncIntervalRef.current) {
