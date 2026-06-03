@@ -1,4 +1,5 @@
-import { RefreshCcw, RotateCw, Wifi, WifiOff } from "lucide-react";
+import { RefreshCcw, RotateCw, Share2, Wifi, WifiOff } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function ConnectionBanner({
   status,
@@ -9,6 +10,22 @@ export default function ConnectionBanner({
 }) {
   const isConnected = status === "connected";
   const isReconnecting = status === "reconnecting";
+
+  async function copyRoomLink() {
+    if (!roomCode) {
+      toast.error("Önce oda oluştur veya odaya katıl.");
+      return;
+    }
+
+    const roomLink = `${window.location.origin}/room/${roomCode}`;
+
+    try {
+      await navigator.clipboard.writeText(roomLink);
+      toast.success("Room link copied 🚀");
+    } catch (error) {
+      toast.error("Link kopyalanamadı.");
+    }
+  }
 
   return (
     <div
@@ -52,14 +69,26 @@ export default function ConnectionBanner({
         )}
 
         {roomCode && (
-          <button
-            type="button"
-            onClick={() => onForceSync?.("manual-click")}
-            className="flex items-center gap-1 rounded-xl bg-white/10 px-3 py-1.5 text-xs transition hover:bg-white/15"
-          >
-            <RotateCw size={13} />
-            Sync
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={copyRoomLink}
+              className="flex items-center gap-1 rounded-xl bg-white/10 px-3 py-1.5 text-xs transition hover:bg-white/15"
+              title="Room linkini kopyala"
+            >
+              <Share2 size={13} />
+              Share
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onForceSync?.("manual-click")}
+              className="flex items-center gap-1 rounded-xl bg-white/10 px-3 py-1.5 text-xs transition hover:bg-white/15"
+            >
+              <RotateCw size={13} />
+              Sync
+            </button>
+          </>
         )}
       </div>
     </div>
