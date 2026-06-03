@@ -402,89 +402,43 @@
 }
 
 
-/* Emoji Reactions V10.3 */
-.vory-reaction-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 45;
-  overflow: hidden;
-  border-radius: 34px;
-}
-
-.vory-floating-reaction {
-  position: absolute;
-  bottom: 86px;
-  display: flex;
-  flex-direction: column;
+/* Live Viewer Count V10.4 */
+.vory-live-pill {
+  display: inline-flex;
   align-items: center;
-  gap: 2px;
-  transform: translateX(-50%);
-  animation: voryReactionFloat 2.25s ease-out forwards;
-  filter: drop-shadow(0 12px 24px rgba(0,0,0,0.35));
+  gap: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.045);
+  padding: 9px 11px;
+  color: rgba(255,255,255,0.58);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
-.vory-floating-reaction span {
-  font-size: 42px;
+.vory-live-pill strong {
+  color: white;
+  font-size: 13px;
   line-height: 1;
 }
 
-.vory-floating-reaction small {
-  max-width: 120px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.45);
-  padding: 3px 8px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: rgba(255,255,255,0.72);
-  font-size: 10px;
-  font-weight: 900;
-  backdrop-filter: blur(14px);
+.vory-live-pill span {
+  color: rgba(255,255,255,0.42);
 }
 
-@keyframes voryReactionFloat {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, 20px) scale(0.72) rotate(-8deg);
-  }
-  12% {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1) rotate(4deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -280px) scale(1.22) rotate(12deg);
-  }
+.vory-live-pill svg {
+  color: rgba(167,139,250,0.95);
 }
 
-.vory-reaction-picker {
-  position: absolute;
-  bottom: 100%;
-  left: 96px;
-  margin-bottom: 12px;
-  display: flex;
-  gap: 8px;
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 24px;
-  background: rgba(0,0,0,0.78);
-  padding: 8px;
-  box-shadow: 0 20px 80px rgba(0,0,0,0.42);
-  backdrop-filter: blur(24px);
+.vory-live-pill-on {
+  border-color: rgba(34,197,94,0.22);
+  background: rgba(16,185,129,0.10);
+  color: rgb(167,243,208);
+  box-shadow: 0 0 28px rgba(16,185,129,0.12);
 }
 
-.vory-reaction-btn {
-  display: flex;
-  width: 42px;
-  height: 42px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.065);
-  font-size: 22px;
-  transition: transform .16s ease, background .16s ease;
-}
-
-.vory-reaction-btn:hover {
-  transform: translateY(-2px) scale(1.08);
-  background: rgba(255,255,255,0.12);
+.vory-live-pill-on svg,
+.vory-live-pill-on strong {
+  color: rgb(167,243,208);
 }

@@ -50,6 +50,16 @@ export default function Home({ authUser, onLogout }) {
     avatar: authUser?.avatar || "",
   };
 
+  const currentRoomPresence = onlinePresence.filter((user) => user.roomCode === roomCode);
+  const liveWatchingCount = roomCode ? Math.max(users.length, currentRoomPresence.length) : 0;
+  const liveVoiceCount = roomCode
+    ? currentRoomPresence.filter((user) => user.voiceActive || user.activity === "voice").length
+    : 0;
+  const liveScreenCount = roomCode
+    ? currentRoomPresence.filter((user) => user.screenSharing || user.activity === "sharing-screen").length
+    : 0;
+
+
   useEffect(() => {
     window.currentRoomCode = roomCode;
 
@@ -876,6 +886,9 @@ export default function Home({ authUser, onLogout }) {
             isHost={isHost}
             roomCode={roomCode}
             userCount={users.length}
+            watchingCount={liveWatchingCount}
+            voiceCount={liveVoiceCount}
+            screenCount={liveScreenCount}
             connectionStatus={connectionStatus}
             lastRestoreMessage={lastRestoreMessage}
             onRestore={() => restorePreviousSession("manual-click")}

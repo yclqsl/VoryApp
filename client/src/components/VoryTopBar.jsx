@@ -1,3 +1,4 @@
+import { MonitorUp, Radio, UsersRound } from "lucide-react";
 import ConnectionBanner from "./ConnectionBanner";
 import NotificationCenter from "./NotificationCenter";
 
@@ -7,6 +8,9 @@ export default function VoryTopBar({
   isHost,
   roomCode,
   userCount,
+  watchingCount = 0,
+  voiceCount = 0,
+  screenCount = 0,
   connectionStatus,
   lastRestoreMessage,
   onRestore,
@@ -40,6 +44,26 @@ export default function VoryTopBar({
             {" • "}
             @{authUser?.username || "user"}
           </span>
+        </div>
+      </div>
+
+      <div className="hidden items-center gap-2 xl:flex">
+        <div className="vory-live-pill">
+          <UsersRound size={15} />
+          <strong>{watchingCount || 0}</strong>
+          <span>Watching</span>
+        </div>
+
+        <div className="vory-live-pill">
+          <Radio size={15} />
+          <strong>{voiceCount || 0}</strong>
+          <span>Voice</span>
+        </div>
+
+        <div className={`vory-live-pill ${screenCount > 0 ? "vory-live-pill-on" : ""}`}>
+          <MonitorUp size={15} />
+          <strong>{screenCount || 0}</strong>
+          <span>Screen</span>
         </div>
       </div>
 
