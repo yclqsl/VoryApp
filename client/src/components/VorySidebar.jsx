@@ -1,13 +1,14 @@
 import { Home, MessageCircle, Radio, ShieldCheck, UsersRound, Video } from "lucide-react";
 
-const items = [
+const baseItems = [
   { id: "watch", label: "Watch", icon: Video },
   { id: "room", label: "Room", icon: Home },
   { id: "voice", label: "Voice", icon: Radio },
   { id: "chat", label: "Chat", icon: MessageCircle },
   { id: "friends", label: "Social", icon: UsersRound },
-  { id: "admin", label: "Admin", icon: ShieldCheck },
 ];
+
+const adminItem = { id: "admin", label: "Admin", icon: ShieldCheck };
 
 export default function VorySidebar({
   activeSection,
@@ -15,7 +16,10 @@ export default function VorySidebar({
   roomCode,
   onlineCount = 0,
   userCount = 0,
+  isAdmin = false,
 }) {
+  const items = isAdmin ? [...baseItems, adminItem] : baseItems;
+
   return (
     <aside className="vory-v5-sidebar">
       <button

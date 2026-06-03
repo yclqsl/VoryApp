@@ -135,6 +135,10 @@ export default function Home({ authUser, onLogout }) {
     avatar: authUser?.avatar || "",
   };
 
+  const isAdminUser =
+    authUser?.username === "admin" ||
+    authUser?.email === "yucelinizbusiness@gmail.com";
+
   const displayProfileStats = {
     ...profileStats,
     watchTime: formatWatchTime(profileStats.watchSeconds),
@@ -921,6 +925,11 @@ export default function Home({ authUser, onLogout }) {
   }
 
   function handleSectionChange(section) {
+    if (section === "admin" && !isAdminUser) {
+      toast.error("Admin panel sadece admin kullanıcıya açık.");
+      return;
+    }
+
     setAppSection(section);
 
     if (section === "watch") {
@@ -974,6 +983,10 @@ export default function Home({ authUser, onLogout }) {
   }
 
   function renderDesktopMain() {
+    if (!isAdminUser && appSection === "admin") {
+      return null;
+    }
+
     if (appSection === "room") {
       return (
         <div className="vory-v5-page-grid">
@@ -1195,6 +1208,7 @@ export default function Home({ authUser, onLogout }) {
           roomCode={roomCode}
           onlineCount={onlinePresence.length}
           userCount={users.length}
+          isAdmin={isAdminUser}
         />
 
         <div className="flex min-w-0 flex-1 flex-col gap-3">
