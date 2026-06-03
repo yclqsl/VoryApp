@@ -7,6 +7,11 @@ const tabs = [
     icon: Video,
   },
   {
+    id: "dm",
+    label: "DM",
+    icon: MessageCircle,
+  },
+  {
     id: "voice",
     label: "Voice",
     icon: Radio,
@@ -32,20 +37,23 @@ export default function MobileBottomNav({
   activeTab,
   onChange,
   unreadMessages = 0,
+  dmUnreadCount = 0,
   onlineCount = 0,
   roomCode,
 }) {
   return (
     <nav className="fixed inset-x-3 bottom-3 z-50 rounded-[1.75rem] border border-white/10 bg-black/85 p-2 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-2xl lg:hidden">
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-6 gap-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
 
           const badge =
-            tab.id === "chat" && unreadMessages > 0
-              ? Math.min(unreadMessages, 99)
-              : tab.id === "social" && onlineCount > 0
+            tab.id === "dm" && dmUnreadCount > 0
+              ? Math.min(dmUnreadCount, 99)
+              : tab.id === "chat" && unreadMessages > 0
+                ? Math.min(unreadMessages, 99)
+                : tab.id === "social" && onlineCount > 0
                 ? Math.min(onlineCount, 99)
                 : null;
 

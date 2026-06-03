@@ -192,6 +192,11 @@ export default function Home({ authUser, onLogout }) {
     })
   );
 
+  const totalDmUnread = Object.values(dmUnread || {}).reduce(
+    (sum, value) => sum + Number(value || 0),
+    0
+  );
+
 
   async function loadFriendState() {
     if (!currentUserId) return;
@@ -1404,6 +1409,8 @@ export default function Home({ authUser, onLogout }) {
       username: targetUser?.username || "Kullanıcı",
     });
 
+    setActiveMobileTab("dm");
+
     setDmUnread((prev) => ({
       ...prev,
       [targetId]: 0,
@@ -1472,7 +1479,7 @@ export default function Home({ authUser, onLogout }) {
     const messagesForThread = dmMessages?.[targetId] || [];
 
     return (
-      <div className="fixed bottom-24 right-4 z-[9998] w-[390px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[2rem] border border-white/10 bg-black/90 shadow-[0_24px_100px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+      <div className="fixed inset-0 z-[9998] flex flex-col overflow-hidden border border-white/10 bg-black/95 shadow-[0_24px_100px_rgba(0,0,0,0.55)] backdrop-blur-2xl lg:bottom-24 lg:left-auto lg:right-4 lg:top-auto lg:h-auto lg:w-[390px] lg:max-w-[calc(100vw-2rem)] lg:rounded-[2rem] lg:bg-black/90">
         <div className="flex items-center justify-between border-b border-white/10 p-4">
           <div className="min-w-0">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-200/70">Direct Message</p>
@@ -1490,7 +1497,7 @@ export default function Home({ authUser, onLogout }) {
           </button>
         </div>
 
-        <div className="flex max-h-[360px] min-h-[260px] flex-col gap-2 overflow-auto p-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-4 lg:max-h-[360px] lg:min-h-[260px]">
           {messagesForThread.length === 0 ? (
             <div className="m-auto rounded-3xl bg-white/[0.04] p-5 text-center text-sm text-white/40">
               Henüz mesaj yok. İlk mesajı sen gönder knks 💬
@@ -1534,7 +1541,7 @@ export default function Home({ authUser, onLogout }) {
           ) : null}
         </div>
 
-        <div className="border-t border-white/10 p-3">
+        <div className="border-t border-white/10 p-3 pb-5 lg:pb-3">
           <div className="flex gap-2">
             <input
               value={dmInput}
@@ -1660,7 +1667,7 @@ export default function Home({ authUser, onLogout }) {
 
     setAppSection("friends");
     setRightPanelTab("people");
-    setActiveMobileTab("social");
+    setActiveMobileTab("dm");
   }
 
   function handleSectionChange(section) {
@@ -1680,6 +1687,12 @@ export default function Home({ authUser, onLogout }) {
     if (section === "chat") {
       setRightPanelTab("chat");
       setActiveMobileTab("chat");
+      return;
+    }
+
+    if (section === "dm") {
+      setRightPanelTab("people");
+      setActiveMobileTab("dm");
       return;
     }
 
@@ -1948,6 +1961,38 @@ export default function Home({ authUser, onLogout }) {
       );
     }
 
+    if (activeMobileTab === "dm") {
+      return (
+        <section className="flex min-w-0 flex-col gap-4">
+          <div className="rounded-[1.75rem] border border-sky-300/10 bg-sky-400/5 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-sky-200/55">
+              Mobile DM
+            </p>
+            <h2 className="mt-1 text-xl font-black text-white">
+              Mesajlar
+            </h2>
+            <p className="mt-1 text-sm font-bold text-white/45">
+              Bir arkadaşına dokun, DM tam ekran açılsın.
+            </p>
+          </div>
+
+          <PresenceFriendPanel
+            friendState={friendState}
+            onlineUsers={onlinePresence}
+            currentSocketId={socket.id}
+            currentRoomCode={roomCode}
+            inviteCooldowns={inviteCooldowns}
+            dmUnread={dmUnread}
+            activeDM={activeDM}
+            dmLastMessages={dmLastMessages}
+            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+            onInviteFriend={sendPartyInvite}
+            onOpenDM={openDM}
+          />
+        </section>
+      );
+    }
+
     return (
       <section className="flex min-w-0 flex-col gap-4">
         <FriendRequestsPanel
@@ -2144,6 +2189,7 @@ export default function Home({ authUser, onLogout }) {
             activeTab={activeMobileTab}
             onChange={setActiveMobileTab}
             unreadMessages={messages.length}
+            dmUnreadCount={totalDmUnread}
             onlineCount={onlinePresence.length}
             roomCode={roomCode}
           />
