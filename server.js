@@ -1698,17 +1698,7 @@ io.on("connection", (socket) => {
     }
 
     try {
-      const messages = await DirectMessage.find({
-        $or: [
-          { fromUserId: cleanCurrentUserId, toUserId: cleanTargetUserId },
-          { fromUserId: cleanTargetUserId, toUserId: cleanCurrentUserId },
-        ],
-      })
-        .sort({ createdAt: 1 })
-        .limit(100)
-        .lean();
-
-      await DirectMessage.updateMany(
+      const readResult = await DirectMessage.updateMany(
         {
           fromUserId: cleanTargetUserId,
           toUserId: cleanCurrentUserId,
@@ -1721,6 +1711,34 @@ io.on("connection", (socket) => {
           },
         }
       );
+
+      const messages = await DirectMessage.find({
+        $or: [
+          { fromUserId: cleanCurrentUserId, toUserId: cleanTargetUserId },
+          { fromUserId: cleanTargetUserId, toUserId: cleanCurrentUserId },
+        ],
+      })
+        .sort({ createdAt: 1 })
+        .limit(100)
+        .lean();
+
+      if (Number(readResult?.modifiedCount || 0) > 0) {
+        const senderPresence = getOnlineUserById(cleanTargetUserId);
+        const readMessageIds = messages
+          .filter((message) =>
+            String(message.fromUserId || "") === cleanTargetUserId &&
+            String(message.toUserId || "") === cleanCurrentUserId
+          )
+          .map((message) => String(message._id || message.clientId || ""));
+
+        if (senderPresence?.socketId) {
+          io.to(senderPresence.socketId).emit("dm:read", {
+            readerUserId: cleanCurrentUserId,
+            messageIds: readMessageIds,
+            readAt: Date.now(),
+          });
+        }
+      }
 
       reply({
         ok: true,
@@ -1789,6 +1807,68 @@ io.on("connection", (socket) => {
     } catch (error) {
       console.error("DM gönderilemedi:", error);
       reply({ ok: false, message: "DM gönderilemedi." });
+    }
+  });
+
+  socket.on("dm:mark-read", async ({ currentUserId, targetUserId }, ack) => {
+    const reply = (payload) => {
+      if (typeof ack === "function") ack(payload);
+    };
+
+    const cleanCurrentUserId = String(currentUserId || "");
+    const cleanTargetUserId = String(targetUserId || "");
+
+    if (!cleanCurrentUserId || !cleanTargetUserId) {
+      reply({ ok: false, message: "DM okundu bilgisi güncellenemedi." });
+      return;
+    }
+
+    try {
+      const unreadMessages = await DirectMessage.find({
+        fromUserId: cleanTargetUserId,
+        toUserId: cleanCurrentUserId,
+        read: false,
+      }).select("_id clientId").lean();
+
+      if (!unreadMessages.length) {
+        reply({ ok: true, updated: 0 });
+        return;
+      }
+
+      await DirectMessage.updateMany(
+        {
+          fromUserId: cleanTargetUserId,
+          toUserId: cleanCurrentUserId,
+          read: false,
+        },
+        {
+          $set: {
+            read: true,
+            readAt: new Date(),
+          },
+        }
+      );
+
+      const senderPresence = getOnlineUserById(cleanTargetUserId);
+      const readMessageIds = unreadMessages.map((message) =>
+        String(message._id || message.clientId || "")
+      );
+
+      if (senderPresence?.socketId) {
+        io.to(senderPresence.socketId).emit("dm:read", {
+          readerUserId: cleanCurrentUserId,
+          messageIds: readMessageIds,
+          readAt: Date.now(),
+        });
+      }
+
+      reply({
+        ok: true,
+        updated: readMessageIds.length,
+      });
+    } catch (error) {
+      console.error("DM okundu bilgisi güncellenemedi:", error);
+      reply({ ok: false, message: "DM okundu bilgisi güncellenemedi." });
     }
   });
 

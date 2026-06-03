@@ -267,6 +267,16 @@ export default function Home({ authUser, onLogout }) {
   const pulseLockRef = useRef(false);
   const lastSoftSyncRef = useRef(0);
   const typingTimeoutRef = useRef(null);
+  const activeDMRef = useRef(null);
+  const currentUserIdRef = useRef(currentUserId);
+
+  useEffect(() => {
+    activeDMRef.current = activeDM;
+  }, [activeDM]);
+
+  useEffect(() => {
+    currentUserIdRef.current = currentUserId;
+  }, [currentUserId]);
 
   useEffect(() => {
     const invitedRoom = getRoomCodeFromLocation();
@@ -553,18 +563,31 @@ export default function Home({ authUser, onLogout }) {
     socket.on("dm:received", (dm) => {
       if (!dm) return;
 
-      const threadId = dm.fromUserId;
+      const threadId = String(dm.fromUserId || "");
+      const activeThreadId = String(
+        activeDMRef.current?.userId ||
+        activeDMRef.current?._id ||
+        activeDMRef.current?.id ||
+        ""
+      );
+
       setDmMessages((prev) => ({
         ...prev,
         [threadId]: [...(prev?.[threadId] || []), dm].slice(-100),
       }));
 
-      if (!activeDM || String(activeDM.userId || activeDM._id || activeDM.id) !== String(threadId)) {
-        setDmUnread((prev) => ({
-          ...prev,
-          [threadId]: Number(prev?.[threadId] || 0) + 1,
-        }));
+      if (activeThreadId === threadId) {
+        socket.emit("dm:mark-read", {
+          currentUserId: currentUserIdRef.current,
+          targetUserId: threadId,
+        });
+        return;
       }
+
+      setDmUnread((prev) => ({
+        ...prev,
+        [threadId]: Number(prev?.[threadId] || 0) + 1,
+      }));
     });
 
     socket.on("dm:sent", (dm) => {
@@ -578,6 +601,37 @@ export default function Home({ authUser, onLogout }) {
         return {
           ...prev,
           [threadId]: [...existing, dm].slice(-100),
+        };
+      });
+    });
+
+    socket.on("dm:read", ({ readerUserId, messageIds = [] }) => {
+      const threadId = String(readerUserId || "");
+      if (!threadId) return;
+
+      setDmMessages((prev) => {
+        const existing = prev?.[threadId] || [];
+        if (!existing.length) return prev;
+
+        const idSet = new Set((messageIds || []).map((id) => String(id)));
+
+        return {
+          ...prev,
+          [threadId]: existing.map((message) => {
+            const messageId = String(message?._id || message?.id || "");
+            const mineToReader =
+              String(message?.fromUserId || "") === String(currentUserIdRef.current || "") &&
+              String(message?.toUserId || "") === threadId;
+
+            if (!mineToReader) return message;
+            if (idSet.size && !idSet.has(messageId)) return message;
+
+            return {
+              ...message,
+              read: true,
+              status: "read",
+            };
+          }),
         };
       });
     });
@@ -676,6 +730,7 @@ export default function Home({ authUser, onLogout }) {
       socket.off("activity:new");
       socket.off("dm:received");
       socket.off("dm:sent");
+      socket.off("dm:read");
       socket.off("dm:typing");
       socket.off("notification:new");
       socket.off("media-queue-updated");
@@ -1171,6 +1226,11 @@ export default function Home({ authUser, onLogout }) {
         ...prev,
         [targetId]: response.messages || [],
       }));
+
+      socket.emit("dm:mark-read", {
+        currentUserId,
+        targetUserId: targetId,
+      });
     });
   }
 
@@ -1255,9 +1315,19 @@ export default function Home({ authUser, onLogout }) {
                     <p className="whitespace-pre-wrap break-words text-sm font-bold leading-5">
                       {dm.message}
                     </p>
-                    <p className="mt-1 text-[10px] font-bold text-white/30">
-                      {new Date(dm.createdAt || Date.now()).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
-                    </p>
+                    <div className="mt-1 flex items-center justify-end gap-1 text-[10px] font-bold text-white/30">
+                      <span>
+                        {new Date(dm.createdAt || Date.now()).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      {mine ? (
+                        <span
+                          className={dm.read || dm.status === "read" ? "text-sky-200/80" : "text-white/35"}
+                          title={dm.read || dm.status === "read" ? "Okundu" : "Gönderildi"}
+                        >
+                          {dm.read || dm.status === "read" ? "✓✓" : "✓"}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               );
