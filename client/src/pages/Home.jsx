@@ -43,6 +43,61 @@ function setRoomUrl(roomCode) {
   window.history.replaceState({}, "", `/room/${roomCode}`);
 }
 
+function readLocalJson(key, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeLocalJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function createEmptyVoryStats() {
+  return {
+    roomsJoined: 0,
+    watchSeconds: 0,
+    mediaPlayed: 0,
+    messagesSent: 0,
+    reactionsUsed: 0,
+    invitesSent: 0,
+    friends: 0,
+    syncScore: "100%",
+  };
+}
+
+function formatWatchTime(seconds = 0) {
+  const safeSeconds = Math.max(0, Number(seconds) || 0);
+  const hours = Math.floor(safeSeconds / 3600);
+
+  if (hours >= 1) return `${hours}h`;
+
+  const minutes = Math.floor(safeSeconds / 60);
+  return minutes > 0 ? `${minutes}m` : "0h";
+}
+
+function normalizeHistoryTitle(value = "") {
+  try {
+    const url = new URL(value);
+    if (url.hostname.includes("youtube.com")) {
+      return url.searchParams.get("v")
+        ? `YouTube Video • ${url.searchParams.get("v")}`
+        : "YouTube Video";
+    }
+
+    if (url.hostname.includes("youtu.be")) {
+      return `YouTube Video • ${url.pathname.replace("/", "")}`;
+    }
+
+    return url.hostname || value;
+  } catch {
+    return value || "Vory Media";
+  }
+}
+
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
   const [roomInput, setRoomInput] = useState("");
@@ -67,10 +122,21 @@ export default function Home({ authUser, onLogout }) {
   const [reactions, setReactions] = useState([]);
   const [typingUser, setTypingUser] = useState("");
   const [partyInvite, setPartyInvite] = useState(null);
+  const [watchHistory, setWatchHistory] = useState(() =>
+    readLocalJson("vory-watch-history", [])
+  );
+  const [profileStats, setProfileStats] = useState(() =>
+    readLocalJson("vory-profile-stats", createEmptyVoryStats())
+  );
 
   const currentUserPayload = {
     username: username || authUser?.username || "Misafir",
     avatar: authUser?.avatar || "",
+  };
+
+  const displayProfileStats = {
+    ...profileStats,
+    watchTime: formatWatchTime(profileStats.watchSeconds),
   };
 
   const currentRoomPresence = onlinePresence.filter((user) => user.roomCode === roomCode);
@@ -98,6 +164,14 @@ export default function Home({ authUser, onLogout }) {
       localStorage.setItem("vory-last-username", currentUserPayload.username);
     }
   }, [currentUserPayload.username]);
+
+  useEffect(() => {
+    writeLocalJson("vory-watch-history", watchHistory);
+  }, [watchHistory]);
+
+  useEffect(() => {
+    writeLocalJson("vory-profile-stats", profileStats);
+  }, [profileStats]);
 
   const playerRef = useRef(null);
   const ignoreEventRef = useRef(false);
@@ -198,6 +272,7 @@ export default function Home({ authUser, onLogout }) {
       setIsHost(data.isHost);
       setPendingInviteRoom("");
       setStatus("Oda oluşturuldu.");
+      bumpProfileStat("roomsJoined", 1);
       toast.success("Oda oluşturuldu 🚀");
     });
 
@@ -207,6 +282,7 @@ export default function Home({ authUser, onLogout }) {
       setIsHost(data.isHost);
       setPendingInviteRoom("");
       setStatus("Odaya katıldın.");
+      bumpProfileStat("roomsJoined", 1);
       toast.success("Odaya katıldın 🎉");
     });
 
@@ -237,6 +313,11 @@ export default function Home({ authUser, onLogout }) {
 
     socket.on("video-updated", (url) => {
       setVideoUrl(url);
+      recordWatchItem({
+        url,
+        title: normalizeHistoryTitle(url),
+        meta: roomCode ? `Room ${roomCode}` : "Vory watch session",
+      });
       setStatus("Video odaya eklendi.");
       toast.success("Video odaya eklendi 🎬");
     });
@@ -269,32 +350,21 @@ export default function Home({ authUser, onLogout }) {
     function applySyncState({ isPlaying, currentTime, soft = false }) {
       if (!playerRef.current) return;
 
-      const bufferingUntil = window.voryPlayerBufferingUntil || 0;
-
-      // YouTube 2K/4K kalite değişiminde iframe uzun buffer yapabiliyor.
-      // Bu sırada dışarıdan play/seek vermek çift ses / ghost playback hissi yaratıyor.
-      if (Date.now() < bufferingUntil) return;
-
       const targetTime = Math.max(0, Number(currentTime) || 0);
       const localTime = playerRef.current.getCurrentTime?.() || 0;
       const localState = playerRef.current.getPlayerState?.();
       const drift = Math.abs(localTime - targetTime);
-
-      if (localState === 3) {
-        window.voryPlayerBufferingUntil = Date.now() + 8000;
-        return;
-      }
 
       ignoreEventRef.current = true;
 
       if (soft) {
         const now = Date.now();
 
-        if (now - lastSoftSyncRef.current > 5000 && drift > 3.5) {
+        if (now - lastSoftSyncRef.current > 1200 && drift > 1.2) {
           lastSoftSyncRef.current = now;
           playerRef.current.seekTo(targetTime, true);
         }
-      } else if (drift > 5) {
+      } else if (drift > 0.75) {
         playerRef.current.seekTo(targetTime, true);
       }
 
@@ -395,6 +465,14 @@ export default function Home({ authUser, onLogout }) {
 
     socket.on("media-current-updated", (mediaItem) => {
       setCurrentMedia(mediaItem || null);
+
+      if (mediaItem?.url) {
+        recordWatchItem({
+          url: mediaItem.url,
+          title: mediaItem.title || normalizeHistoryTitle(mediaItem.url),
+          meta: mediaItem.addedBy ? `Added by ${mediaItem.addedBy}` : "Current media",
+        });
+      }
     });
 
     socket.on("party-invite-received", (invite) => {
@@ -475,6 +553,10 @@ export default function Home({ authUser, onLogout }) {
       const playerState = playerRef.current.getPlayerState?.();
       const playing = playerState === 1;
 
+      if (playing) {
+        bumpProfileStat("watchSeconds", isHost ? 6 : 7);
+      }
+
       if (isHost) {
         socket.emit("video-heartbeat", {
           roomCode,
@@ -488,7 +570,7 @@ export default function Home({ authUser, onLogout }) {
           isPlaying: playing,
         });
       }
-    }, isHost ? 6000 : 7000);
+    }, isHost ? 1000 : 1500);
 
     return () => {
       if (syncIntervalRef.current) {
@@ -507,6 +589,59 @@ export default function Home({ authUser, onLogout }) {
       screenSharing: false,
     });
   }, [roomCode, videoUrl]);
+
+  function bumpProfileStat(key, amount = 1) {
+    setProfileStats((prev) => ({
+      ...prev,
+      [key]: Math.max(0, Number(prev?.[key] || 0) + amount),
+    }));
+  }
+
+  function recordWatchItem({ url, title, meta = "Vory watch session" }) {
+    const cleanUrl = String(url || "").trim();
+
+    if (!cleanUrl) return;
+
+    const item = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      url: cleanUrl,
+      title: title || normalizeHistoryTitle(cleanUrl),
+      meta,
+      progress: "Ready",
+      createdAt: Date.now(),
+    };
+
+    setWatchHistory((prev) => {
+      const filtered = (prev || []).filter((oldItem) => oldItem.url !== cleanUrl);
+      return [item, ...filtered].slice(0, 10);
+    });
+
+    bumpProfileStat("mediaPlayed", 1);
+  }
+
+  function resumeWatchItem(item) {
+    if (!item?.url) return;
+
+    setVideoInput(item.url);
+    setAppSection("watch");
+    setActiveMobileTab("watch");
+    setRightPanelTab("queue");
+
+    if (!roomCode) {
+      toast("Medya hazırlandı. Oynatmak için önce oda oluştur veya odaya gir.", {
+        icon: "🎬",
+      });
+      return;
+    }
+
+    socket.emit("set-video", {
+      roomCode,
+      videoUrl: item.url,
+      title: item.title || item.url,
+    });
+
+    toast.success("Geçmişten medya başlatıldı 🎬");
+  }
 
   function createRoom() {
     socket.emit("create-room", currentUserPayload);
@@ -568,10 +703,18 @@ export default function Home({ authUser, onLogout }) {
       return;
     }
 
+    const cleanUrl = videoInput.trim();
+
+    recordWatchItem({
+      url: cleanUrl,
+      title: normalizeHistoryTitle(cleanUrl),
+      meta: `Room ${roomCode}`,
+    });
+
     socket.emit("set-video", {
       roomCode,
-      videoUrl: videoInput.trim(),
-      title: videoInput.trim(),
+      videoUrl: cleanUrl,
+      title: cleanUrl,
     });
   }
 
@@ -630,6 +773,7 @@ export default function Home({ authUser, onLogout }) {
 
     socket.emit("typing-stop", { roomCode });
 
+    bumpProfileStat("messagesSent", 1);
     setTypingUser("");
     setMessage("");
   }
@@ -739,6 +883,8 @@ export default function Home({ authUser, onLogout }) {
       emoji,
       username: currentUserPayload.username,
     });
+
+    bumpProfileStat("reactionsUsed", 1);
   }
 
   function sendPartyInvite(targetUser) {
@@ -758,6 +904,7 @@ export default function Home({ authUser, onLogout }) {
       fromUsername: currentUserPayload.username,
     });
 
+    bumpProfileStat("invitesSent", 1);
     toast.success(`${targetUser.username || "Kullanıcı"} davet edildi 🎉`);
   }
 
@@ -849,7 +996,7 @@ export default function Home({ authUser, onLogout }) {
         <div className="vory-v5-page-grid">
           <VoiceChat roomCode={roomCode} username={currentUserPayload.username} />
           <UserList users={users} />
-          <ProfileCard authUser={authUser} />
+          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
         </div>
       );
     }
@@ -872,7 +1019,7 @@ export default function Home({ authUser, onLogout }) {
     if (appSection === "friends") {
       return (
         <div className="vory-v5-page-grid">
-          <ProfileCard authUser={authUser} />
+          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
           <PresenceFriendPanel
             onlineUsers={onlinePresence}
             currentSocketId={socket.id}
@@ -1004,7 +1151,7 @@ export default function Home({ authUser, onLogout }) {
 
     return (
       <section className="flex min-w-0 flex-col gap-4">
-        <ProfileCard authUser={authUser} />
+        <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
         <PresenceFriendPanel
           onlineUsers={onlinePresence}
           currentSocketId={socket.id}

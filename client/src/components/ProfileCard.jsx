@@ -3,7 +3,6 @@ import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
 import WatchHistory from "./WatchHistory";
-import AnalyticsCard from "./AnalyticsCard";
 
 function Avatar({ user }) {
   if (user?.avatar) {
@@ -23,7 +22,15 @@ function Avatar({ user }) {
   );
 }
 
-export default function ProfileCard({ authUser, onUserUpdate }) {
+export default function ProfileCard({
+  authUser,
+  onUserUpdate,
+  roomCode = "",
+  connectionStatus = "unknown",
+  stats,
+  watchHistory = [],
+  onResumeWatch,
+}) {
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
 
@@ -58,6 +65,13 @@ export default function ProfileCard({ authUser, onUserUpdate }) {
 
   const username = authUser?.username || "user";
   const email = authUser?.email || "Closed beta user";
+  const online = connectionStatus === "connected";
+
+  const profileStatus = roomCode
+    ? `Room ${roomCode} içinde aktif.`
+    : online
+      ? "Lobby'de online. Oda oluştur veya arkadaşına katıl."
+      : "Bağlantı bekleniyor.";
 
   return (
     <section className="glass overflow-hidden p-0">
@@ -87,9 +101,15 @@ export default function ProfileCard({ authUser, onUserUpdate }) {
             />
           </div>
 
-          <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-300">
+          <span
+            className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
+              online
+                ? "bg-emerald-500/15 text-emerald-300"
+                : "bg-white/10 text-white/40"
+            }`}
+          >
             <ShieldCheck size={13} />
-            Online
+            {online ? "Online" : "Offline"}
           </span>
         </div>
 
@@ -109,21 +129,21 @@ export default function ProfileCard({ authUser, onUserUpdate }) {
 
           <div className="mt-4 grid grid-cols-3 gap-2">
             <div className="rounded-2xl border border-white/8 bg-white/5 p-3 text-center">
-              <p className="text-lg font-black text-white">0</p>
+              <p className="text-lg font-black text-white">{stats?.roomsJoined || 0}</p>
               <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/35">
                 Rooms
               </p>
             </div>
 
             <div className="rounded-2xl border border-white/8 bg-white/5 p-3 text-center">
-              <p className="text-lg font-black text-white">0h</p>
+              <p className="text-lg font-black text-white">{stats?.watchTime || "0h"}</p>
               <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/35">
                 Watch
               </p>
             </div>
 
             <div className="rounded-2xl border border-white/8 bg-white/5 p-3 text-center">
-              <p className="text-lg font-black text-white">0</p>
+              <p className="text-lg font-black text-white">{stats?.friends || 0}</p>
               <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/35">
                 Friends
               </p>
@@ -135,12 +155,15 @@ export default function ProfileCard({ authUser, onUserUpdate }) {
               Profile Status
             </p>
             <p className="mt-1 text-sm font-bold text-white/70">
-              VoryApp closed beta explorer profile is active.
+              {profileStatus}
             </p>
           </div>
 
-          <WatchHistory />
-		  <AnalyticsCard />
+          <WatchHistory
+            items={watchHistory}
+            stats={stats}
+            onResumeWatch={onResumeWatch}
+          />
         </div>
       </div>
     </section>
