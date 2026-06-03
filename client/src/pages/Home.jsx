@@ -953,6 +953,25 @@ export default function Home({ authUser, onLogout }) {
     socket.emit("media-play-next", { roomCode });
   }
 
+  function voteMedia(mediaId) {
+    if (!roomCode || !mediaId) return;
+
+    socket.emit(
+      "media-vote",
+      {
+        roomCode,
+        mediaId,
+        userId: currentUserId || socket.id,
+        username: currentUserPayload.username,
+      },
+      (response) => {
+        if (!response?.ok) {
+          toast.error(response?.message || "Oy verilemedi.");
+        }
+      }
+    );
+  }
+
   function removeFromQueue(mediaId) {
     if (!roomCode) return;
     socket.emit("media-remove-from-queue", { roomCode, mediaId });
@@ -1646,6 +1665,7 @@ export default function Home({ authUser, onLogout }) {
           onPlayNext={playNextMedia}
           onRemoveMedia={removeFromQueue}
           onClearQueue={clearMediaQueue}
+          onVoteMedia={voteMedia}
           messages={messages}
           message={message}
           setMessage={setMessage}
@@ -1693,6 +1713,8 @@ export default function Home({ authUser, onLogout }) {
             onPlayNext={playNextMedia}
             onRemove={removeFromQueue}
             onClear={clearMediaQueue}
+            onVote={voteMedia}
+            currentUserId={currentUserId || socket.id}
           />
         </section>
       );

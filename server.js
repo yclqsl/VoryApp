@@ -498,6 +498,28 @@ function normalizeMediaItem({ videoUrl, title, addedBy }) {
     type: detectMediaType(cleanUrl),
     addedBy: addedBy || "Kullanıcı",
     addedAt: Date.now(),
+    votes: 0,
+    voters: [],
+  };
+}
+
+function sortMediaQueue(room) {
+  if (!room?.mediaQueue) return;
+
+  room.mediaQueue = [...room.mediaQueue].sort((a, b) => {
+    const voteDiff = Number(b.votes || 0) - Number(a.votes || 0);
+    if (voteDiff !== 0) return voteDiff;
+    return Number(a.addedAt || 0) - Number(b.addedAt || 0);
+  });
+}
+
+function serializeMediaQueueItem(item) {
+  if (!item) return item;
+
+  return {
+    ...item,
+    votes: Number(item.votes || 0),
+    voters: Array.isArray(item.voters) ? item.voters : [],
   };
 }
 
@@ -505,9 +527,11 @@ function emitMediaQueue(roomCode) {
   const room = rooms[roomCode];
   if (!room) return;
 
+  sortMediaQueue(room);
+
   io.to(roomCode).emit("media-queue-updated", {
     currentMedia: room.currentMedia || null,
-    queue: room.mediaQueue || [],
+    queue: (room.mediaQueue || []).map(serializeMediaQueueItem),
   });
 }
 
@@ -1033,6 +1057,55 @@ io.on("connection", (socket) => {
 
     room.mediaQueue = (room.mediaQueue || []).filter((item) => item.id !== mediaId);
     emitMediaQueue(roomCode);
+  });
+
+  socket.on("media-vote", ({ roomCode, mediaId, userId, username }, ack) => {
+    const reply = (payload) => {
+      if (typeof ack === "function") ack(payload);
+    };
+
+    const targetRoomCode = normalizeRoomCode(roomCode);
+    const room = rooms[targetRoomCode];
+
+    if (!room || !mediaId) {
+      reply({ ok: false, message: "Oy verilecek medya bulunamadı." });
+      return;
+    }
+
+    const voterId = String(userId || socket.id || "");
+    const media = (room.mediaQueue || []).find((item) => item.id === mediaId);
+
+    if (!media) {
+      reply({ ok: false, message: "Bu medya artık sırada yok." });
+      return;
+    }
+
+    media.voters = Array.isArray(media.voters) ? media.voters : [];
+
+    const alreadyVoted = media.voters.includes(voterId);
+
+    if (alreadyVoted) {
+      media.voters = media.voters.filter((id) => id !== voterId);
+    } else {
+      media.voters.push(voterId);
+    }
+
+    media.votes = media.voters.length;
+    sortMediaQueue(room);
+    emitMediaQueue(targetRoomCode);
+
+    emitActivity(targetRoomCode, {
+      type: "video",
+      title: alreadyVoted ? "Queue vote kaldırıldı" : "Queue vote",
+      username: username || "Kullanıcı",
+      message: `${username || "Kullanıcı"} ${media.title || "medya"} için ${alreadyVoted ? "oyunu kaldırdı" : "oy verdi"}.`,
+    });
+
+    reply({
+      ok: true,
+      voted: !alreadyVoted,
+      votes: media.votes,
+    });
   });
 
   socket.on("media-play-next", ({ roomCode }) => {

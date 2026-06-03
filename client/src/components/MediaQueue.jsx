@@ -1,4 +1,4 @@
-import { ListVideo, Play, Plus, Trash2, X } from "lucide-react";
+import { ListVideo, Play, Plus, ThumbsUp, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -18,6 +18,8 @@ export default function MediaQueue({
   onPlayNext,
   onRemove,
   onClear,
+  onVote,
+  currentUserId,
 }) {
   const [mediaUrl, setMediaUrl] = useState("");
   const [title, setTitle] = useState("");
@@ -185,15 +187,32 @@ export default function MediaQueue({
                     </div>
                   </div>
 
-                  {isHost && (
+                  <div className="flex shrink-0 items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => onRemove?.(item.id)}
-                      className="shrink-0 rounded-xl bg-white/8 p-2 text-white/35 transition hover:bg-red-500/15 hover:text-red-300"
+                      onClick={() => onVote?.(item.id)}
+                      disabled={!canUse || !onVote}
+                      className={`inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                        Array.isArray(item.voters) && item.voters.includes(String(currentUserId || ""))
+                          ? "bg-violet-500/30 text-violet-100"
+                          : "bg-violet-500/15 text-violet-200 hover:bg-violet-500/25"
+                      }`}
+                      title="Bu medyaya oy ver"
                     >
-                      <X size={15} />
+                      <ThumbsUp size={13} />
+                      {item.votes || 0}
                     </button>
-                  )}
+
+                    {isHost && (
+                      <button
+                        type="button"
+                        onClick={() => onRemove?.(item.id)}
+                        className="rounded-xl bg-white/8 p-2 text-white/35 transition hover:bg-red-500/15 hover:text-red-300"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))
             )}
