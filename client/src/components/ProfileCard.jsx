@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
 import WatchHistory from "./WatchHistory";
+import AnalyticsCard from "./AnalyticsCard";
 
 function Avatar({ user }) {
   if (user?.avatar) {
@@ -139,6 +140,7 @@ export default function ProfileCard({ authUser, onUserUpdate }) {
           </div>
 
           <WatchHistory />
+		  <AnalyticsCard />
         </div>
       </div>
     </section>
