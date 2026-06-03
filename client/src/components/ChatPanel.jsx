@@ -6,6 +6,8 @@ export default function ChatPanel({
   message,
   setMessage,
   onSendMessage,
+  typingUser,
+  onTyping,
 }) {
   const messagesEndRef = useRef(null);
 
@@ -65,12 +67,21 @@ export default function ChatPanel({
         <div ref={messagesEndRef} />
       </div>
 
+      {typingUser && (
+        <div className="mt-3 rounded-2xl bg-white/[0.04] px-3 py-2 text-xs font-bold text-white/45">
+          ✍️ {typingUser} yazıyor...
+        </div>
+      )}
+
       <div className="mt-3 flex gap-2">
         <input
           className="input mt-0"
           placeholder="Mesaj yaz..."
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e) => {
+            setMessage(e.target.value);
+            onTyping?.();
+          }}
           onKeyDown={(e) => e.key === "Enter" && onSendMessage()}
         />
 

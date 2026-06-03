@@ -41,7 +41,7 @@ export default function Home({ authUser, onLogout }) {
   const [connectionStatus, setConnectionStatus] = useState(socket.connected ? "connected" : "offline");
   const [lastRestoreMessage, setLastRestoreMessage] = useState("");
   const [onlinePresence, setOnlinePresence] = useState([]);
-  const [activities, setActivities] = useState([]);
+  const [typingUser, setTypingUser] = useState("");
 
   const currentUserPayload = {
     username: username || authUser?.username || "Misafir",
@@ -69,6 +69,7 @@ export default function Home({ authUser, onLogout }) {
   const syncIntervalRef = useRef(null);
   const pulseLockRef = useRef(false);
   const lastSoftSyncRef = useRef(0);
+  const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -278,6 +279,27 @@ export default function Home({ authUser, onLogout }) {
       setMessages((prev) => [...prev, `${data.sender}: ${data.message}`]);
     });
 
+    socket.on("user-typing", ({ username }) => {
+      setTypingUser(username || "Kullanıcı");
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        setTypingUser("");
+      }, 2200);
+    });
+
+    socket.on("user-stop-typing", () => {
+      setTypingUser("");
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+    });
+
     socket.on("system-message", (msg) => {
       setMessages((prev) => [...prev, `⚙️ ${msg}`]);
     });
@@ -320,10 +342,6 @@ export default function Home({ authUser, onLogout }) {
       setCurrentMedia(mediaItem || null);
     });
 
-    socket.on("activity:new", (activity) => {
-      setActivities((prev) => [activity, ...prev].slice(0, 60));
-    });
-
     return () => {
       socket.off("connect");
       socket.off("disconnect");
@@ -347,6 +365,8 @@ export default function Home({ authUser, onLogout }) {
         syncIntervalRef.current = null;
       }
       socket.off("receive-message");
+      socket.off("user-typing");
+      socket.off("user-stop-typing");
       socket.off("system-message");
       socket.off("room-error");
       socket.off("online-users");
@@ -354,7 +374,6 @@ export default function Home({ authUser, onLogout }) {
       socket.off("notification:new");
       socket.off("media-queue-updated");
       socket.off("media-current-updated");
-      socket.off("activity:new");
     };
   }, []);
 
@@ -489,6 +508,16 @@ export default function Home({ authUser, onLogout }) {
     socket.emit("media-clear-queue", { roomCode });
   }
 
+
+  function handleTyping() {
+    if (!roomCode) return;
+
+    socket.emit("typing-start", {
+      roomCode,
+      username: currentUserPayload.username,
+    });
+  }
+
   function sendMessage() {
     if (!roomCode) {
       toast.error("Önce odaya gir");
@@ -503,6 +532,9 @@ export default function Home({ authUser, onLogout }) {
       username: currentUserPayload.username,
     });
 
+    socket.emit("typing-stop", { roomCode });
+
+    setTypingUser("");
     setMessage("");
   }
 
@@ -638,6 +670,8 @@ export default function Home({ authUser, onLogout }) {
             message={message}
             setMessage={setMessage}
             onSendMessage={sendMessage}
+            typingUser={typingUser}
+            onTyping={handleTyping}
           />
         </div>
       );
@@ -691,7 +725,6 @@ export default function Home({ authUser, onLogout }) {
           onlinePresence={onlinePresence}
           currentSocketId={socket.id}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-          activities={activities}
         />
       </div>
     );
@@ -746,6 +779,8 @@ export default function Home({ authUser, onLogout }) {
             message={message}
             setMessage={setMessage}
             onSendMessage={sendMessage}
+            typingUser={typingUser}
+            onTyping={handleTyping}
           />
           <InviteBox roomCode={roomCode} />
         </section>

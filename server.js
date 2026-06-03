@@ -214,25 +214,6 @@ function clearSocketRoomPresence(socketId) {
   });
 }
 
-function emitActivity(roomCode, payload = {}) {
-  const activity = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    type: payload.type || "system",
-    title: payload.title || "VoryApp",
-    message: payload.message || "",
-    username: payload.username || "",
-    roomCode: roomCode || "",
-    createdAt: Date.now(),
-  };
-
-  if (roomCode) {
-    io.to(roomCode).emit("activity:new", activity);
-    return;
-  }
-
-  io.emit("activity:new", activity);
-}
-
 function emitNotification(roomCode, payload = {}) {
   const notification = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -424,13 +405,6 @@ function removeUserFromRooms(socketId) {
       message: `${leavingUser.username} odadan ayrıldı.`,
     });
 
-    emitActivity(roomCode, {
-      type: "room",
-      title: "Odadan ayrıldı",
-      message: `${leavingUser.username} odadan ayrıldı.`,
-      username: leavingUser.username,
-    });
-
     io.to(roomCode).emit("room-users", room.users);
 
     if (room.users.length === 0) {
@@ -601,13 +575,6 @@ io.on("connection", (socket) => {
       title: "Oda oluşturuldu",
       message: `${username || "Misafir"} yeni bir oda oluşturdu.`,
     });
-
-    emitActivity(roomCode, {
-      type: "room",
-      title: "Oda oluşturuldu",
-      message: `${username || "Misafir"} odayı oluşturdu.`,
-      username: username || "Misafir",
-    });
   });
 
   socket.on("join-room", ({ roomCode, username, avatar }) => {
@@ -651,13 +618,6 @@ io.on("connection", (socket) => {
       type: "room",
       title: "Odaya katıldı",
       message: `${username || "Misafir"} odaya katıldı.`,
-    });
-
-    emitActivity(roomCode, {
-      type: "room",
-      title: "Odaya katıldı",
-      message: `${username || "Misafir"} odaya katıldı.`,
-      username: username || "Misafir",
     });
 
     if (room.videoUrl) {
@@ -725,13 +685,6 @@ io.on("connection", (socket) => {
       title: "Medya değişti",
       message: `Host ${mediaItem.type === "direct-video" ? "MP4/direct video" : "video"} başlattı.`,
     });
-
-    emitActivity(roomCode, {
-      type: "video",
-      title: "Medya başladı",
-      message: `${mediaItem.title} oynatılıyor.`,
-      username: "Host",
-    });
   });
 
   socket.on("media-add-to-queue", ({ roomCode, videoUrl, title }) => {
@@ -768,18 +721,6 @@ io.on("connection", (socket) => {
       type: "video",
       title: "Sıraya eklendi",
       message: `${user.username || "Kullanıcı"} sıraya medya ekledi.`,
-    });
-
-    io.to(roomCode).emit(
-      "system-message",
-      `${user.username || "Kullanıcı"} sıraya medya ekledi.`
-    );
-
-    emitActivity(roomCode, {
-      type: "queue",
-      title: "Sıraya eklendi",
-      message: `${user.username || "Kullanıcı"} medya ekledi: ${mediaItem.title}`,
-      username: user.username || "Kullanıcı",
     });
   });
 
@@ -820,18 +761,6 @@ io.on("connection", (socket) => {
       title: "Sıradaki medya",
       message: "Host sıradaki medyaya geçti.",
     });
-
-    io.to(roomCode).emit(
-      "system-message",
-      `${nextMedia.title} oynatılıyor.`
-    );
-
-    emitActivity(roomCode, {
-      type: "video",
-      title: "Sıradaki medya",
-      message: `${nextMedia.title} oynatılıyor.`,
-      username: "Host",
-    });
   });
 
   socket.on("media-clear-queue", ({ roomCode }) => {
@@ -845,15 +774,6 @@ io.on("connection", (socket) => {
 
     room.mediaQueue = [];
     emitMediaQueue(roomCode);
-
-    io.to(roomCode).emit("system-message", "Medya sırası temizlendi.");
-
-    emitActivity(roomCode, {
-      type: "queue",
-      title: "Sıra temizlendi",
-      message: "Medya sırası temizlendi.",
-      username: "Host",
-    });
   });
 
   socket.on("video-control", ({ roomCode, action, currentTime }) => {
@@ -1032,18 +952,6 @@ io.on("connection", (socket) => {
       title: "Voice aktif",
       message: `${username || "Kullanıcı"} sesli sohbete katıldı.`,
     });
-
-    io.to(roomCode).emit(
-      "system-message",
-      `${username || "Kullanıcı"} sesli sohbete katıldı.`
-    );
-
-    emitActivity(roomCode, {
-      type: "voice",
-      title: "Voice aktif",
-      message: `${username || "Kullanıcı"} sesli sohbete katıldı.`,
-      username: username || "Kullanıcı",
-    });
   });
 
   socket.on("voice-mute-state", ({ roomCode, muted }) => {
@@ -1133,17 +1041,6 @@ io.on("connection", (socket) => {
       title: "Voice ayrıldı",
       message: "Bir kullanıcı sesli sohbetten ayrıldı.",
     });
-
-    io.to(roomCode).emit(
-      "system-message",
-      "Bir kullanıcı sesli sohbetten ayrıldı."
-    );
-
-    emitActivity(roomCode, {
-      type: "voice",
-      title: "Voice ayrıldı",
-      message: "Bir kullanıcı sesli sohbetten ayrıldı.",
-    });
   });
 
 
@@ -1187,13 +1084,6 @@ io.on("connection", (socket) => {
       title: "Ekran paylaşımı",
       message: `${username || "Kullanıcı"} ekran paylaşımı başlattı.`,
     });
-
-    emitActivity(roomCode, {
-      type: "screen",
-      title: "Ekran paylaşımı",
-      message: `${username || "Kullanıcı"} ekran paylaşımı başlattı.`,
-      username: username || "Kullanıcı",
-    });
   });
 
   socket.on("screen-share-stop", ({ roomCode }) => {
@@ -1217,12 +1107,6 @@ io.on("connection", (socket) => {
     io.to(roomCode).emit("system-message", "Ekran paylaşımı durduruldu.");
 
     emitNotification(roomCode, {
-      type: "screen",
-      title: "Ekran paylaşımı durdu",
-      message: "Ekran paylaşımı durduruldu.",
-    });
-
-    emitActivity(roomCode, {
       type: "screen",
       title: "Ekran paylaşımı durdu",
       message: "Ekran paylaşımı durduruldu.",
@@ -1275,6 +1159,24 @@ io.on("connection", (socket) => {
     });
 
     emitPresence();
+  });
+
+
+  socket.on("typing-start", ({ roomCode, username }) => {
+    if (!roomCode || !rooms[roomCode]) return;
+
+    socket.to(roomCode).emit("user-typing", {
+      username: username || "Kullanıcı",
+      socketId: socket.id,
+    });
+  });
+
+  socket.on("typing-stop", ({ roomCode }) => {
+    if (!roomCode || !rooms[roomCode]) return;
+
+    socket.to(roomCode).emit("user-stop-typing", {
+      socketId: socket.id,
+    });
   });
 
   socket.on("send-message", ({ roomCode, message, username }) => {
