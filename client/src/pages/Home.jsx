@@ -1197,6 +1197,7 @@ export default function Home({ authUser, onLogout }) {
             friendState={friendState}
             onlineUsers={onlinePresence}
             currentSocketId={socket.id}
+            currentRoomCode={roomCode}
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onInviteFriend={sendPartyInvite}
           />
@@ -1354,6 +1355,7 @@ export default function Home({ authUser, onLogout }) {
           friendState={friendState}
           onlineUsers={onlinePresence}
           currentSocketId={socket.id}
+          currentRoomCode={roomCode}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
           onInviteFriend={sendPartyInvite}
         />

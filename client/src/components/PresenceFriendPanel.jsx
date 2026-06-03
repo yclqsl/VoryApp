@@ -174,6 +174,7 @@ export default function PresenceFriendPanel({
   friends,
   onlineUsers = [],
   currentSocketId,
+  currentRoomCode,
   onJoinRoom,
   onInviteFriend,
 }) {
@@ -228,6 +229,10 @@ export default function PresenceFriendPanel({
             const activity = getActivityLabel(user);
             const presence = getPresenceStatus(user);
             const roomSummary = user.roomSummary;
+            const sameRoom =
+              user.roomCode &&
+              currentRoomCode &&
+              String(user.roomCode).toUpperCase() === String(currentRoomCode).toUpperCase();
 
             return (
               <div
@@ -292,12 +297,18 @@ export default function PresenceFriendPanel({
                   <div className="flex shrink-0 flex-col gap-2">
                     {user.roomCode && (
                       <>
-                        <button
-                          className="rounded-2xl bg-violet-500/15 px-3 py-2 text-xs font-black text-violet-200 transition hover:bg-violet-500/25"
-                          onClick={() => onJoinRoom?.(user.roomCode)}
-                        >
-                          Katıl
-                        </button>
+                        {sameRoom ? (
+                          <div className="rounded-2xl bg-emerald-500/15 px-3 py-2 text-center text-xs font-black text-emerald-200">
+                            Aynı Odada
+                          </div>
+                        ) : (
+                          <button
+                            className="rounded-2xl bg-violet-500/15 px-3 py-2 text-xs font-black text-violet-200 transition hover:bg-violet-500/25"
+                            onClick={() => onJoinRoom?.(user.roomCode)}
+                          >
+                            Katıl
+                          </button>
+                        )}
 
                         <button
                           className="inline-flex items-center justify-center gap-1 rounded-2xl bg-white/8 px-3 py-2 text-xs font-black text-white/65 transition hover:bg-white/12"
