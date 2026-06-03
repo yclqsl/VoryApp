@@ -331,6 +331,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
       setPendingInviteRoom("");
+	  setLastRestoreMessage("");
       setStatus("Oda oluşturuldu.");
       bumpProfileStat("roomsJoined", 1);
       toast.success("Oda oluşturuldu 🚀");
@@ -341,6 +342,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
       setPendingInviteRoom("");
+	  setLastRestoreMessage("");
       setStatus("Odaya katıldın.");
       bumpProfileStat("roomsJoined", 1);
       toast.success("Odaya katıldın 🎉");
