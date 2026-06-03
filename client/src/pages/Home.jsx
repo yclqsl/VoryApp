@@ -12,6 +12,7 @@ import FeedbackWidget from "../components/FeedbackWidget";
 import QuickActions from "../components/QuickActions";
 import RoomPanel from "../components/RoomPanel";
 import RoomThemePanel from "../components/RoomThemePanel";
+import AnimatedBackground from "../components/AnimatedBackground";
 import InviteBox from "../components/InviteBox";
 import PresenceFriendPanel from "../components/PresenceFriendPanel";
 import UserList from "../components/UserList";
@@ -2195,6 +2196,7 @@ export default function Home({ authUser, onLogout }) {
 
   return (
     <div className={`app-shell theme-${roomTheme} min-h-screen overflow-x-hidden bg-gradient-to-br ${getThemeShellClass(roomTheme)} text-white`}>
+      <AnimatedBackground theme={roomTheme} />
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className={`absolute -left-32 top-0 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 1)} blur-3xl`} />
         <div className={`absolute right-10 top-20 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 2)} blur-3xl`} />
