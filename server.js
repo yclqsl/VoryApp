@@ -10,8 +10,6 @@ const voiceRooms = {};
 const screenShares = {};
 const partyInviteCooldowns = new Map();
 const PARTY_INVITE_COOLDOWN_MS = 60 * 1000;
-const dmThreads = new Map();
-const DM_HISTORY_LIMIT = 100;
 
 const SYNC_DRIFT_WARN_SECONDS = 1.5;
 const SYNC_HARD_DRIFT_SECONDS = 3.5;
@@ -25,6 +23,7 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const Feedback = require("./models/Feedback");
+const DirectMessage = require("./models/DirectMessage");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -273,20 +272,91 @@ function getSyncedVideoState(room) {
 }
 
 
-function getDMThreadKey(userA, userB) {
-  return [String(userA || ""), String(userB || "")].sort().join(":");
-}
-
 function getOnlineUserById(userId) {
   return onlineUsers.get(String(userId || ""));
 }
 
-function pushDMMessage(message) {
-  const threadKey = getDMThreadKey(message.fromUserId, message.toUserId);
-  const current = dmThreads.get(threadKey) || [];
-  const next = [...current, message].slice(-DM_HISTORY_LIMIT);
-  dmThreads.set(threadKey, next);
-  return next;
+function serializeDM(doc) {
+  if (!doc) return null;
+
+  const item = typeof doc.toObject === "function" ? doc.toObject() : doc;
+
+  return {
+    id: item.clientId || String(item._id || ""),
+    _id: String(item._id || ""),
+    fromUserId: String(item.fromUserId || ""),
+    toUserId: String(item.toUserId || ""),
+    fromUsername: item.fromUsername || "Kullanıcı",
+    toUsername: item.toUsername || "Kullanıcı",
+    message: item.message || "",
+    createdAt: item.createdAt ? new Date(item.createdAt).getTime() : Date.now(),
+    read: !!item.read,
+  };
+}
+
+async function emitDMInboxSummary(socket, userId) {
+  const cleanUserId = String(userId || "");
+  if (!cleanUserId) return;
+
+  const unreadMessages = await DirectMessage.find({
+    toUserId: cleanUserId,
+    read: false,
+  })
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .lean();
+
+  if (!unreadMessages.length) {
+    socket.emit("dm:inbox-summary", { total: 0, threads: [] });
+    return;
+  }
+
+  const grouped = new Map();
+
+  unreadMessages.forEach((message) => {
+    const fromUserId = String(message.fromUserId || "");
+    if (!fromUserId) return;
+
+    const current = grouped.get(fromUserId) || {
+      fromUserId,
+      fromUsername: message.fromUsername || "Kullanıcı",
+      count: 0,
+      latestMessage: "",
+      latestAt: 0,
+    };
+
+    const createdAt = message.createdAt ? new Date(message.createdAt).getTime() : Date.now();
+
+    current.count += 1;
+
+    if (createdAt >= current.latestAt) {
+      current.latestAt = createdAt;
+      current.latestMessage = message.message || "";
+      current.fromUsername = message.fromUsername || current.fromUsername;
+    }
+
+    grouped.set(fromUserId, current);
+  });
+
+  const threads = Array.from(grouped.values()).sort((a, b) => b.latestAt - a.latestAt);
+  const total = threads.reduce((sum, item) => sum + item.count, 0);
+
+  socket.emit("dm:inbox-summary", {
+    total,
+    threads,
+  });
+
+  threads.forEach((thread) => {
+    socket.emit("notification:new", {
+      id: `offline-dm-${thread.fromUserId}-${thread.latestAt}`,
+      type: "dm",
+      title: `${thread.fromUsername} kişisinden ${thread.count} yeni mesajınız var`,
+      message: thread.latestMessage || "Yeni DM mesajın var.",
+      createdAt: thread.latestAt || Date.now(),
+      read: false,
+      fromUserId: thread.fromUserId,
+    });
+  });
 }
 
 function emitPresence() {
@@ -580,7 +650,7 @@ function removeUserFromRooms(socketId) {
 io.on("connection", (socket) => {
   console.log("Yeni kullanıcı bağlandı:", socket.id);
 
-  socket.on("user-online", ({ userId, username }) => {
+  socket.on("user-online", async ({ userId, username }) => {
     if (!userId) return;
 
     const existing = onlineUsers.get(String(userId)) || {};
@@ -600,6 +670,12 @@ io.on("connection", (socket) => {
     });
 
     emitPresence();
+
+    try {
+      await emitDMInboxSummary(socket, userId);
+    } catch (error) {
+      console.error("DM inbox summary gönderilemedi:", error);
+    }
   });
 
   socket.on("get-online-users", () => {
@@ -1608,16 +1684,55 @@ io.on("connection", (socket) => {
   });
 
 
-  socket.on("dm:history", ({ currentUserId, targetUserId }, ack) => {
+  socket.on("dm:history", async ({ currentUserId, targetUserId }, ack) => {
     const reply = (payload) => {
       if (typeof ack === "function") ack(payload);
     };
 
-    const threadKey = getDMThreadKey(currentUserId, targetUserId);
-    reply({ ok: true, messages: dmThreads.get(threadKey) || [] });
+    const cleanCurrentUserId = String(currentUserId || "");
+    const cleanTargetUserId = String(targetUserId || "");
+
+    if (!cleanCurrentUserId || !cleanTargetUserId) {
+      reply({ ok: false, message: "DM geçmişi alınamadı." });
+      return;
+    }
+
+    try {
+      const messages = await DirectMessage.find({
+        $or: [
+          { fromUserId: cleanCurrentUserId, toUserId: cleanTargetUserId },
+          { fromUserId: cleanTargetUserId, toUserId: cleanCurrentUserId },
+        ],
+      })
+        .sort({ createdAt: 1 })
+        .limit(100)
+        .lean();
+
+      await DirectMessage.updateMany(
+        {
+          fromUserId: cleanTargetUserId,
+          toUserId: cleanCurrentUserId,
+          read: false,
+        },
+        {
+          $set: {
+            read: true,
+            readAt: new Date(),
+          },
+        }
+      );
+
+      reply({
+        ok: true,
+        messages: messages.map(serializeDM),
+      });
+    } catch (error) {
+      console.error("DM history alınamadı:", error);
+      reply({ ok: false, message: "DM geçmişi alınamadı." });
+    }
   });
 
-  socket.on("dm:send", ({ fromUserId, toUserId, fromUsername, toUsername, message }, ack) => {
+  socket.on("dm:send", async ({ fromUserId, toUserId, fromUsername, toUsername, message }, ack) => {
     const reply = (payload) => {
       if (typeof ack === "function") ack(payload);
     };
@@ -1636,35 +1751,44 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const dmMessage = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      fromUserId: cleanFromUserId,
-      toUserId: cleanToUserId,
-      fromUsername: fromUsername || "Kullanıcı",
-      toUsername: toUsername || "Kullanıcı",
-      message: cleanMessage.slice(0, 1000),
-      createdAt: Date.now(),
-      read: false,
-    };
-
-    pushDMMessage(dmMessage);
-
-    const targetPresence = getOnlineUserById(cleanToUserId);
-
-    if (targetPresence?.socketId) {
-      io.to(targetPresence.socketId).emit("dm:received", dmMessage);
-      io.to(targetPresence.socketId).emit("notification:new", {
-        id: `dm-${dmMessage.id}`,
-        type: "dm",
-        title: `DM • ${dmMessage.fromUsername}`,
-        message: dmMessage.message,
-        createdAt: dmMessage.createdAt,
+    try {
+      const savedMessage = await DirectMessage.create({
+        clientId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        fromUserId: cleanFromUserId,
+        toUserId: cleanToUserId,
+        fromUsername: fromUsername || "Kullanıcı",
+        toUsername: toUsername || "Kullanıcı",
+        message: cleanMessage.slice(0, 1000),
         read: false,
       });
-    }
 
-    socket.emit("dm:sent", dmMessage);
-    reply({ ok: true, message: dmMessage });
+      const dmMessage = serializeDM(savedMessage);
+      const targetPresence = getOnlineUserById(cleanToUserId);
+
+      if (targetPresence?.socketId) {
+        io.to(targetPresence.socketId).emit("dm:received", dmMessage);
+        io.to(targetPresence.socketId).emit("notification:new", {
+          id: `dm-${dmMessage.id}`,
+          type: "dm",
+          title: `DM • ${dmMessage.fromUsername}`,
+          message: dmMessage.message,
+          createdAt: dmMessage.createdAt,
+          read: false,
+          fromUserId: dmMessage.fromUserId,
+        });
+      }
+
+      socket.emit("dm:sent", dmMessage);
+
+      reply({
+        ok: true,
+        message: dmMessage,
+        delivered: !!targetPresence?.socketId,
+      });
+    } catch (error) {
+      console.error("DM gönderilemedi:", error);
+      reply({ ok: false, message: "DM gönderilemedi." });
+    }
   });
 
   socket.on("dm:typing", ({ fromUserId, toUserId, fromUsername }) => {

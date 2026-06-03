@@ -191,6 +191,15 @@ export default function Home({ authUser, onLogout }) {
   }, [currentUserId]);
 
   useEffect(() => {
+    if (!currentUserId) return;
+
+    socket.emit("user-online", {
+      userId: currentUserId,
+      username: currentUserPayload.username,
+    });
+  }, [currentUserId, currentUserPayload.username]);
+
+  useEffect(() => {
     if (!currentUserId || friendSearchQuery.trim().length < 2) {
       setFriendSearchResults([]);
       return;
@@ -585,6 +594,25 @@ export default function Home({ authUser, onLogout }) {
       }, 1800);
     });
 
+    socket.on("dm:inbox-summary", (summary) => {
+      const threads = summary?.threads || [];
+
+      if (!threads.length) return;
+
+      const unreadPatch = {};
+
+      threads.forEach((thread) => {
+        if (!thread?.fromUserId) return;
+
+        unreadPatch[thread.fromUserId] = Number(thread.count || 0);
+      });
+
+      setDmUnread((prev) => ({
+        ...prev,
+        ...unreadPatch,
+      }));
+    });
+
     socket.on("notification:new", (notification) => {
       addLocalNotification(notification);
 
@@ -670,6 +698,7 @@ export default function Home({ authUser, onLogout }) {
       socket.off("dm:received");
       socket.off("dm:sent");
       socket.off("dm:typing");
+      socket.off("dm:inbox-summary");
       socket.off("notification:new");
       socket.off("media-queue-updated");
       socket.off("media-current-updated");
