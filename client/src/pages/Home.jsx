@@ -718,11 +718,17 @@ export default function Home({ authUser, onLogout }) {
   }
 
   function createRoom() {
-    socket.emit("create-room", currentUserPayload);
-  }
+  setPendingInviteRoom("");
+  setLastRestoreMessage("");
+
+  socket.emit("create-room", currentUserPayload);
+}
 
   function joinRoom(customRoomCode) {
-    const targetRoom = (customRoomCode || roomInput).trim().toUpperCase();
+    setPendingInviteRoom("");
+    setLastRestoreMessage("");
+
+	const targetRoom = (customRoomCode || roomInput).trim().toUpperCase();
 
     if (!targetRoom) {
       toast.error("Oda kodu gir kanks");
