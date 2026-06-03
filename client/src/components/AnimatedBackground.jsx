@@ -1,26 +1,25 @@
-const stars = Array.from({ length: 46 }, (_, index) => ({
+const stars = Array.from({ length: 52 }, (_, index) => ({
   id: index,
   left: (index * 37) % 100,
   top: (index * 61) % 100,
   size: index % 5 === 0 ? 3 : index % 3 === 0 ? 2 : 1,
-  delay: (index % 9) * 0.35,
-  duration: 5 + (index % 7),
+  delay: (index % 9) * 0.25,
+  duration: 4 + (index % 5),
 }));
 
-const particles = Array.from({ length: 24 }, (_, index) => ({
+const particles = Array.from({ length: 26 }, (_, index) => ({
   id: index,
   left: (index * 43) % 100,
   top: (index * 29) % 100,
-  delay: (index % 8) * 0.45,
-  duration: 6 + (index % 6),
+  delay: (index % 8) * 0.35,
+  duration: 4 + (index % 5),
 }));
 
-function themeEmoji(theme) {
-  if (theme === "cinema") return "🎬";
-  if (theme === "galaxy") return "✦";
-  if (theme === "gaming") return "▣";
-  return "✦";
-}
+const shootingStars = Array.from({ length: 7 }, (_, index) => ({
+  id: index,
+  top: 8 + index * 12,
+  delay: index * 1.15,
+}));
 
 export default function AnimatedBackground({ theme = "neon" }) {
   const cleanTheme = String(theme || "neon").toLowerCase();
@@ -32,22 +31,37 @@ export default function AnimatedBackground({ theme = "neon" }) {
       <div className="vory-animated-orb vory-animated-orb-three" />
 
       {(cleanTheme === "galaxy" || cleanTheme === "neon") && (
-        <div className="vory-animated-stars">
-          {stars.map((star) => (
-            <span
-              key={star.id}
-              className="vory-animated-star"
-              style={{
-                left: `${star.left}%`,
-                top: `${star.top}%`,
-                width: `${star.size}px`,
-                height: `${star.size}px`,
-                animationDelay: `${star.delay}s`,
-                animationDuration: `${star.duration}s`,
-              }}
-            />
-          ))}
-        </div>
+        <>
+          <div className="vory-animated-stars">
+            {stars.map((star) => (
+              <span
+                key={star.id}
+                className="vory-animated-star"
+                style={{
+                  left: `${star.left}%`,
+                  top: `${star.top}%`,
+                  width: `${star.size}px`,
+                  height: `${star.size}px`,
+                  animationDelay: `${star.delay}s`,
+                  animationDuration: `${star.duration}s`,
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="vory-shooting-stars">
+            {shootingStars.map((star) => (
+              <span
+                key={star.id}
+                className="vory-shooting-star"
+                style={{
+                  top: `${star.top}%`,
+                  animationDelay: `${star.delay}s`,
+                }}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {cleanTheme === "neon" && (
@@ -63,7 +77,7 @@ export default function AnimatedBackground({ theme = "neon" }) {
                 animationDuration: `${particle.duration}s`,
               }}
             >
-              {themeEmoji(cleanTheme)}
+              ✦
             </span>
           ))}
         </div>
@@ -73,6 +87,7 @@ export default function AnimatedBackground({ theme = "neon" }) {
         <>
           <div className="vory-cinema-scanlines" />
           <div className="vory-cinema-projector" />
+          <div className="vory-cinema-flicker-card" />
         </>
       )}
 
@@ -80,6 +95,7 @@ export default function AnimatedBackground({ theme = "neon" }) {
         <>
           <div className="vory-gaming-grid" />
           <div className="vory-gaming-scanline" />
+          <div className="vory-gaming-pulse" />
         </>
       )}
     </div>
