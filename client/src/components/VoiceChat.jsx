@@ -15,6 +15,7 @@ export default function VoiceChat({ roomCode, username }) {
   const [isMuted, setIsMuted] = useState(false);
   const [voiceUsers, setVoiceUsers] = useState([]);
   const [voiceLevels, setVoiceLevels] = useState({});
+  const [forceMutedByHost, setForceMutedByHost] = useState(false);
 
   const localStreamRef = useRef(null);
   const peersRef = useRef({});
@@ -23,6 +24,7 @@ export default function VoiceChat({ roomCode, username }) {
   const analyserRef = useRef(null);
   const levelIntervalRef = useRef(null);
   const isMutedRef = useRef(false);
+  const forceMutedByHostRef = useRef(false);
 
   function participantCount() {
     return isVoiceOn ? Math.max(voiceUsers.length, 1) : 0;
@@ -237,9 +239,55 @@ export default function VoiceChat({ roomCode, username }) {
     });
   }
 
+  function applyHostMuteAllLock() {
+    const track = localStreamRef.current?.getAudioTracks?.()[0];
+
+    if (track) {
+      track.enabled = false;
+    }
+
+    forceMutedByHostRef.current = true;
+    setForceMutedByHost(true);
+
+    isMutedRef.current = true;
+    setIsMuted(true);
+
+    updateLocalLevel(0);
+
+    socket.emit("voice-mute-state", {
+      roomCode,
+      muted: true,
+    });
+
+    socket.emit("voice-level", {
+      roomCode,
+      level: 0,
+    });
+  }
+
   function toggleMute() {
     const track = localStreamRef.current?.getAudioTracks()?.[0];
     if (!track) return;
+
+    if (forceMutedByHostRef.current) {
+      track.enabled = false;
+      isMutedRef.current = true;
+      setIsMuted(true);
+      updateLocalLevel(0);
+
+      socket.emit("voice-mute-state", {
+        roomCode,
+        muted: true,
+      });
+
+      socket.emit("voice-level", {
+        roomCode,
+        level: 0,
+      });
+
+      toast.error("Host Mute All açtı. Mikrofonu sadece host izin verince açabilirsin.");
+      return;
+    }
 
     track.enabled = !track.enabled;
     const muted = !track.enabled;
@@ -336,26 +384,20 @@ export default function VoiceChat({ roomCode, username }) {
     socket.on("room-mute-all", ({ roomCode: targetRoom }) => {
       if (targetRoom && targetRoom !== roomCode) return;
 
-      const track = localStreamRef.current?.getAudioTracks?.()[0];
-      if (!track) return;
-
-      track.enabled = false;
-      isMutedRef.current = true;
-      setIsMuted(true);
-
-      updateLocalLevel(0);
-
-      socket.emit("voice-mute-state", {
-        roomCode,
-        muted: true,
-      });
-
-      socket.emit("voice-level", {
-        roomCode,
-        level: 0,
-      });
-
+      applyHostMuteAllLock();
       toast.success("Host tarafından susturuldun 🔇");
+    });
+
+    socket.on("room-settings-updated", ({ roomCode: targetRoom, settings }) => {
+      if (targetRoom && targetRoom !== roomCode) return;
+
+      if (settings?.muteAll) {
+        applyHostMuteAllLock();
+        return;
+      }
+
+      forceMutedByHostRef.current = false;
+      setForceMutedByHost(false);
     });
 
     return () => {
@@ -368,6 +410,7 @@ export default function VoiceChat({ roomCode, username }) {
       socket.off("voice-ice-candidate");
       socket.off("voice-user-left");
       socket.off("room-mute-all");
+      socket.off("room-settings-updated");
 
       if (localStreamRef.current) {
         stopVoice();
@@ -404,7 +447,7 @@ export default function VoiceChat({ roomCode, username }) {
           <p className="text-xs text-white/35">Durum</p>
           <div className="mt-2 flex items-center gap-2 text-sm font-bold">
             <Activity size={15} className={isVoiceOn ? "text-emerald-300" : "text-white/35"} />
-            {isVoiceOn ? (isMuted ? "Sessiz" : "Aktif") : "Kapalı"}
+            {isVoiceOn ? (forceMutedByHost ? "Host Susturdu" : isMuted ? "Sessiz" : "Aktif") : "Kapalı"}
           </div>
         </div>
       </div>
@@ -488,11 +531,13 @@ export default function VoiceChat({ roomCode, username }) {
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
-            className="btn-secondary flex items-center justify-center gap-2"
+            className="btn-secondary flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={toggleMute}
+            disabled={forceMutedByHost}
+            title={forceMutedByHost ? "Host Mute All açık" : ""}
           >
             <MicOff size={17} />
-            {isMuted ? "Aç" : "Sustur"}
+            {forceMutedByHost ? "Host Susturdu" : isMuted ? "Aç" : "Sustur"}
           </button>
 
           <button
