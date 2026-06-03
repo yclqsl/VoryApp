@@ -10,6 +10,8 @@ const voiceRooms = {};
 const screenShares = {};
 const partyInviteCooldowns = new Map();
 const PARTY_INVITE_COOLDOWN_MS = 60 * 1000;
+const dmThreads = new Map();
+const DM_HISTORY_LIMIT = 100;
 
 const SYNC_DRIFT_WARN_SECONDS = 1.5;
 const SYNC_HARD_DRIFT_SECONDS = 3.5;
@@ -268,6 +270,23 @@ function getSyncedVideoState(room) {
     currentTime: (state.currentTime || 0) + elapsed,
     updatedAt: Date.now(),
   };
+}
+
+
+function getDMThreadKey(userA, userB) {
+  return [String(userA || ""), String(userB || "")].sort().join(":");
+}
+
+function getOnlineUserById(userId) {
+  return onlineUsers.get(String(userId || ""));
+}
+
+function pushDMMessage(message) {
+  const threadKey = getDMThreadKey(message.fromUserId, message.toUserId);
+  const current = dmThreads.get(threadKey) || [];
+  const next = [...current, message].slice(-DM_HISTORY_LIMIT);
+  dmThreads.set(threadKey, next);
+  return next;
 }
 
 function emitPresence() {
@@ -1585,6 +1604,77 @@ io.on("connection", (socket) => {
     io.to(targetRoomCode).emit("receive-message", {
       sender: username || "Misafir",
       message,
+    });
+  });
+
+
+  socket.on("dm:history", ({ currentUserId, targetUserId }, ack) => {
+    const reply = (payload) => {
+      if (typeof ack === "function") ack(payload);
+    };
+
+    const threadKey = getDMThreadKey(currentUserId, targetUserId);
+    reply({ ok: true, messages: dmThreads.get(threadKey) || [] });
+  });
+
+  socket.on("dm:send", ({ fromUserId, toUserId, fromUsername, toUsername, message }, ack) => {
+    const reply = (payload) => {
+      if (typeof ack === "function") ack(payload);
+    };
+
+    const cleanMessage = String(message || "").trim();
+    const cleanFromUserId = String(fromUserId || "");
+    const cleanToUserId = String(toUserId || "");
+
+    if (!cleanFromUserId || !cleanToUserId || !cleanMessage) {
+      reply({ ok: false, message: "DM gönderilemedi." });
+      return;
+    }
+
+    if (cleanFromUserId === cleanToUserId) {
+      reply({ ok: false, message: "Kendine mesaj gönderemezsin." });
+      return;
+    }
+
+    const dmMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      fromUserId: cleanFromUserId,
+      toUserId: cleanToUserId,
+      fromUsername: fromUsername || "Kullanıcı",
+      toUsername: toUsername || "Kullanıcı",
+      message: cleanMessage.slice(0, 1000),
+      createdAt: Date.now(),
+      read: false,
+    };
+
+    pushDMMessage(dmMessage);
+
+    const targetPresence = getOnlineUserById(cleanToUserId);
+
+    if (targetPresence?.socketId) {
+      io.to(targetPresence.socketId).emit("dm:received", dmMessage);
+      io.to(targetPresence.socketId).emit("notification:new", {
+        id: `dm-${dmMessage.id}`,
+        type: "dm",
+        title: `DM • ${dmMessage.fromUsername}`,
+        message: dmMessage.message,
+        createdAt: dmMessage.createdAt,
+        read: false,
+      });
+    }
+
+    socket.emit("dm:sent", dmMessage);
+    reply({ ok: true, message: dmMessage });
+  });
+
+  socket.on("dm:typing", ({ fromUserId, toUserId, fromUsername }) => {
+    const targetPresence = getOnlineUserById(toUserId);
+    if (!targetPresence?.socketId) return;
+
+    io.to(targetPresence.socketId).emit("dm:typing", {
+      fromUserId,
+      fromUsername: fromUsername || "Kullanıcı",
+      createdAt: Date.now(),
     });
   });
 

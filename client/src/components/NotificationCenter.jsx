@@ -12,6 +12,7 @@ import {
 import { useMemo, useState } from "react";
 
 function getNotificationIcon(type) {
+  if (type === "dm") return MessageCircle;
   if (type === "screen") return Monitor;
   if (type === "voice") return Radio;
   if (type === "video") return Video;

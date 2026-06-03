@@ -1,4 +1,4 @@
-import { Activity, Clock, Copy, Monitor, Radio, UserPlus, Users, Video } from "lucide-react";
+import { Activity, Clock, Copy, MessageCircle, Monitor, Radio, UserPlus, Users, Video } from "lucide-react";
 import toast from "react-hot-toast";
 
 function getId(user) {
@@ -204,6 +204,7 @@ export default function PresenceFriendPanel({
   inviteCooldowns = {},
   onJoinRoom,
   onInviteFriend,
+  onOpenDM,
 }) {
   const friendList = friends || friendState?.friends || [];
   const users = buildFriendActivity({ friends: friendList, onlineUsers, currentSocketId });
@@ -328,7 +329,17 @@ export default function PresenceFriendPanel({
                   <div className="flex shrink-0 flex-col gap-2">
                     {user.roomCode && (
                       <>
-                        {sameRoom ? (
+                        <button
+                      className="inline-flex items-center justify-center gap-1 rounded-2xl bg-sky-500/15 px-3 py-2 text-xs font-black text-sky-200 transition hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={() => onOpenDM?.(user)}
+                      disabled={!onOpenDM}
+                      title="Arkadaşına mesaj gönder"
+                    >
+                      <MessageCircle size={13} />
+                      Mesaj
+                    </button>
+
+                    {sameRoom ? (
                           <div className="rounded-2xl bg-emerald-500/15 px-3 py-2 text-center text-xs font-black text-emerald-200">
                             Aynı Odada
                           </div>
@@ -350,6 +361,16 @@ export default function PresenceFriendPanel({
                         </button>
                       </>
                     )}
+
+                    <button
+                      className="inline-flex items-center justify-center gap-1 rounded-2xl bg-sky-500/15 px-3 py-2 text-xs font-black text-sky-200 transition hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={() => onOpenDM?.(user)}
+                      disabled={!onOpenDM}
+                      title="Arkadaşına mesaj gönder"
+                    >
+                      <MessageCircle size={13} />
+                      Mesaj
+                    </button>
 
                     {sameRoom ? (
                       <button

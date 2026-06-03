@@ -126,6 +126,11 @@ export default function Home({ authUser, onLogout }) {
   const [typingUser, setTypingUser] = useState("");
   const [partyInvite, setPartyInvite] = useState(null);
   const [activityFeed, setActivityFeed] = useState([]);
+  const [activeDM, setActiveDM] = useState(null);
+  const [dmMessages, setDmMessages] = useState({});
+  const [dmInput, setDmInput] = useState("");
+  const [dmUnread, setDmUnread] = useState({});
+  const [dmTypingUser, setDmTypingUser] = useState("");
   const [inviteCooldowns, setInviteCooldowns] = useState({});
   const [watchHistory, setWatchHistory] = useState(() =>
     readLocalJson("vory-watch-history", [])
@@ -538,6 +543,48 @@ export default function Home({ authUser, onLogout }) {
       setActivityFeed((prev) => [activity, ...(prev || [])].slice(0, 50));
     });
 
+    socket.on("dm:received", (dm) => {
+      if (!dm) return;
+
+      const threadId = dm.fromUserId;
+      setDmMessages((prev) => ({
+        ...prev,
+        [threadId]: [...(prev?.[threadId] || []), dm].slice(-100),
+      }));
+
+      if (!activeDM || String(activeDM.userId || activeDM._id || activeDM.id) !== String(threadId)) {
+        setDmUnread((prev) => ({
+          ...prev,
+          [threadId]: Number(prev?.[threadId] || 0) + 1,
+        }));
+      }
+    });
+
+    socket.on("dm:sent", (dm) => {
+      if (!dm) return;
+
+      const threadId = dm.toUserId;
+      setDmMessages((prev) => {
+        const existing = prev?.[threadId] || [];
+        if (existing.some((item) => item.id === dm.id)) return prev;
+
+        return {
+          ...prev,
+          [threadId]: [...existing, dm].slice(-100),
+        };
+      });
+    });
+
+    socket.on("dm:typing", ({ fromUserId, fromUsername }) => {
+      if (!activeDM || String(activeDM.userId || activeDM._id || activeDM.id) !== String(fromUserId)) return;
+
+      setDmTypingUser(fromUsername || "Kullanıcı");
+
+      setTimeout(() => {
+        setDmTypingUser("");
+      }, 1800);
+    });
+
     socket.on("notification:new", (notification) => {
       addLocalNotification(notification);
 
@@ -620,6 +667,9 @@ export default function Home({ authUser, onLogout }) {
       socket.off("online-users");
       socket.off("presence-changed");
       socket.off("activity:new");
+      socket.off("dm:received");
+      socket.off("dm:sent");
+      socket.off("dm:typing");
       socket.off("notification:new");
       socket.off("media-queue-updated");
       socket.off("media-current-updated");
@@ -1080,6 +1130,169 @@ export default function Home({ authUser, onLogout }) {
     }
   }
 
+  function getDMTargetId(targetUser) {
+    return String(targetUser?.userId || targetUser?._id || targetUser?.id || "");
+  }
+
+  function openDM(targetUser) {
+    const targetId = getDMTargetId(targetUser);
+
+    if (!targetId) {
+      toast.error("DM açılacak kullanıcı bulunamadı.");
+      return;
+    }
+
+    setActiveDM({
+      ...targetUser,
+      userId: targetId,
+      username: targetUser?.username || "Kullanıcı",
+    });
+
+    setDmUnread((prev) => ({
+      ...prev,
+      [targetId]: 0,
+    }));
+
+    socket.emit("dm:history", {
+      currentUserId,
+      targetUserId: targetId,
+    }, (response) => {
+      if (!response?.ok) return;
+
+      setDmMessages((prev) => ({
+        ...prev,
+        [targetId]: response.messages || [],
+      }));
+    });
+  }
+
+  function sendDMMessage() {
+    const targetId = getDMTargetId(activeDM);
+    const cleanMessage = dmInput.trim();
+
+    if (!activeDM || !targetId) {
+      toast.error("Önce bir DM seç.");
+      return;
+    }
+
+    if (!cleanMessage) return;
+
+    socket.emit("dm:send", {
+      fromUserId: currentUserId,
+      toUserId: targetId,
+      fromUsername: currentUserPayload.username,
+      toUsername: activeDM.username || "Kullanıcı",
+      message: cleanMessage,
+    }, (response) => {
+      if (!response?.ok) {
+        toast.error(response?.message || "DM gönderilemedi.");
+        return;
+      }
+
+      setDmInput("");
+    });
+  }
+
+  function handleDMTyping() {
+    const targetId = getDMTargetId(activeDM);
+    if (!targetId) return;
+
+    socket.emit("dm:typing", {
+      fromUserId: currentUserId,
+      toUserId: targetId,
+      fromUsername: currentUserPayload.username,
+    });
+  }
+
+  function renderDMPanel() {
+    if (!activeDM) return null;
+
+    const targetId = getDMTargetId(activeDM);
+    const messagesForThread = dmMessages?.[targetId] || [];
+
+    return (
+      <div className="fixed bottom-24 right-4 z-[9998] w-[390px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[2rem] border border-white/10 bg-black/90 shadow-[0_24px_100px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+        <div className="flex items-center justify-between border-b border-white/10 p-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-200/70">Direct Message</p>
+            <h2 className="truncate text-base font-black text-white">
+              {activeDM.username || "Kullanıcı"}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            className="rounded-xl bg-white/8 px-3 py-2 text-xs font-black text-white/55 transition hover:bg-white/12 hover:text-white"
+            onClick={() => setActiveDM(null)}
+          >
+            Kapat
+          </button>
+        </div>
+
+        <div className="flex max-h-[360px] min-h-[260px] flex-col gap-2 overflow-auto p-4">
+          {messagesForThread.length === 0 ? (
+            <div className="m-auto rounded-3xl bg-white/[0.04] p-5 text-center text-sm text-white/40">
+              Henüz mesaj yok. İlk mesajı sen gönder knks 💬
+            </div>
+          ) : (
+            messagesForThread.map((dm) => {
+              const mine = String(dm.fromUserId) === String(currentUserId);
+
+              return (
+                <div
+                  key={dm.id || `${dm.createdAt}-${dm.message}`}
+                  className={`flex ${mine ? "justify-end" : "justify-start"}`}
+                >
+                  <div className={`max-w-[82%] rounded-3xl px-4 py-3 ${mine ? "bg-violet-500/25 text-violet-50" : "bg-white/[0.06] text-white/75"}`}>
+                    <p className="whitespace-pre-wrap break-words text-sm font-bold leading-5">
+                      {dm.message}
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold text-white/30">
+                      {new Date(dm.createdAt || Date.now()).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {dmTypingUser ? (
+            <p className="px-2 text-xs font-bold text-sky-200/55">
+              {dmTypingUser} yazıyor...
+            </p>
+          ) : null}
+        </div>
+
+        <div className="border-t border-white/10 p-3">
+          <div className="flex gap-2">
+            <input
+              value={dmInput}
+              onChange={(event) => {
+                setDmInput(event.target.value);
+                handleDMTyping();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  sendDMMessage();
+                }
+              }}
+              placeholder="Mesaj yaz..."
+              className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-sky-300/35"
+            />
+            <button
+              type="button"
+              className="btn-primary w-auto px-4"
+              onClick={sendDMMessage}
+            >
+              Gönder
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function sendPartyInvite(targetUser) {
     if (!roomCode) {
       toast.error("Önce oda oluştur veya odaya gir.");
@@ -1285,6 +1498,7 @@ export default function Home({ authUser, onLogout }) {
             inviteCooldowns={inviteCooldowns}
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onInviteFriend={sendPartyInvite}
+            onOpenDM={openDM}
           />
           <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
         </div>
@@ -1333,6 +1547,7 @@ export default function Home({ authUser, onLogout }) {
           inviteCooldowns={inviteCooldowns}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
           onInviteFriend={sendPartyInvite}
+          onOpenDM={openDM}
         />
       </div>
     );
@@ -1446,6 +1661,7 @@ export default function Home({ authUser, onLogout }) {
           inviteCooldowns={inviteCooldowns}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
           onInviteFriend={sendPartyInvite}
+          onOpenDM={openDM}
         />
         <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
       </section>
@@ -1592,6 +1808,8 @@ export default function Home({ authUser, onLogout }) {
               {renderMobilePanel()}
             </div>
           </main>
+
+          {renderDMPanel()}
 
           <FeedbackWidget
             authUser={authUser}
