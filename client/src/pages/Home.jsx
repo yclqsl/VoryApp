@@ -21,6 +21,8 @@ import VoiceChat from "../components/VoiceChat";
 import ScreenShare from "../components/ScreenShare";
 import MobileBottomNav from "../components/MobileBottomNav";
 import AdminFeedbackPanel from "../components/AdminFeedbackPanel";
+import FriendRequestsPanel from "../components/FriendRequestsPanel";
+import { api } from "../services/api";
 
 function getRoomCodeFromLocation() {
   const pathMatch = window.location.pathname.match(/^\/room\/([^/?#]+)/i);
@@ -129,8 +131,15 @@ export default function Home({ authUser, onLogout }) {
   const [profileStats, setProfileStats] = useState(() =>
     readLocalJson("vory-profile-stats", createEmptyVoryStats())
   );
+  const [friendState, setFriendState] = useState({ friends: [], sent: [], received: [] });
+  const [friendSearchQuery, setFriendSearchQuery] = useState("");
+  const [friendSearchResults, setFriendSearchResults] = useState([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+
+  const currentUserId = authUser?._id || authUser?.id || "";
 
   const currentUserPayload = {
+    userId: currentUserId,
     username: username || authUser?.username || "Misafir",
     avatar: authUser?.avatar || "",
   };
@@ -141,6 +150,7 @@ export default function Home({ authUser, onLogout }) {
 
   const displayProfileStats = {
     ...profileStats,
+    friends: friendState.friends?.length || profileStats.friends || 0,
     watchTime: formatWatchTime(profileStats.watchSeconds),
   };
 
@@ -152,6 +162,50 @@ export default function Home({ authUser, onLogout }) {
   const liveScreenCount = roomCode
     ? currentRoomPresence.filter((user) => user.screenSharing || user.activity === "sharing-screen").length
     : 0;
+
+
+  async function loadFriendState() {
+    if (!currentUserId) return;
+
+    try {
+      setFriendsLoading(true);
+      const response = await api.get(`/friends/state/${currentUserId}`);
+      setFriendState(response.data || { friends: [], sent: [], received: [] });
+    } catch (error) {
+      console.error("Friend state alınamadı:", error);
+      toast.error(error?.response?.data?.message || "Friend listesi alınamadı.");
+    } finally {
+      setFriendsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadFriendState();
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId || friendSearchQuery.trim().length < 2) {
+      setFriendSearchResults([]);
+      return;
+    }
+
+    const searchTimer = setTimeout(async () => {
+      try {
+        const response = await api.get("/friends/search", {
+          params: {
+            q: friendSearchQuery.trim(),
+            currentUserId,
+          },
+        });
+
+        setFriendSearchResults(response.data?.users || []);
+      } catch (error) {
+        console.error("Friend search hatası:", error);
+      }
+    }, 350);
+
+    return () => clearTimeout(searchTimer);
+  }, [friendSearchQuery, currentUserId]);
 
 
   useEffect(() => {
@@ -892,6 +946,69 @@ export default function Home({ authUser, onLogout }) {
     bumpProfileStat("reactionsUsed", 1);
   }
 
+  async function sendFriendRequest(targetUser) {
+    if (!currentUserId || !targetUser?._id) {
+      toast.error("Arkadaşlık isteği için giriş gerekli.");
+      return;
+    }
+
+    try {
+      const response = await api.post("/friends/request", {
+        fromUserId: currentUserId,
+        toUserId: targetUser._id,
+      });
+
+      setFriendState(response.data?.state || friendState);
+      toast.success(response.data?.message || "Arkadaşlık isteği gönderildi.");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Arkadaşlık isteği gönderilemedi.");
+    }
+  }
+
+  async function acceptFriendRequest(targetUser) {
+    if (!currentUserId || !targetUser?._id) return;
+
+    try {
+      const response = await api.post("/friends/accept", {
+        currentUserId,
+        requesterId: targetUser._id,
+      });
+
+      setFriendState(response.data?.state || friendState);
+      toast.success(response.data?.message || "Arkadaşlık isteği kabul edildi.");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Arkadaşlık isteği kabul edilemedi.");
+    }
+  }
+
+  async function rejectFriendRequest(targetUser) {
+    if (!currentUserId || !targetUser?._id) return;
+
+    try {
+      const response = await api.post("/friends/reject", {
+        currentUserId,
+        requesterId: targetUser._id,
+      });
+
+      setFriendState(response.data?.state || friendState);
+      toast.success(response.data?.message || "Arkadaşlık isteği reddedildi.");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Arkadaşlık isteği reddedilemedi.");
+    }
+  }
+
+  async function removeFriend(targetUser) {
+    if (!currentUserId || !targetUser?._id) return;
+
+    try {
+      const response = await api.delete(`/friends/${currentUserId}/${targetUser._id}`);
+      setFriendState(response.data?.state || friendState);
+      toast.success(response.data?.message || "Arkadaş silindi.");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Arkadaş silinemedi.");
+    }
+  }
+
   function sendPartyInvite(targetUser) {
     if (!roomCode) {
       toast.error("Önce oda oluştur veya odaya gir.");
@@ -1038,13 +1155,25 @@ export default function Home({ authUser, onLogout }) {
     if (appSection === "friends") {
       return (
         <div className="vory-v5-page-grid">
-          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
+          <FriendRequestsPanel
+            authUser={authUser}
+            friendState={friendState}
+            searchQuery={friendSearchQuery}
+            setSearchQuery={setFriendSearchQuery}
+            searchResults={friendSearchResults}
+            loading={friendsLoading}
+            onSendRequest={sendFriendRequest}
+            onAcceptRequest={acceptFriendRequest}
+            onRejectRequest={rejectFriendRequest}
+            onRemoveFriend={removeFriend}
+          />
           <PresenceFriendPanel
             onlineUsers={onlinePresence}
             currentSocketId={socket.id}
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-          onInviteFriend={sendPartyInvite}
+            onInviteFriend={sendPartyInvite}
           />
+          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
         </div>
       );
     }
@@ -1182,13 +1311,25 @@ export default function Home({ authUser, onLogout }) {
 
     return (
       <section className="flex min-w-0 flex-col gap-4">
-        <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
+        <FriendRequestsPanel
+          authUser={authUser}
+          friendState={friendState}
+          searchQuery={friendSearchQuery}
+          setSearchQuery={setFriendSearchQuery}
+          searchResults={friendSearchResults}
+          loading={friendsLoading}
+          onSendRequest={sendFriendRequest}
+          onAcceptRequest={acceptFriendRequest}
+          onRejectRequest={rejectFriendRequest}
+          onRemoveFriend={removeFriend}
+        />
         <PresenceFriendPanel
           onlineUsers={onlinePresence}
           currentSocketId={socket.id}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-        onInviteFriend={sendPartyInvite}
-          />
+          onInviteFriend={sendPartyInvite}
+        />
+        <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} onResumeWatch={resumeWatchItem} />
       </section>
     );
   }

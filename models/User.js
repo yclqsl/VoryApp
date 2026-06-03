@@ -22,7 +22,25 @@ const userSchema = new mongoose.Schema(
     avatar: {
       type: String,
       default: ""
-    }
+    },
+    friends: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+      }
+    ],
+    friendRequestsSent: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+      }
+    ],
+    friendRequestsReceived: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+      }
+    ]
   },
   {
     timestamps: true
