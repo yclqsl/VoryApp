@@ -95,6 +95,31 @@ function getActivityLabel(user) {
   };
 }
 
+function getActivityFeedIcon(type) {
+  if (type === "video") return <Video size={13} className="text-sky-300" />;
+  if (type === "screen") return <Monitor size={13} className="text-fuchsia-300" />;
+  if (type === "voice") return <Radio size={13} className="text-emerald-300" />;
+  if (type === "invite") return <UserPlus size={13} className="text-violet-300" />;
+  if (type === "room") return <Users size={13} className="text-violet-300" />;
+
+  return <Activity size={13} className="text-white/35" />;
+}
+
+function getActivityTimeText(createdAt) {
+  if (!createdAt) return "az önce";
+
+  const diffSeconds = Math.max(0, Math.floor((Date.now() - Number(createdAt)) / 1000));
+
+  if (diffSeconds < 15) return "şimdi";
+  if (diffSeconds < 60) return `${diffSeconds} sn önce`;
+
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) return `${diffMinutes} dk önce`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  return `${diffHours} sa önce`;
+}
+
 function getLastSeenText(updatedAt, isOnline) {
   if (!isOnline) return "offline";
   if (!updatedAt) return "az önce";
@@ -175,6 +200,7 @@ export default function PresenceFriendPanel({
   onlineUsers = [],
   currentSocketId,
   currentRoomCode = "",
+  activityFeed = [],
   inviteCooldowns = {},
   onJoinRoom,
   onInviteFriend,
@@ -186,6 +212,7 @@ export default function PresenceFriendPanel({
   const watchingCount = users.filter((user) => user.isOnline && user.activity === "watching").length;
   const roomCount = users.filter((user) => user.isOnline && user.roomCode).length;
   const voiceCount = users.filter((user) => user.isOnline && (user.voiceActive || user.activity === "voice")).length;
+  const visibleActivityFeed = (activityFeed || []).slice(0, 6);
 
   return (
     <section className="glass overflow-hidden">
@@ -353,6 +380,52 @@ export default function PresenceFriendPanel({
               </div>
             );
           })
+        )}
+      </div>
+
+      <div className="mt-4 rounded-3xl border border-white/5 bg-white/[0.04] p-3">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-white/45">
+            <Activity size={14} />
+            Party Activity
+          </div>
+          <span className="rounded-full bg-white/8 px-2.5 py-1 text-[10px] font-black text-white/30">
+            Live
+          </span>
+        </div>
+
+        {visibleActivityFeed.length === 0 ? (
+          <div className="rounded-2xl bg-black/20 px-3 py-3 text-xs text-white/35">
+            Henüz aktivite yok. Odaya katılma, voice, screen share ve davet olayları burada akar.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {visibleActivityFeed.map((activity) => (
+              <div
+                key={activity.id || `${activity.type}-${activity.createdAt}`}
+                className="rounded-2xl bg-black/20 px-3 py-2"
+              >
+                <div className="flex items-start gap-2">
+                  <div className="mt-0.5 rounded-xl bg-white/8 p-1.5">
+                    {getActivityFeedIcon(activity.type)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      <p className="truncate text-xs font-black text-white/75">
+                        {activity.title || "Vory Activity"}
+                      </p>
+                      <span className="shrink-0 text-[10px] font-bold text-white/25">
+                        {getActivityTimeText(activity.createdAt)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 line-clamp-2 text-xs font-bold text-white/40">
+                      {activity.message || "Yeni aktivite"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

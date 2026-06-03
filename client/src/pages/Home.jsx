@@ -125,6 +125,7 @@ export default function Home({ authUser, onLogout }) {
   const [reactions, setReactions] = useState([]);
   const [typingUser, setTypingUser] = useState("");
   const [partyInvite, setPartyInvite] = useState(null);
+  const [activityFeed, setActivityFeed] = useState([]);
   const [inviteCooldowns, setInviteCooldowns] = useState({});
   const [watchHistory, setWatchHistory] = useState(() =>
     readLocalJson("vory-watch-history", [])
@@ -531,6 +532,12 @@ export default function Home({ authUser, onLogout }) {
       setOnlinePresence(presenceUsers || []);
     });
 
+    socket.on("activity:new", (activity) => {
+      if (!activity) return;
+
+      setActivityFeed((prev) => [activity, ...(prev || [])].slice(0, 50));
+    });
+
     socket.on("notification:new", (notification) => {
       addLocalNotification(notification);
 
@@ -612,6 +619,7 @@ export default function Home({ authUser, onLogout }) {
       socket.off("room-error");
       socket.off("online-users");
       socket.off("presence-changed");
+      socket.off("activity:new");
       socket.off("notification:new");
       socket.off("media-queue-updated");
       socket.off("media-current-updated");
@@ -1273,6 +1281,7 @@ export default function Home({ authUser, onLogout }) {
             onlineUsers={onlinePresence}
             currentSocketId={socket.id}
             currentRoomCode={roomCode}
+            activityFeed={activityFeed}
             inviteCooldowns={inviteCooldowns}
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onInviteFriend={sendPartyInvite}

@@ -723,6 +723,13 @@ io.on("connection", (socket) => {
       title: "Oda oluşturuldu",
       message: `${username || "Misafir"} yeni bir oda oluşturdu.`,
     });
+
+    emitActivity(roomCode, {
+      type: "room",
+      title: "Oda oluşturuldu",
+      username: username || "Misafir",
+      message: `${username || "Misafir"} odayı oluşturdu.`,
+    });
   });
 
   socket.on("join-room", ({ roomCode, username, avatar }) => {
@@ -802,6 +809,13 @@ io.on("connection", (socket) => {
       message: `${username || "Misafir"} odaya katıldı.`,
     });
 
+    emitActivity(targetRoomCode, {
+      type: "room",
+      title: "Odaya Katıldı",
+      username: username || "Misafir",
+      message: `${username || "Misafir"} odaya katıldı.`,
+    });
+
     if (room.videoUrl) {
       socket.emit("video-updated", room.videoUrl);
       socket.emit("video-sync", getSyncedVideoState(room));
@@ -865,6 +879,13 @@ io.on("connection", (socket) => {
     emitNotification(roomCode, {
       type: "video",
       title: "Medya değişti",
+      message: `Host ${mediaItem.type === "direct-video" ? "MP4/direct video" : "video"} başlattı.`,
+    });
+
+    emitActivity(roomCode, {
+      type: "video",
+      title: "Video başladı",
+      username: room.users.find((user) => user.id === socket.id)?.username || "Host",
       message: `Host ${mediaItem.type === "direct-video" ? "MP4/direct video" : "video"} başlattı.`,
     });
   });
@@ -1134,6 +1155,13 @@ io.on("connection", (socket) => {
       title: "Voice aktif",
       message: `${username || "Kullanıcı"} sesli sohbete katıldı.`,
     });
+
+    emitActivity(roomCode, {
+      type: "voice",
+      title: "Voice Chat",
+      username: username || "Kullanıcı",
+      message: `${username || "Kullanıcı"} sesli sohbete katıldı.`,
+    });
   });
 
   socket.on("voice-mute-state", ({ roomCode, muted }) => {
@@ -1223,6 +1251,13 @@ io.on("connection", (socket) => {
       title: "Voice ayrıldı",
       message: "Bir kullanıcı sesli sohbetten ayrıldı.",
     });
+
+    emitActivity(roomCode, {
+      type: "voice",
+      title: "Voice ayrıldı",
+      username: "Kullanıcı",
+      message: "Bir kullanıcı sesli sohbetten ayrıldı.",
+    });
   });
 
 
@@ -1266,6 +1301,13 @@ io.on("connection", (socket) => {
       title: "Ekran paylaşımı",
       message: `${username || "Kullanıcı"} ekran paylaşımı başlattı.`,
     });
+
+    emitActivity(roomCode, {
+      type: "screen",
+      title: "Screen Share",
+      username: username || "Kullanıcı",
+      message: `${username || "Kullanıcı"} ekran paylaşımı başlattı.`,
+    });
   });
 
   socket.on("screen-share-stop", ({ roomCode }) => {
@@ -1291,6 +1333,13 @@ io.on("connection", (socket) => {
     emitNotification(roomCode, {
       type: "screen",
       title: "Ekran paylaşımı durdu",
+      message: "Ekran paylaşımı durduruldu.",
+    });
+
+    emitActivity(roomCode, {
+      type: "screen",
+      title: "Screen Share bitti",
+      username: "Kullanıcı",
       message: "Ekran paylaşımı durduruldu.",
     });
   });
