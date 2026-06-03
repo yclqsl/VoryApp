@@ -6,6 +6,7 @@ const feedbackSchema = new mongoose.Schema(
       type: String,
       enum: ["bug", "idea", "general"],
       default: "bug",
+      index: true,
     },
     title: {
       type: String,
@@ -19,10 +20,18 @@ const feedbackSchema = new mongoose.Schema(
       trim: true,
       maxlength: 3000,
     },
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: 5,
+      index: true,
+    },
     roomCode: {
       type: String,
       default: "",
       trim: true,
+      index: true,
     },
     username: {
       type: String,
@@ -32,6 +41,7 @@ const feedbackSchema = new mongoose.Schema(
     userId: {
       type: String,
       default: "",
+      index: true,
     },
     userAgent: {
       type: String,
@@ -49,6 +59,7 @@ const feedbackSchema = new mongoose.Schema(
       type: String,
       enum: ["open", "reviewing", "closed"],
       default: "open",
+      index: true,
     },
   },
   {
