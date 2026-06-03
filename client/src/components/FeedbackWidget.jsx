@@ -52,7 +52,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
         username: authUser?.username || "Anonim",
         userId: authUser?.id || authUser?._id || "",
         userAgent: navigator.userAgent,
-        appVersion: "v12.5-closed-beta",
+        appVersion: "v13.7.3-mobile-feedback-ux",
         metadata: {
           rating,
           url: window.location.href,
@@ -83,27 +83,29 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 right-4 z-[65] flex items-center gap-2 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/15 px-4 py-3 text-sm font-black text-white shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:bg-fuchsia-500/25 lg:bottom-5"
+        className="fixed bottom-20 right-3 z-[65] flex items-center gap-2 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/15 px-3 py-2.5 text-xs font-black text-white shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:bg-fuchsia-500/25 sm:bottom-24 sm:right-4 sm:px-4 sm:py-3 sm:text-sm lg:bottom-5"
       >
         <Bug size={17} className="text-fuchsia-300" />
         Feedback
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-xl">
+        <div className="fixed inset-0 z-[99999] flex items-end justify-center bg-black/90 p-0 backdrop-blur-xl sm:items-center sm:p-4">
           <form
             onSubmit={submitFeedback}
-            className="relative z-[100000] w-full max-w-[560px] overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0c0a16] text-white shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
+            className="relative z-[100000] flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[2rem] border border-white/10 bg-[#0c0a16] text-white shadow-[0_-20px_90px_rgba(0,0,0,0.65)] sm:max-h-[88vh] sm:max-w-[560px] sm:rounded-[1.75rem] sm:shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
           >
-            <div className="border-b border-white/10 bg-white/[0.03] px-5 py-4">
+            <div className="shrink-0 border-b border-white/10 bg-white/[0.03] px-4 py-3 sm:px-5 sm:py-4">
+              <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-white/15 sm:hidden" />
+
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-fuchsia-400/20 bg-fuchsia-500/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-fuchsia-200">
+                <div className="min-w-0">
+                  <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-fuchsia-400/20 bg-fuchsia-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200 sm:text-[11px]">
                     🧪 Closed Beta
                   </div>
 
-                  <h2 className="text-xl font-black">Feedback Center</h2>
-                  <p className="mt-1 text-sm text-white/45">
+                  <h2 className="text-lg font-black sm:text-xl">Feedback Center</h2>
+                  <p className="mt-1 text-xs font-bold text-white/45 sm:text-sm">
                     Bug, öneri veya deneyimini gönder.
                   </p>
                 </div>
@@ -111,15 +113,15 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-2xl bg-white/8 p-2 text-white/45 transition hover:bg-white/12 hover:text-white"
+                  className="shrink-0 rounded-2xl bg-white/8 p-2 text-white/45 transition hover:bg-white/12 hover:text-white"
                 >
                   <X size={18} />
                 </button>
               </div>
             </div>
 
-            <div className="space-y-3 p-5">
-              <div className="grid gap-2 sm:grid-cols-3">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 sm:p-5">
+              <div className="grid grid-cols-3 gap-2">
                 {feedbackTypes.map((item) => {
                   const Icon = item.icon;
                   const active = type === item.id;
@@ -129,17 +131,17 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                       key={item.id}
                       type="button"
                       onClick={() => setType(item.id)}
-                      className={`rounded-2xl border p-3 text-left transition ${
+                      className={`rounded-2xl border p-2.5 text-left transition sm:p-3 ${
                         active
                           ? "border-violet-400/35 bg-violet-500/20 text-white"
                           : "border-white/10 bg-white/[0.04] text-white/45 hover:bg-white/8 hover:text-white"
                       }`}
                     >
-                      <div className="mb-2 flex items-center gap-2 text-sm font-black">
-                        <Icon size={16} />
+                      <div className="mb-1.5 flex items-center gap-1.5 text-xs font-black sm:mb-2 sm:gap-2 sm:text-sm">
+                        <Icon size={15} />
                         {item.label}
                       </div>
-                      <p className="text-xs font-bold opacity-60">{item.helper}</p>
+                      <p className="hidden text-xs font-bold opacity-60 sm:block">{item.helper}</p>
                     </button>
                   );
                 })}
@@ -151,7 +153,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                     <p className="text-xs font-black uppercase tracking-wide text-white/35">
                       Deneyim puanı
                     </p>
-                    <p className="mt-1 text-xs text-white/35">
+                    <p className="mt-1 hidden text-xs text-white/35 sm:block">
                       Beta hissi nasıl?
                     </p>
                   </div>
@@ -187,7 +189,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="Örn: Invite link tıklayınca oda açılmadı"
-                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/40"
+                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/40"
                   maxLength={140}
                 />
               </label>
@@ -200,7 +202,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
                   placeholder="Ne yaptın, ne oldu, ne bekliyordun?"
-                  className="min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/40"
+                  className="min-h-[132px] w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/40 sm:min-h-[150px]"
                   maxLength={3000}
                 />
               </label>
@@ -216,7 +218,9 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
                   User: <span className="font-bold text-white/60">@{authUser?.username || "anonim"}</span>
                 </div>
               </div>
+            </div>
 
+            <div className="shrink-0 border-t border-white/10 bg-[#0c0a16]/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:p-5">
               <button
                 type="submit"
                 disabled={sending}
