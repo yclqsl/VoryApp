@@ -174,7 +174,7 @@ export default function PresenceFriendPanel({
   friends,
   onlineUsers = [],
   currentSocketId,
-  currentRoomCode,
+  currentRoomCode = "",
   onJoinRoom,
   onInviteFriend,
 }) {
@@ -230,8 +230,8 @@ export default function PresenceFriendPanel({
             const presence = getPresenceStatus(user);
             const roomSummary = user.roomSummary;
             const sameRoom =
-              user.roomCode &&
-              currentRoomCode &&
+              !!user.roomCode &&
+              !!currentRoomCode &&
               String(user.roomCode).toUpperCase() === String(currentRoomCode).toUpperCase();
 
             return (
@@ -320,14 +320,24 @@ export default function PresenceFriendPanel({
                       </>
                     )}
 
-                    <button
-                      className="rounded-2xl bg-fuchsia-500/15 px-3 py-2 text-xs font-black text-fuchsia-200 transition hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-40"
-                      onClick={() => onInviteFriend?.(user)}
-                      disabled={!user.isOnline || !user.socketId || !onInviteFriend}
-                      title={!user.isOnline ? "Arkadaş offline" : "Arkadaşını odana davet et"}
-                    >
-                      Davet Et
-                    </button>
+                    {sameRoom ? (
+                      <button
+                        className="rounded-2xl bg-white/8 px-3 py-2 text-xs font-black text-white/45 disabled:cursor-not-allowed"
+                        disabled
+                        title="Zaten aynı odadasınız"
+                      >
+                        Odada
+                      </button>
+                    ) : (
+                      <button
+                        className="rounded-2xl bg-fuchsia-500/15 px-3 py-2 text-xs font-black text-fuchsia-200 transition hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                        onClick={() => onInviteFriend?.(user)}
+                        disabled={!user.isOnline || !user.socketId || !onInviteFriend}
+                        title={!user.isOnline ? "Arkadaş offline" : "Arkadaşını odana davet et"}
+                      >
+                        Davet Et
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
