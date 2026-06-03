@@ -8,6 +8,7 @@ const rooms = {};
 const onlineUsers = new Map();
 const voiceRooms = {};
 const screenShares = {};
+const feedbackItems = [];
 
 const SYNC_DRIFT_WARN_SECONDS = 1.5;
 const SYNC_HARD_DRIFT_SECONDS = 3.5;
@@ -20,7 +21,6 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const connectDB = require("./config/db");
-const Feedback = require("./models/Feedback");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -55,76 +55,65 @@ app.use("/api/invites", inviteRoutes);
 app.use(express.static("public"));
 
 
-app.post("/api/feedback", async (req, res) => {
-  try {
-    const {
-      type,
-      title,
-      message,
-      roomCode,
-      username,
-      userId,
-      userAgent,
-      appVersion,
-      metadata,
-    } = req.body || {};
+app.post("/api/feedback", (req, res) => {
+  const {
+    type,
+    title,
+    message,
+    roomCode,
+    username,
+    userId,
+    userAgent,
+    appVersion,
+    metadata,
+  } = req.body || {};
 
-    if (!title || !message) {
-      return res.status(400).json({
-        message: "Başlık ve açıklama gerekli.",
-      });
-    }
-
-    const feedback = await Feedback.create({
-      type: type || "bug",
-      title: String(title).slice(0, 140),
-      message: String(message).slice(0, 3000),
-      roomCode: roomCode || "",
-      username: username || "Anonim",
-      userId: userId || "",
-      userAgent: userAgent || "",
-      appVersion: appVersion || "beta",
-      metadata: metadata || {},
-      status: "open",
-    });
-
-    res.status(201).json({
-      message: "Feedback alındı.",
-      feedback,
-    });
-  } catch (error) {
-    console.error("Feedback kaydedilemedi:", error);
-    res.status(500).json({
-      message: "Feedback kaydedilemedi.",
+  if (!title || !message) {
+    return res.status(400).json({
+      message: "Başlık ve açıklama gerekli.",
     });
   }
+
+  const feedback = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: type || "bug",
+    title: String(title).slice(0, 140),
+    message: String(message).slice(0, 3000),
+    roomCode: roomCode || "",
+    username: username || "Anonim",
+    userId: userId || "",
+    userAgent: userAgent || "",
+    appVersion: appVersion || "beta",
+    metadata: metadata || {},
+    status: "open",
+    createdAt: Date.now(),
+  };
+
+  feedbackItems.unshift(feedback);
+
+  if (feedbackItems.length > 500) {
+    feedbackItems.pop();
+  }
+
+  res.status(201).json({
+    message: "Feedback alındı.",
+    feedback,
+  });
 });
 
-app.get("/api/feedback", async (req, res) => {
-  try {
-    const adminKey = req.headers["x-admin-key"] || req.query.adminKey;
+app.get("/api/feedback", (req, res) => {
+  const adminKey = req.headers["x-admin-key"] || req.query.adminKey;
 
-    if (process.env.ADMIN_KEY && adminKey !== process.env.ADMIN_KEY) {
-      return res.status(401).json({
-        message: "Yetkisiz.",
-      });
-    }
-
-    const feedback = await Feedback.find()
-      .sort({ createdAt: -1 })
-      .limit(500)
-      .lean();
-
-    res.json({
-      count: feedback.length,
-      feedback,
-    });
-  } catch (error) {
-    console.error("Feedback okunamadı:", error);
-    res.status(500).json({
-      message: "Feedback okunamadı.",
+  if (process.env.ADMIN_KEY && adminKey !== process.env.ADMIN_KEY) {
+    return res.status(401).json({
+      message: "Yetkisiz.",
     });
   }
+
+  res.json({
+    count: feedbackItems.length,
+    feedback: feedbackItems,
+  });
 });
 
 
@@ -153,6 +142,19 @@ function createRoomCode() {
 
 function normalizeRoomCode(roomCode = "") {
   return String(roomCode).trim().toUpperCase();
+}
+
+function getDefaultRoomSettings() {
+  return {
+    roomLocked: false,
+    inviteOnly: false,
+    muteAll: false,
+    chatLocked: false,
+  };
+}
+
+function getPublicRoomSettings(roomCode) {
+  return rooms[roomCode]?.settings || getDefaultRoomSettings();
 }
 
 function isHost(roomCode, socketId) {
@@ -344,6 +346,7 @@ function buildRoomSnapshot(roomCode) {
     mediaQueue: room.mediaQueue || [],
     screenShare: room.screenShare || null,
     roomSummary: getRoomSummary(roomCode),
+    settings: getPublicRoomSettings(roomCode),
   };
 }
 
@@ -371,6 +374,11 @@ function emitRoomSnapshot(socket, roomCode, reason = "snapshot") {
   socket.emit("media-queue-updated", {
     currentMedia: snapshot.currentMedia,
     queue: snapshot.mediaQueue,
+  });
+
+  socket.emit("room-settings-updated", {
+    roomCode,
+    settings: snapshot.settings,
   });
 
   if (snapshot.screenShare?.broadcaster) {
@@ -585,6 +593,7 @@ io.on("connection", (socket) => {
       screenShare: null,
       mediaQueue: [],
       currentMedia: null,
+      settings: getDefaultRoomSettings(),
       users: [
         {
           id: socket.id,
@@ -600,6 +609,7 @@ io.on("connection", (socket) => {
     socket.emit("room-created", {
       roomCode,
       isHost: true,
+      settings: rooms[roomCode].settings,
     });
 
     socket.emit("room-users", rooms[roomCode].users);
@@ -633,6 +643,23 @@ io.on("connection", (socket) => {
       return;
     }
 
+    const roomSettings = room.settings || getDefaultRoomSettings();
+
+    if (roomSettings.roomLocked || roomSettings.inviteOnly) {
+      const alreadyInRoom = room.users.some((user) => user.id === socket.id);
+      const isRoomHost = room.host === socket.id;
+
+      if (!alreadyInRoom && !isRoomHost) {
+        socket.emit(
+          "room-error",
+          roomSettings.roomLocked
+            ? "Bu oda kilitli. Host kilidi açınca katılabilirsin."
+            : "Bu oda invite only modunda."
+        );
+        return;
+      }
+    }
+
     socket.join(targetRoomCode);
 
     const existingIndex = room.users.findIndex((user) => user.id === socket.id);
@@ -660,6 +687,7 @@ io.on("connection", (socket) => {
     socket.emit("room-joined", {
       roomCode: targetRoomCode,
       isHost: room.host === socket.id,
+      settings: room.settings || getDefaultRoomSettings(),
     });
 
     io.to(targetRoomCode).emit("room-users", room.users);
@@ -1227,6 +1255,51 @@ io.on("connection", (socket) => {
 
 
 
+  socket.on("room-settings-update", ({ roomCode, settings }) => {
+    const targetRoomCode = normalizeRoomCode(roomCode);
+    const room = rooms[targetRoomCode];
+
+    if (!targetRoomCode || !room) {
+      socket.emit("room-error", "Oda bulunamadı.");
+      return;
+    }
+
+    if (!isHost(targetRoomCode, socket.id)) {
+      socket.emit("room-error", "Room settings sadece host tarafından değiştirilebilir.");
+      return;
+    }
+
+    const currentSettings = room.settings || getDefaultRoomSettings();
+
+    room.settings = {
+      ...currentSettings,
+      roomLocked: !!settings?.roomLocked,
+      inviteOnly: !!settings?.inviteOnly,
+      muteAll: !!settings?.muteAll,
+      chatLocked: !!settings?.chatLocked,
+    };
+
+    io.to(targetRoomCode).emit("room-settings-updated", {
+      roomCode: targetRoomCode,
+      settings: room.settings,
+    });
+
+    if (room.settings.muteAll) {
+      io.to(targetRoomCode).emit("room-mute-all", {
+        roomCode: targetRoomCode,
+        muted: true,
+      });
+    }
+
+    emitNotification(targetRoomCode, {
+      type: "room",
+      title: "Room settings updated",
+      message: "Host oda ayarlarını güncelledi.",
+    });
+  });
+
+
+
   socket.on("party-invite-send", ({ targetSocketId, roomCode, fromUsername }) => {
     if (!targetSocketId || !roomCode || !rooms[roomCode]) return;
 
@@ -1298,9 +1371,17 @@ io.on("connection", (socket) => {
   });
 
   socket.on("send-message", ({ roomCode, message, username }) => {
-    if (!rooms[roomCode] || !message) return;
+    const targetRoomCode = normalizeRoomCode(roomCode);
+    const room = rooms[targetRoomCode];
 
-    io.to(roomCode).emit("receive-message", {
+    if (!room || !message) return;
+
+    if (room.settings?.chatLocked && !isHost(targetRoomCode, socket.id)) {
+      socket.emit("room-error", "Chat kilitli. Sadece host mesaj gönderebilir.");
+      return;
+    }
+
+    io.to(targetRoomCode).emit("receive-message", {
       sender: username || "Misafir",
       message,
     });

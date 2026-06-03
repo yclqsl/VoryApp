@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Copy,
   Radio,
@@ -11,12 +11,44 @@ import {
   MessageSquareOff,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { socket } from "../services/socket";
+
+const defaultSettings = {
+  roomLocked: false,
+  inviteOnly: false,
+  muteAll: false,
+  chatLocked: false,
+};
 
 export default function QuickActions({ roomCode, isHost, userCount = 0 }) {
-  const [roomLocked, setRoomLocked] = useState(false);
-  const [inviteOnly, setInviteOnly] = useState(false);
-  const [muteAll, setMuteAll] = useState(false);
-  const [chatLocked, setChatLocked] = useState(false);
+  const [roomSettings, setRoomSettings] = useState(defaultSettings);
+
+  useEffect(() => {
+    function handleRoomSettingsUpdated(payload) {
+      if (!payload?.settings) return;
+      if (payload.roomCode && roomCode && payload.roomCode !== roomCode) return;
+
+      setRoomSettings({
+        roomLocked: !!payload.settings.roomLocked,
+        inviteOnly: !!payload.settings.inviteOnly,
+        muteAll: !!payload.settings.muteAll,
+        chatLocked: !!payload.settings.chatLocked,
+      });
+    }
+
+    function handleMuteAll(payload) {
+      if (payload?.roomCode && roomCode && payload.roomCode !== roomCode) return;
+      toast("Host herkesi susturdu 🔇", { icon: "🔇" });
+    }
+
+    socket.on("room-settings-updated", handleRoomSettingsUpdated);
+    socket.on("room-mute-all", handleMuteAll);
+
+    return () => {
+      socket.off("room-settings-updated", handleRoomSettingsUpdated);
+      socket.off("room-mute-all", handleMuteAll);
+    };
+  }, [roomCode]);
 
   async function copyRoom() {
     if (!roomCode) {
@@ -26,6 +58,41 @@ export default function QuickActions({ roomCode, isHost, userCount = 0 }) {
 
     await navigator.clipboard.writeText(roomCode);
     toast.success("Oda kodu kopyalandı.");
+  }
+
+  function updateSetting(key) {
+    if (!roomCode) {
+      toast.error("Önce oda oluştur veya odaya gir.");
+      return;
+    }
+
+    if (!isHost) {
+      toast.error("Bu ayarları sadece host değiştirebilir.");
+      return;
+    }
+
+    const nextSettings = {
+      ...roomSettings,
+      [key]: !roomSettings[key],
+    };
+
+    setRoomSettings(nextSettings);
+
+    socket.emit("room-settings-update", {
+      roomCode,
+      settings: nextSettings,
+    });
+
+    const enabled = nextSettings[key];
+
+    const labels = {
+      roomLocked: enabled ? "Room locked 🔒" : "Room unlocked 🔓",
+      inviteOnly: enabled ? "Invite only enabled 👥" : "Invite only disabled 👥",
+      muteAll: enabled ? "Mute all enabled 🔇" : "Mute all disabled 🎤",
+      chatLocked: enabled ? "Chat locked 💬" : "Chat unlocked 💬",
+    };
+
+    toast.success(labels[key] || "Room setting updated");
   }
 
   const items = [
@@ -61,46 +128,30 @@ export default function QuickActions({ roomCode, isHost, userCount = 0 }) {
       {
         icon: Lock,
         label: "Room Lock",
-        value: roomLocked ? "Enabled" : "Disabled",
-        color: roomLocked ? "text-red-300" : "text-white/38",
-        onClick: () => {
-          const nextValue = !roomLocked;
-          setRoomLocked(nextValue);
-          toast.success(nextValue ? "Room locked 🔒" : "Room unlocked 🔓");
-        },
+        value: roomSettings.roomLocked ? "Enabled" : "Disabled",
+        color: roomSettings.roomLocked ? "text-red-300" : "text-white/38",
+        onClick: () => updateSetting("roomLocked"),
       },
       {
         icon: UserCheck,
         label: "Invite Only",
-        value: inviteOnly ? "Enabled" : "Disabled",
-        color: inviteOnly ? "text-violet-300" : "text-white/38",
-        onClick: () => {
-          const nextValue = !inviteOnly;
-          setInviteOnly(nextValue);
-          toast.success(nextValue ? "Invite only enabled 👥" : "Invite only disabled 👥");
-        },
+        value: roomSettings.inviteOnly ? "Enabled" : "Disabled",
+        color: roomSettings.inviteOnly ? "text-violet-300" : "text-white/38",
+        onClick: () => updateSetting("inviteOnly"),
       },
       {
         icon: MicOff,
         label: "Mute All",
-        value: muteAll ? "Enabled" : "Disabled",
-        color: muteAll ? "text-amber-300" : "text-white/38",
-        onClick: () => {
-          const nextValue = !muteAll;
-          setMuteAll(nextValue);
-          toast.success(nextValue ? "Everyone muted 🔇" : "Mute all disabled 🎤");
-        },
+        value: roomSettings.muteAll ? "Enabled" : "Disabled",
+        color: roomSettings.muteAll ? "text-amber-300" : "text-white/38",
+        onClick: () => updateSetting("muteAll"),
       },
       {
         icon: MessageSquareOff,
         label: "Chat Lock",
-        value: chatLocked ? "Enabled" : "Disabled",
-        color: chatLocked ? "text-fuchsia-300" : "text-white/38",
-        onClick: () => {
-          const nextValue = !chatLocked;
-          setChatLocked(nextValue);
-          toast.success(nextValue ? "Chat locked 💬" : "Chat unlocked 💬");
-        },
+        value: roomSettings.chatLocked ? "Enabled" : "Disabled",
+        color: roomSettings.chatLocked ? "text-fuchsia-300" : "text-white/38",
+        onClick: () => updateSetting("chatLocked"),
       }
     );
   }
@@ -133,7 +184,7 @@ export default function QuickActions({ roomCode, isHost, userCount = 0 }) {
             </div>
 
             <span className="rounded-full bg-black/20 px-3 py-1 text-xs font-black text-violet-200">
-              HOST
+              LIVE
             </span>
           </div>
         </div>
@@ -160,7 +211,8 @@ export default function QuickActions({ roomCode, isHost, userCount = 0 }) {
 
       {isHost && (
         <p className="mt-4 rounded-3xl bg-white/[0.04] p-3 text-xs text-white/35">
-          Bu ayarlar V12.6 mini sürümünde frontend toggle olarak çalışır. V12.6.1 ile socket/backend senkronu eklenecek.
+          Room Lock ve Invite Only yeni katılımları engeller. Chat Lock viewer mesajlarını engeller.
+          Mute All şu an odadaki herkese mute sinyali gönderir; V13.0.3 ile VoiceChat seviyesinde mikrofon kapatma zorlaması eklenecek.
         </p>
       )}
     </section>
