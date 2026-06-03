@@ -90,10 +90,10 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-xl">
           <form
             onSubmit={submitFeedback}
-            className="w-full max-w-[560px] overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0c0a16] text-white shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
+            className="relative z-[100000] w-full max-w-[560px] overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0c0a16] text-white shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
           >
             <div className="border-b border-white/10 bg-white/[0.03] px-5 py-4">
               <div className="flex items-start justify-between gap-4">
