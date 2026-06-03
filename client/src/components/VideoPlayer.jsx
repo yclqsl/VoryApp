@@ -149,10 +149,10 @@ export default function VideoPlayer({
     <section className="glass flex min-h-[560px] flex-1 flex-col">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black">Watch Room</h2>
-          <p className="text-sm text-white/40">
-            Rave tarzı yumuşak senkron: sadece büyük farklarda düzeltir.
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-white/35">
+            Media Center
           </p>
+          <h2 className="text-2xl font-black text-white">Add Media</h2>
         </div>
 
         <div
@@ -170,7 +170,7 @@ export default function VideoPlayer({
       <div className="mt-5 flex gap-2">
         <input
           className="input mt-0"
-          placeholder="YouTube linki gir..."
+          placeholder="YouTube veya MP4 linki yapıştır..."
           value={videoInput}
           onChange={(e) => setVideoInput(e.target.value)}
           disabled={!isHost}
@@ -182,7 +182,7 @@ export default function VideoPlayer({
           disabled={!isHost}
         >
           <PlayCircle size={18} />
-          Aç
+          Add Media
         </button>
       </div>
 
