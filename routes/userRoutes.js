@@ -212,6 +212,145 @@ function buildMissionState(stats = {}, dailyMissions = {}) {
   };
 }
 
+
+function getCustomizationCatalog() {
+  return [
+    {
+      id: "frame-neon",
+      type: "frame",
+      value: "neon",
+      icon: "💜",
+      title: "Neon Frame",
+      description: "Profil fotoğrafına Vory neon çerçeve ekler.",
+      costXp: 500,
+      requiredLevel: 2,
+    },
+    {
+      id: "frame-galaxy",
+      type: "frame",
+      value: "galaxy",
+      icon: "🌌",
+      title: "Galaxy Frame",
+      description: "Mor galaksi glow çerçevesi.",
+      costXp: 1200,
+      requiredLevel: 4,
+    },
+    {
+      id: "frame-cinema",
+      type: "frame",
+      value: "cinema",
+      icon: "🎬",
+      title: "Cinema Frame",
+      description: "Film geceleri için kırmızı sinema çerçevesi.",
+      costXp: 800,
+      requiredLevel: 3,
+    },
+    {
+      id: "frame-founder",
+      type: "frame",
+      value: "founder",
+      icon: "👑",
+      title: "Founder Frame",
+      description: "Founder/early badge kullanıcıları için altın frame.",
+      costXp: 0,
+      requiredBadge: "Closed Beta Tester",
+    },
+    {
+      id: "theme-galaxy",
+      type: "theme",
+      value: "galaxy",
+      icon: "🌠",
+      title: "Galaxy Profile Theme",
+      description: "Profil kartına galaxy teması verir.",
+      costXp: 1000,
+      requiredLevel: 3,
+    },
+    {
+      id: "theme-cinema",
+      type: "theme",
+      value: "cinema",
+      icon: "🍿",
+      title: "Cinema Profile Theme",
+      description: "Profil kartını sinema havasına sokar.",
+      costXp: 750,
+      requiredLevel: 2,
+    },
+    {
+      id: "theme-gaming",
+      type: "theme",
+      value: "gaming",
+      icon: "🎮",
+      title: "Gaming Profile Theme",
+      description: "Yeşil/cyan gaming profil teması.",
+      costXp: 900,
+      requiredLevel: 3,
+    },
+    {
+      id: "glow-founder",
+      type: "glow",
+      value: "founder",
+      icon: "💎",
+      title: "Founder Glow",
+      description: "Profil kartına premium founder glow efekti verir.",
+      costXp: 0,
+      requiredBadge: "Closed Beta Tester",
+    },
+    {
+      id: "glow-fire",
+      type: "glow",
+      value: "fire",
+      icon: "🔥",
+      title: "Fire Glow",
+      description: "Host master havası veren sıcak glow.",
+      costXp: 1400,
+      requiredLevel: 5,
+    },
+  ];
+}
+
+function userHasRequiredBadge(user, requiredBadge = "") {
+  if (!requiredBadge) return true;
+  const badges = (user.profileBadges || []).map((badge) => String(badge).toLowerCase());
+  return badges.some((badge) => badge.includes(String(requiredBadge).toLowerCase()));
+}
+
+function buildCustomizationState(user) {
+  const catalog = getCustomizationCatalog();
+  const purchased = new Set(user.profileInventory?.purchasedItemIds || []);
+  const unlocked = new Set(user.profileInventory?.unlockedItemIds || []);
+  const equipped = new Set(user.profileInventory?.equippedItemIds || []);
+
+  const items = catalog.map((item) => {
+    const levelOk = Number(user.profileLevel || 1) >= Number(item.requiredLevel || 1);
+    const badgeOk = userHasRequiredBadge(user, item.requiredBadge || "");
+    const freeUnlock = Number(item.costXp || 0) === 0 && levelOk && badgeOk;
+    const owned = purchased.has(item.id) || unlocked.has(item.id) || freeUnlock;
+
+    return {
+      ...item,
+      owned,
+      equipped: equipped.has(item.id) || user.activeCustomizations?.[item.type] === item.value,
+      locked: !levelOk || !badgeOk,
+      lockReason: !levelOk
+        ? `Level ${item.requiredLevel} gerekli`
+        : !badgeOk
+          ? `${item.requiredBadge} badge gerekli`
+          : "",
+    };
+  });
+
+  return {
+    items,
+    active: {
+      frame: user.activeCustomizations?.frame || user.profileFrame || "rookie",
+      theme: user.activeCustomizations?.theme || user.profileTheme || "vory",
+      glow: user.activeCustomizations?.glow || "none",
+      badgeShowcase: user.activeCustomizations?.badgeShowcase || [],
+    },
+    totalSpentXp: Number(user.profileInventory?.totalSpentXp || 0),
+  };
+}
+
 function serializeProfileUser(user) {
   const stats = normalizeStats(user.profileStats || {});
   const baseXp = calculateProfileXp(stats);
@@ -237,6 +376,8 @@ function serializeProfileUser(user) {
     profileStats: stats,
     achievements: user.achievements || [],
     dailyMissions: buildMissionState(stats, user.dailyMissions || {}),
+    customization: buildCustomizationState(user),
+    activeCustomizations: buildCustomizationState(user).active,
     currentLevelXp,
     nextLevelXp,
   };
@@ -266,7 +407,7 @@ async function refreshUserProgress(user, statsInput = null) {
   const profileXp = baseXp + achievementBonus + missionBonus;
   const profileLevel = calculateProfileLevel(profileXp);
   const profileBadges = buildProfileBadges(user.profileBadges || [], stats, profileLevel, achievements);
-  const profileFrame = pickProfileFrame(profileLevel, profileBadges);
+  const profileFrame = user.activeCustomizations?.frame || pickProfileFrame(profileLevel, profileBadges);
 
   user.profileStats = stats;
   user.achievements = achievements;
@@ -370,6 +511,120 @@ router.patch("/missions/claim", protect, async (req, res) => {
   } catch (error) {
     console.error("Mission claim error:", error);
     res.status(500).json({ message: "Görev ödülü alınamadı." });
+  }
+});
+
+
+router.get("/customization/catalog", protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password");
+    await refreshUserProgress(user, user.profileStats || {});
+    await user.save();
+
+    res.json({
+      customization: buildCustomizationState(user),
+      user: serializeProfileUser(user),
+    });
+  } catch (error) {
+    console.error("Customization catalog error:", error);
+    res.status(500).json({ message: "Customization store alınamadı." });
+  }
+});
+
+router.patch("/customization/unlock", protect, async (req, res) => {
+  try {
+    const itemId = String(req.body?.itemId || "");
+    const catalogItem = getCustomizationCatalog().find((item) => item.id === itemId);
+    if (!catalogItem) return res.status(404).json({ message: "Store item bulunamadı." });
+
+    const user = await User.findById(req.user._id);
+    await refreshUserProgress(user, req.body?.stats || user.profileStats || {});
+
+    const customization = buildCustomizationState(user);
+    const stateItem = customization.items.find((item) => item.id === itemId);
+    if (!stateItem) return res.status(404).json({ message: "Store item bulunamadı." });
+    if (stateItem.locked) return res.status(400).json({ message: stateItem.lockReason || "Bu item henüz kilitli." });
+    if (stateItem.owned) return res.status(400).json({ message: "Bu cosmetic zaten açık." });
+
+    const currentSpent = Number(user.profileInventory?.totalSpentXp || 0);
+    const spendableXp = Math.max(0, Number(user.profileXp || 0) - currentSpent);
+    const costXp = Number(catalogItem.costXp || 0);
+    if (spendableXp < costXp) {
+      return res.status(400).json({ message: `Yetersiz XP. Gerekli: ${costXp} XP` });
+    }
+
+    const purchasedItemIds = Array.from(new Set([...(user.profileInventory?.purchasedItemIds || []), itemId]));
+    const unlockedItemIds = Array.from(new Set([...(user.profileInventory?.unlockedItemIds || []), itemId]));
+
+    user.profileInventory = {
+      ...(user.profileInventory || {}),
+      purchasedItemIds,
+      unlockedItemIds,
+      equippedItemIds: user.profileInventory?.equippedItemIds || [],
+      totalSpentXp: currentSpent + costXp,
+      updatedAt: new Date(),
+    };
+
+    await user.save();
+
+    res.json({
+      message: `${catalogItem.title} açıldı.`,
+      item: catalogItem,
+      customization: buildCustomizationState(user),
+      user: serializeProfileUser(user),
+    });
+  } catch (error) {
+    console.error("Customization unlock error:", error);
+    res.status(500).json({ message: "Cosmetic açılamadı." });
+  }
+});
+
+router.patch("/customization/equip", protect, async (req, res) => {
+  try {
+    const itemId = String(req.body?.itemId || "");
+    const catalogItem = getCustomizationCatalog().find((item) => item.id === itemId);
+    if (!catalogItem) return res.status(404).json({ message: "Store item bulunamadı." });
+
+    const user = await User.findById(req.user._id);
+    await refreshUserProgress(user, req.body?.stats || user.profileStats || {});
+
+    const customization = buildCustomizationState(user);
+    const stateItem = customization.items.find((item) => item.id === itemId);
+    if (!stateItem?.owned) return res.status(400).json({ message: "Önce bu cosmetic'i unlock et." });
+
+    const currentEquipped = (user.profileInventory?.equippedItemIds || []).filter((id) => {
+      const item = getCustomizationCatalog().find((catalog) => catalog.id === id);
+      return item && item.type !== catalogItem.type;
+    });
+
+    user.activeCustomizations = {
+      ...(user.activeCustomizations || {}),
+      [catalogItem.type]: catalogItem.value,
+    };
+
+    if (catalogItem.type === "frame") user.profileFrame = catalogItem.value;
+    if (catalogItem.type === "theme") user.profileTheme = catalogItem.value;
+
+    user.profileInventory = {
+      ...(user.profileInventory || {}),
+      unlockedItemIds: Array.from(new Set([...(user.profileInventory?.unlockedItemIds || []), itemId])),
+      purchasedItemIds: user.profileInventory?.purchasedItemIds || [],
+      equippedItemIds: [...currentEquipped, itemId],
+      totalSpentXp: Number(user.profileInventory?.totalSpentXp || 0),
+      updatedAt: new Date(),
+    };
+
+    await user.save();
+
+    res.json({
+      message: `${catalogItem.title} aktif edildi.`,
+      item: catalogItem,
+      customization: buildCustomizationState(user),
+      user: serializeProfileUser(user),
+    });
+  } catch (error) {
+    console.error("Customization equip error:", error);
+    res.status(500).json({ message: "Cosmetic aktif edilemedi." });
   }
 });
 

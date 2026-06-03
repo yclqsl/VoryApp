@@ -82,13 +82,27 @@ const userSchema = new mongoose.Schema(
       totalXpClaimed: { type: Number, default: 0 },
       updatedAt: { type: Date, default: null }
     },
+
+    profileInventory: {
+      unlockedItemIds: { type: [String], default: [] },
+      purchasedItemIds: { type: [String], default: [] },
+      equippedItemIds: { type: [String], default: [] },
+      totalSpentXp: { type: Number, default: 0 },
+      updatedAt: { type: Date, default: null }
+    },
+    activeCustomizations: {
+      frame: { type: String, default: "rookie" },
+      theme: { type: String, default: "vory" },
+      glow: { type: String, default: "none" },
+      badgeShowcase: { type: [String], default: [] }
+    },
     lastProfileSyncAt: {
       type: Date,
       default: null
     },
     profileTheme: {
       type: String,
-      enum: ["vory", "violet", "fuchsia", "emerald", "sky"],
+      enum: ["vory", "violet", "fuchsia", "emerald", "sky", "cinema", "galaxy", "gaming"],
       default: "vory"
     },
     friends: [

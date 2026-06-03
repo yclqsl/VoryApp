@@ -169,7 +169,10 @@ export default function ProfileCard({
   const currentLevelXp = Number(profileProgress?.currentLevelXp ?? xpForLevel(level));
   const nextLevelXp = Number(profileProgress?.nextLevelXp ?? xpForLevel(level + 1));
   const xpProgress = nextLevelXp > currentLevelXp ? Math.min(100, Math.max(0, Math.round(((xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100))) : 100;
-  const frame = profileProgress?.profileFrame || authUser?.profileFrame || (level >= 10 ? "neon" : "rookie");
+  const activeCustomizations = profileProgress?.activeCustomizations || profileProgress?.customization?.active || {};
+  const frame = activeCustomizations.frame || profileProgress?.profileFrame || authUser?.profileFrame || (level >= 10 ? "neon" : "rookie");
+  const activeTheme = activeCustomizations.theme || profileProgress?.profileTheme || authUser?.profileTheme || "vory";
+  const activeGlow = activeCustomizations.glow || "none";
   const platforms = getDefaultPlatforms(authUser?.favoritePlatforms);
   const badges = profileProgress?.profileBadges?.length ? profileProgress.profileBadges : buildLocalBadges(authUser, mergedStats, level);
   const achievements = profileProgress?.achievements?.length ? profileProgress.achievements : [];
@@ -181,10 +184,10 @@ export default function ProfileCard({
   const hiddenHistoryCount = Math.max(0, (watchHistory || []).length - 3);
 
   return (
-    <section className="glass overflow-hidden p-0">
+    <section className={`glass overflow-hidden p-0 profile-theme-${activeTheme} ${activeGlow !== "none" ? "shadow-[0_0_70px_rgba(217,70,239,0.16)]" : ""}`}>
       <div className="relative h-24 bg-gradient-to-r from-violet-600/80 via-fuchsia-600/60 to-indigo-600/70 sm:h-24">
         <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-black/25 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/70 backdrop-blur-xl sm:text-xs">
-          <Gem size={13} /> V14.1 Profile System
+          <Gem size={13} /> V14.3 Cosmetic Profile
         </div>
         <div className="absolute bottom-4 right-4 rounded-full bg-yellow-400/15 px-3 py-1 text-xs font-black text-yellow-100">
           {getFrameLabel(frame)}
@@ -214,6 +217,13 @@ export default function ProfileCard({
         <div className="mt-4 min-w-0">
           <h2 className="truncate text-2xl font-black sm:text-xl">@{username}</h2>
           <p className="truncate text-sm text-white/40">{email}</p>
+
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-white/45">
+            <span className="rounded-full bg-white/8 px-3 py-1">Active Cosmetics</span>
+            <span className="rounded-full bg-fuchsia-400/10 px-3 py-1 text-fuchsia-100">{getFrameLabel(frame)}</span>
+            <span className="rounded-full bg-sky-400/10 px-3 py-1 text-sky-100">{activeTheme} theme</span>
+            {activeGlow !== "none" ? <span className="rounded-full bg-yellow-400/10 px-3 py-1 text-yellow-100">{activeGlow} glow</span> : null}
+          </div>
 
           <div className="mt-4 rounded-[1.75rem] border border-yellow-300/15 bg-gradient-to-br from-yellow-400/12 via-fuchsia-400/10 to-violet-500/10 p-4">
             <div className="flex items-center justify-between gap-3">

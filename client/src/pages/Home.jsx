@@ -17,6 +17,7 @@ import InviteBox from "../components/InviteBox";
 import PartyDiscoveryPanel from "../components/PartyDiscoveryPanel";
 import LeaderboardPanel from "../components/LeaderboardPanel";
 import DailyMissionsPanel from "../components/DailyMissionsPanel";
+import CustomizationStorePanel from "../components/CustomizationStorePanel";
 import PresenceFriendPanel from "../components/PresenceFriendPanel";
 import UserList from "../components/UserList";
 import ChatPanel from "../components/ChatPanel";
@@ -219,6 +220,7 @@ export default function Home({ authUser, onLogout }) {
   const [leaderboardUsers, setLeaderboardUsers] = useState([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [missionsLoading, setMissionsLoading] = useState(false);
+  const [storeLoading, setStoreLoading] = useState(false);
   const [friendState, setFriendState] = useState({ friends: [], sent: [], received: [] });
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
   const [friendSearchResults, setFriendSearchResults] = useState([]);
@@ -338,6 +340,75 @@ export default function Home({ authUser, onLogout }) {
   }
 
 
+
+
+  async function refreshCustomizationStore() {
+    if (!currentUserId) return;
+
+    try {
+      setStoreLoading(true);
+      const response = await api.get("/users/customization/catalog");
+      if (response.data?.user) {
+        setProfileProgress(response.data.user);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Store alınamadı.");
+    } finally {
+      setStoreLoading(false);
+    }
+  }
+
+  async function unlockCustomizationItem(item) {
+    if (!currentUserId || !item?.id) return;
+
+    try {
+      setStoreLoading(true);
+      const response = await api.patch("/users/customization/unlock", {
+        itemId: item.id,
+        stats: {
+          ...(profileStats || {}),
+          friends: friendState.friends?.length || profileStats?.friends || 0,
+        },
+      });
+
+      if (response.data?.user) {
+        setProfileProgress(response.data.user);
+      }
+
+      toast.success(response.data?.message || `${item.title} açıldı ✨`);
+      loadLeaderboard();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Cosmetic açılamadı.");
+    } finally {
+      setStoreLoading(false);
+    }
+  }
+
+  async function equipCustomizationItem(item) {
+    if (!currentUserId || !item?.id) return;
+
+    try {
+      setStoreLoading(true);
+      const response = await api.patch("/users/customization/equip", {
+        itemId: item.id,
+        stats: {
+          ...(profileStats || {}),
+          friends: friendState.friends?.length || profileStats?.friends || 0,
+        },
+      });
+
+      if (response.data?.user) {
+        setProfileProgress(response.data.user);
+      }
+
+      toast.success(response.data?.message || `${item.title} aktif edildi 💎`);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Cosmetic aktif edilemedi.");
+    } finally {
+      setStoreLoading(false);
+    }
+  }
+
   async function loadFriendState() {
     if (!currentUserId) return;
 
@@ -360,6 +431,7 @@ export default function Home({ authUser, onLogout }) {
   useEffect(() => {
     loadProfileProgress();
     loadLeaderboard();
+    refreshCustomizationStore();
   }, [currentUserId]);
 
   useEffect(() => {
@@ -2180,6 +2252,15 @@ export default function Home({ authUser, onLogout }) {
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onInviteFriend={sendPartyInvite}
             onOpenDM={openDM}
+          />
+
+          <CustomizationStorePanel
+            profileProgress={profileProgress}
+            stats={displayProfileStats}
+            loading={storeLoading}
+            onRefresh={refreshCustomizationStore}
+            onUnlockItem={unlockCustomizationItem}
+            onEquipItem={equipCustomizationItem}
           />
           <LeaderboardPanel
             users={leaderboardUsers}
