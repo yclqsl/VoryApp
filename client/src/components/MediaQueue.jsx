@@ -79,11 +79,11 @@ export default function MediaQueue({
 
       {open && (
         <>
-          <form className="mt-4 grid gap-2 lg:grid-cols-[minmax(0,1fr)_170px_auto]" onSubmit={submitMedia}>
+          <form className="vory-v8-media-form mt-4" onSubmit={submitMedia}>
             <input
               value={mediaUrl}
               onChange={(event) => setMediaUrl(event.target.value)}
-              placeholder="YouTube, MP4 veya direct video linki"
+              placeholder="Paste YouTube / MP4 link"
               className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/40"
             />
 

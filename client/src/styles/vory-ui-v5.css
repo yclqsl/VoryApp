@@ -346,3 +346,26 @@
   background: rgba(255,255,255,0.12);
   border-radius: 999px;
 }
+
+
+/* Right Panel Revamp V8 */
+.vory-v8-media-form{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.vory-v8-media-form button{
+  width:100%;
+}
+
+.vory-v8-media-form input{
+  width:100%;
+  min-width:0;
+}
+
+@media (min-width:1280px){
+  .vory-v8-media-form{
+    gap:12px;
+  }
+}
