@@ -53,7 +53,7 @@ function statusClass(status) {
 export default function AdminFeedbackPanel({ authUser }) {
   const [feedback, setFeedback] = useState([]);
   const [filter, setFilter] = useState("all");
-  const [adminKey, setAdminKey] = useState(() => localStorage.getItem("vory-admin-key") || "");
+  const [adminKey, setAdminKey] = useState("");
   const [loading, setLoading] = useState(false);
 
   const isAdminName =
@@ -88,7 +88,6 @@ export default function AdminFeedbackPanel({ authUser }) {
     const cleanKey = adminKey.trim();
 
     if (cleanKey) {
-      localStorage.setItem("vory-admin-key", cleanKey);
       return {
         params: { adminKey: cleanKey },
         headers: { "x-admin-key": cleanKey },
@@ -98,15 +97,24 @@ export default function AdminFeedbackPanel({ authUser }) {
     return {};
   }
 
-  async function loadFeedback() {
+  async function loadFeedback(showToast = false) {
     try {
       setLoading(true);
 
       const { data } = await api.get("/feedback", getAdminConfig());
       setFeedback(data.feedback || []);
-      toast.success("Feedback listesi güncellendi.");
+
+      if (showToast) {
+        toast.success("Feedback listesi güncellendi.");
+      }
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Feedback okunamadı.");
+      setFeedback([]);
+
+      if (showToast) {
+        toast.error(error?.response?.data?.message || "Feedback okunamadı.", {
+          id: "admin-feedback-load-error",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -145,7 +153,8 @@ export default function AdminFeedbackPanel({ authUser }) {
   }
 
   useEffect(() => {
-    loadFeedback();
+    localStorage.removeItem("vory-admin-key");
+    loadFeedback(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -194,7 +203,7 @@ export default function AdminFeedbackPanel({ authUser }) {
 
             <button
               type="button"
-              onClick={loadFeedback}
+              onClick={() => loadFeedback(true)}
               disabled={loading}
               className="btn-primary flex items-center justify-center gap-2"
             >
