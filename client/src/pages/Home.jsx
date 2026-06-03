@@ -15,6 +15,7 @@ import RoomThemePanel from "../components/RoomThemePanel";
 import AnimatedBackground from "../components/AnimatedBackground";
 import InviteBox from "../components/InviteBox";
 import PartyDiscoveryPanel from "../components/PartyDiscoveryPanel";
+import LeaderboardPanel from "../components/LeaderboardPanel";
 import PresenceFriendPanel from "../components/PresenceFriendPanel";
 import UserList from "../components/UserList";
 import ChatPanel from "../components/ChatPanel";
@@ -213,6 +214,9 @@ export default function Home({ authUser, onLogout }) {
   const [profileStats, setProfileStats] = useState(() =>
     readLocalJson("vory-profile-stats", createEmptyVoryStats())
   );
+  const [profileProgress, setProfileProgress] = useState(null);
+  const [leaderboardUsers, setLeaderboardUsers] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [friendState, setFriendState] = useState({ friends: [], sent: [], received: [] });
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
   const [friendSearchResults, setFriendSearchResults] = useState([]);
@@ -259,6 +263,52 @@ export default function Home({ authUser, onLogout }) {
   );
 
 
+  async function loadProfileProgress() {
+    if (!currentUserId) return;
+
+    try {
+      const response = await api.get("/users/profile-summary");
+      setProfileProgress(response.data?.user || null);
+    } catch (error) {
+      console.error("Profile progress alınamadı:", error);
+    }
+  }
+
+  async function loadLeaderboard() {
+    if (!currentUserId) return;
+
+    try {
+      setLeaderboardLoading(true);
+      const response = await api.get("/users/leaderboard");
+      setLeaderboardUsers(response.data?.users || []);
+    } catch (error) {
+      console.error("Leaderboard alınamadı:", error);
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }
+
+  function syncProfileProgress(nextStats) {
+    if (!currentUserId) return;
+
+    api
+      .patch("/users/profile/progress", {
+        stats: {
+          ...(nextStats || profileStats || {}),
+          friends: friendState.friends?.length || nextStats?.friends || profileStats?.friends || 0,
+        },
+      })
+      .then((response) => {
+        if (response.data?.user) {
+          setProfileProgress(response.data.user);
+        }
+      })
+      .catch((error) => {
+        console.error("Profile progress sync hatası:", error);
+      });
+  }
+
+
   async function loadFriendState() {
     if (!currentUserId) return;
 
@@ -276,6 +326,11 @@ export default function Home({ authUser, onLogout }) {
 
   useEffect(() => {
     loadFriendState();
+  }, [currentUserId]);
+
+  useEffect(() => {
+    loadProfileProgress();
+    loadLeaderboard();
   }, [currentUserId]);
 
   useEffect(() => {
@@ -384,6 +439,16 @@ export default function Home({ authUser, onLogout }) {
   useEffect(() => {
     writeLocalJson("vory-profile-stats", profileStats);
   }, [profileStats]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const syncTimer = setTimeout(() => {
+      syncProfileProgress(profileStats);
+    }, 900);
+
+    return () => clearTimeout(syncTimer);
+  }, [profileStats, currentUserId, friendState.friends?.length]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -1099,10 +1164,15 @@ export default function Home({ authUser, onLogout }) {
   }, [roomCode, videoUrl, currentMedia, presenceIdle]);
 
   function bumpProfileStat(key, amount = 1) {
-    setProfileStats((prev) => ({
-      ...prev,
-      [key]: Math.max(0, Number(prev?.[key] || 0) + amount),
-    }));
+    setProfileStats((prev) => {
+      const nextStats = {
+        ...prev,
+        friends: friendState.friends?.length || prev?.friends || 0,
+        [key]: Math.max(0, Number(prev?.[key] || 0) + amount),
+      };
+
+      return nextStats;
+    });
   }
 
   function updateContinueWatching({ url, title, currentTime = 0, roomCode: targetRoomCode = "", playing = false }) {
@@ -2025,7 +2095,7 @@ export default function Home({ authUser, onLogout }) {
         <div className="vory-v5-page-grid">
           <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
           <UserList users={users} />
-          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
+          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} profileProgress={profileProgress} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
         </div>
       );
     }
@@ -2074,7 +2144,12 @@ export default function Home({ authUser, onLogout }) {
             onInviteFriend={sendPartyInvite}
             onOpenDM={openDM}
           />
-          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
+          <LeaderboardPanel
+            users={leaderboardUsers}
+            loading={leaderboardLoading}
+            onRefresh={loadLeaderboard}
+          />
+          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} profileProgress={profileProgress} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
         </div>
       );
     }
@@ -2354,7 +2429,7 @@ export default function Home({ authUser, onLogout }) {
           onInviteFriend={sendPartyInvite}
           onOpenDM={openDM}
         />
-        <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
+        <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} profileProgress={profileProgress} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
       </section>
     );
   }

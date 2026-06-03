@@ -43,6 +43,32 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: ["Closed Beta Tester"]
     },
+    profileXp: {
+      type: Number,
+      default: 0
+    },
+    profileLevel: {
+      type: Number,
+      default: 1
+    },
+    profileFrame: {
+      type: String,
+      enum: ["rookie", "neon", "galaxy", "cinema", "founder"],
+      default: "rookie"
+    },
+    profileStats: {
+      roomsJoined: { type: Number, default: 0 },
+      watchSeconds: { type: Number, default: 0 },
+      mediaPlayed: { type: Number, default: 0 },
+      messagesSent: { type: Number, default: 0 },
+      reactionsUsed: { type: Number, default: 0 },
+      invitesSent: { type: Number, default: 0 },
+      friends: { type: Number, default: 0 }
+    },
+    lastProfileSyncAt: {
+      type: Date,
+      default: null
+    },
     profileTheme: {
       type: String,
       enum: ["vory", "violet", "fuchsia", "emerald", "sky"],
