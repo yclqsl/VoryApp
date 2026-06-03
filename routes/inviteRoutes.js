@@ -11,7 +11,7 @@ router.post("/room-link", protect, async (req, res) => {
   }
 
   const frontendUrl = process.env.FRONTEND_URL || "https://voryapp.com";
-  const inviteLink = `${frontendUrl}/?room=${roomCode}`;
+  const inviteLink = `${frontendUrl}/room/${String(roomCode).trim().toUpperCase()}`;
 
   res.json({
     roomCode,

@@ -332,8 +332,14 @@ export default function PresenceFriendPanel({
                       <button
                         className="rounded-2xl bg-fuchsia-500/15 px-3 py-2 text-xs font-black text-fuchsia-200 transition hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-40"
                         onClick={() => onInviteFriend?.(user)}
-                        disabled={!user.isOnline || !user.socketId || !onInviteFriend}
-                        title={!user.isOnline ? "Arkadaş offline" : "Arkadaşını odana davet et"}
+                        disabled={!currentRoomCode || !user.isOnline || !user.socketId || !onInviteFriend}
+                        title={
+                          !currentRoomCode
+                            ? "Önce oda oluştur veya odaya gir"
+                            : !user.isOnline
+                              ? "Arkadaş offline"
+                              : "Arkadaşını odana davet et"
+                        }
                       >
                         Davet Et
                       </button>

@@ -563,6 +563,33 @@ export default function Home({ authUser, onLogout }) {
       toast.success(`${invite.fromUsername || "Kullanıcı"} seni davet etti 🎉`);
     });
 
+    socket.on("party-invite-sent", ({ message }) => {
+      if (message) {
+        toast.success(message);
+      }
+    });
+
+    socket.on("party-invite-error", ({ message }) => {
+      toast.error(message || "Davet gönderilemedi.");
+    });
+
+    socket.on("party-invite-expired", (invite) => {
+      setPartyInvite((currentInvite) => {
+        if (!currentInvite || currentInvite.id !== invite?.id) return currentInvite;
+        return null;
+      });
+
+      if (invite?.message) {
+        toast(invite.message, { icon: "⏱️" });
+      }
+    });
+
+    socket.on("party-invite-response", ({ accepted, message }) => {
+      toast(message || (accepted ? "Davet kabul edildi." : "Davet reddedildi."), {
+        icon: accepted ? "🎉" : "✋",
+      });
+    });
+
     socket.on("reaction:new", (reaction) => {
       addVisualReaction(reaction);
     });
@@ -600,6 +627,10 @@ export default function Home({ authUser, onLogout }) {
       socket.off("media-queue-updated");
       socket.off("media-current-updated");
       socket.off("party-invite-received");
+      socket.off("party-invite-sent");
+      socket.off("party-invite-error");
+      socket.off("party-invite-expired");
+      socket.off("party-invite-response");
       socket.off("reaction:new");
     };
   }, []);
@@ -1067,24 +1098,57 @@ export default function Home({ authUser, onLogout }) {
       return;
     }
 
-    socket.emit("party-invite-send", {
-      targetSocketId: targetUser.socketId,
-      roomCode,
-      fromUsername: currentUserPayload.username,
-    });
+    if (targetUser.socketId === socket.id) {
+      toast.error("Kendine davet gönderemezsin.");
+      return;
+    }
 
-    bumpProfileStat("invitesSent", 1);
-    toast.success(`${targetUser.username || "Kullanıcı"} davet edildi 🎉`);
+    if (
+      targetUser?.roomCode &&
+      String(targetUser.roomCode).toUpperCase() === String(roomCode).toUpperCase()
+    ) {
+      toast("Arkadaşın zaten aynı odada 👥");
+      return;
+    }
+
+    socket.emit(
+      "party-invite-send",
+      {
+        targetSocketId: targetUser.socketId,
+        roomCode,
+        fromUsername: currentUserPayload.username,
+      },
+      (response) => {
+        if (!response?.ok) {
+          toast.error(response?.message || "Davet gönderilemedi.");
+          return;
+        }
+
+        bumpProfileStat("invitesSent", 1);
+      }
+    );
   }
 
   function acceptPartyInvite() {
     if (!partyInvite?.roomCode) return;
+
+    socket.emit("party-invite-response", {
+      inviteId: partyInvite.id,
+      accepted: true,
+    });
 
     joinRoom(partyInvite.roomCode);
     setPartyInvite(null);
   }
 
   function rejectPartyInvite() {
+    if (partyInvite?.id) {
+      socket.emit("party-invite-response", {
+        inviteId: partyInvite.id,
+        accepted: false,
+      });
+    }
+
     setPartyInvite(null);
   }
 
@@ -1430,16 +1494,17 @@ export default function Home({ authUser, onLogout }) {
                   Party Invite
                 </p>
                 <h2 className="mt-1 text-xl font-black text-white">
-                  {partyInvite.fromUsername || "Kullanıcı"} seni davet etti
+                  {partyInvite.fromUsername || "Kullanıcı"} seni odaya davet etti
                 </h2>
                 <p className="mt-1 text-sm text-white/45">
                   Room {partyInvite.roomCode}
+                  {partyInvite.expiresAt ? " • 60 sn içinde cevapla" : ""}
                 </p>
               </div>
 
               <div className="flex gap-2">
                 <button className="btn-primary w-auto" onClick={acceptPartyInvite}>
-                  Katıl
+                  Kabul Et
                 </button>
                 <button className="btn-secondary w-auto" onClick={rejectPartyInvite}>
                   Reddet
