@@ -11,6 +11,7 @@ import DevHealthOverlay from "../components/DevHealthOverlay";
 import FeedbackWidget from "../components/FeedbackWidget";
 import QuickActions from "../components/QuickActions";
 import RoomPanel from "../components/RoomPanel";
+import RoomThemePanel from "../components/RoomThemePanel";
 import InviteBox from "../components/InviteBox";
 import PresenceFriendPanel from "../components/PresenceFriendPanel";
 import UserList from "../components/UserList";
@@ -115,10 +116,63 @@ function normalizeHistoryTitle(value = "") {
   }
 }
 
+function getThemeShellClass(theme = "neon") {
+  const cleanTheme = String(theme || "neon").toLowerCase();
+
+  if (cleanTheme === "cinema") {
+    return "from-black via-[#180707] to-[#050004]";
+  }
+
+  if (cleanTheme === "galaxy") {
+    return "from-[#040014] via-[#100a35] to-[#020617]";
+  }
+
+  if (cleanTheme === "gaming") {
+    return "from-black via-[#03140b] to-[#020617]";
+  }
+
+  return "from-[#090014] via-[#15032d] to-[#050010]";
+}
+
+function getThemeGlowClass(theme = "neon", slot = 1) {
+  const cleanTheme = String(theme || "neon").toLowerCase();
+
+  if (cleanTheme === "cinema") {
+    return slot === 1
+      ? "bg-red-700/20"
+      : slot === 2
+        ? "bg-amber-600/15"
+        : "bg-rose-700/10";
+  }
+
+  if (cleanTheme === "galaxy") {
+    return slot === 1
+      ? "bg-indigo-600/25"
+      : slot === 2
+        ? "bg-sky-500/15"
+        : "bg-fuchsia-600/12";
+  }
+
+  if (cleanTheme === "gaming") {
+    return slot === 1
+      ? "bg-emerald-500/18"
+      : slot === 2
+        ? "bg-lime-500/12"
+        : "bg-cyan-500/10";
+  }
+
+  return slot === 1
+    ? "bg-violet-700/25"
+    : slot === 2
+      ? "bg-fuchsia-700/20"
+      : "bg-indigo-700/15";
+}
+
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
   const [roomInput, setRoomInput] = useState("");
   const [roomCode, setRoomCode] = useState("");
+  const [roomTheme, setRoomTheme] = useState("neon");
   const [status, setStatus] = useState("");
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState("");
@@ -382,6 +436,10 @@ export default function Home({ authUser, onLogout }) {
         setVideoUrl(snapshot.videoUrl);
       }
 
+      if (snapshot.theme) {
+        setRoomTheme(snapshot.theme);
+      }
+
       const me = (snapshot.users || []).find((user) => user.id === socket.id);
       setIsHost(!!me?.isHost);
       setLastRestoreMessage(snapshot.reason === "session-restore" ? "Oda geri yüklendi." : "");
@@ -391,6 +449,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomUrl(data.roomCode);
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
+      setRoomTheme(data.theme || "neon");
       setPendingInviteRoom("");
 	  setLastRestoreMessage("");
       setStatus("Oda oluşturuldu.");
@@ -402,6 +461,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomUrl(data.roomCode);
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
+      setRoomTheme(data.theme || "neon");
       setPendingInviteRoom("");
 	  setLastRestoreMessage("");
       setStatus("Odaya katıldın.");
@@ -419,6 +479,7 @@ export default function Home({ authUser, onLogout }) {
       setMediaQueue([]);
       setStatus("");
       setIsHost(false);
+      setRoomTheme("neon");
       setLastRestoreMessage("");
       if (syncIntervalRef.current) {
         clearInterval(syncIntervalRef.current);
@@ -432,6 +493,23 @@ export default function Home({ authUser, onLogout }) {
       setUsers(roomUsers);
       const me = roomUsers.find((user) => user.id === socket.id);
       setIsHost(!!me?.isHost);
+    });
+
+    socket.on("room-theme-updated", ({ theme }) => {
+      if (!theme) return;
+
+      setRoomTheme(theme);
+
+      toast(`Room theme: ${theme}`, {
+        icon:
+          theme === "cinema"
+            ? "🎬"
+            : theme === "galaxy"
+              ? "🌌"
+              : theme === "gaming"
+                ? "🎮"
+                : "💜",
+      });
     });
 
     socket.on("room-host-changed", (payload) => {
@@ -794,6 +872,7 @@ export default function Home({ authUser, onLogout }) {
       socket.off("room-joined");
       socket.off("room-left");
       socket.off("room-users");
+      socket.off("room-theme-updated");
       socket.off("room-host-changed");
       socket.off("video-updated");
       socket.off("video-control");
@@ -1711,6 +1790,23 @@ export default function Home({ authUser, onLogout }) {
     setActiveMobileTab(section);
   }
 
+  function changeRoomTheme(theme) {
+    if (!roomCode) {
+      toast.error("Önce oda oluştur veya odaya gir.");
+      return;
+    }
+
+    if (!isHost) {
+      toast.error("Temayı sadece host değiştirebilir.");
+      return;
+    }
+
+    socket.emit("room-theme-update", {
+      roomCode,
+      theme,
+    });
+  }
+
   function renderRoomInviteCard() {
     if (!roomCode) return null;
 
@@ -1758,6 +1854,12 @@ export default function Home({ authUser, onLogout }) {
           {renderRoomInviteCard()}
           <InviteBox roomCode={roomCode} />
           <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+          <RoomThemePanel
+            roomCode={roomCode}
+            isHost={isHost}
+            activeTheme={roomTheme}
+            onThemeChange={changeRoomTheme}
+          />
           <UserList users={users} />
         </div>
       );
@@ -2009,6 +2111,12 @@ export default function Home({ authUser, onLogout }) {
 
           {renderRoomInviteCard()}
           <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+          <RoomThemePanel
+            roomCode={roomCode}
+            isHost={isHost}
+            activeTheme={roomTheme}
+            onThemeChange={changeRoomTheme}
+          />
         </section>
       );
     }
@@ -2086,11 +2194,11 @@ export default function Home({ authUser, onLogout }) {
   }
 
   return (
-    <div className="app-shell min-h-screen overflow-x-hidden text-white">
+    <div className={`app-shell min-h-screen overflow-x-hidden bg-gradient-to-br ${getThemeShellClass(roomTheme)} text-white`}>
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-32 top-0 h-96 w-96 rounded-full bg-violet-700/25 blur-3xl" />
-        <div className="absolute right-10 top-20 h-96 w-96 rounded-full bg-fuchsia-700/20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/2 h-96 w-96 rounded-full bg-indigo-700/15 blur-3xl" />
+        <div className={`absolute -left-32 top-0 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 1)} blur-3xl`} />
+        <div className={`absolute right-10 top-20 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 2)} blur-3xl`} />
+        <div className={`absolute bottom-0 left-1/2 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 3)} blur-3xl`} />
       </div>
 
       <div className="relative flex min-h-screen gap-3 p-3 pb-24 sm:p-4 sm:pb-24 lg:gap-3 lg:p-3 xl:gap-4 xl:p-4">

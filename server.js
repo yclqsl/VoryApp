@@ -245,6 +245,18 @@ function getDefaultRoomSettings() {
   };
 }
 
+function getDefaultRoomTheme() {
+  return "neon";
+}
+
+function getPublicRoomTheme(roomCode) {
+  return rooms[roomCode]?.theme || getDefaultRoomTheme();
+}
+
+function isValidRoomTheme(theme) {
+  return ["neon", "cinema", "galaxy", "gaming"].includes(String(theme || "").toLowerCase());
+}
+
 function getPublicRoomSettings(roomCode) {
   return rooms[roomCode]?.settings || getDefaultRoomSettings();
 }
@@ -551,6 +563,7 @@ function buildRoomSnapshot(roomCode) {
     screenShare: room.screenShare || null,
     roomSummary: getRoomSummary(roomCode),
     settings: getPublicRoomSettings(roomCode),
+    theme: getPublicRoomTheme(roomCode),
   };
 }
 
@@ -583,6 +596,12 @@ function emitRoomSnapshot(socket, roomCode, reason = "snapshot") {
   socket.emit("room-settings-updated", {
     roomCode,
     settings: snapshot.settings,
+  });
+
+  socket.emit("room-theme-updated", {
+    roomCode,
+    theme: snapshot.theme || getDefaultRoomTheme(),
+    reason,
   });
 
   if (snapshot.screenShare?.broadcaster) {
@@ -841,6 +860,7 @@ io.on("connection", (socket) => {
       screenShare: null,
       mediaQueue: [],
       currentMedia: null,
+      theme: getDefaultRoomTheme(),
       settings: getDefaultRoomSettings(),
       users: [
         {
@@ -858,6 +878,7 @@ io.on("connection", (socket) => {
       roomCode,
       isHost: true,
       settings: rooms[roomCode].settings,
+      theme: rooms[roomCode].theme,
     });
 
     socket.emit("room-users", rooms[roomCode].users);
@@ -943,6 +964,7 @@ io.on("connection", (socket) => {
       roomCode: targetRoomCode,
       isHost: room.host === socket.id,
       settings: room.settings || getDefaultRoomSettings(),
+      theme: room.theme || getDefaultRoomTheme(),
     });
 
     io.to(targetRoomCode).emit("room-users", room.users);
@@ -1634,6 +1656,50 @@ io.on("connection", (socket) => {
   });
 
 
+
+
+
+  socket.on("room-theme-update", ({ roomCode, theme }) => {
+    const targetRoomCode = normalizeRoomCode(roomCode);
+    const room = rooms[targetRoomCode];
+    const nextTheme = String(theme || "").toLowerCase();
+
+    if (!targetRoomCode || !room) {
+      socket.emit("room-error", "Oda bulunamadı.");
+      return;
+    }
+
+    if (!isHost(targetRoomCode, socket.id)) {
+      socket.emit("room-error", "Room theme sadece host tarafından değiştirilebilir.");
+      return;
+    }
+
+    if (!isValidRoomTheme(nextTheme)) {
+      socket.emit("room-error", "Geçersiz oda teması.");
+      return;
+    }
+
+    room.theme = nextTheme;
+
+    io.to(targetRoomCode).emit("room-theme-updated", {
+      roomCode: targetRoomCode,
+      theme: room.theme,
+      updatedAt: Date.now(),
+    });
+
+    emitNotification(targetRoomCode, {
+      type: "room",
+      title: "Room theme updated",
+      message: `Host oda temasını ${room.theme} yaptı.`,
+    });
+
+    emitActivity(targetRoomCode, {
+      type: "room",
+      title: "Room Theme",
+      username: "Host",
+      message: `Oda teması ${room.theme} olarak değişti.`,
+    });
+  });
 
 
   socket.on("room-settings-update", ({ roomCode, settings }) => {
