@@ -242,6 +242,7 @@ function getDefaultRoomSettings() {
     inviteOnly: false,
     muteAll: false,
     chatLocked: false,
+    publicRoom: false,
   };
 }
 
@@ -426,6 +427,60 @@ function getRoomSummary(roomCode) {
   };
 }
 
+function serializeDiscoveryRoom(roomCode) {
+  const room = rooms[roomCode];
+
+  if (!room) return null;
+
+  const settings = room.settings || getDefaultRoomSettings();
+  const hostUser = (room.users || []).find((user) => user.id === room.host) || room.users?.[0] || {};
+  const summary = getRoomSummary(roomCode);
+
+  return {
+    roomCode,
+    host: room.host,
+    hostUsername: hostUser.username || "Host",
+    userCount: summary.userCount,
+    voiceCount: summary.voiceCount,
+    screenSharing: summary.screenSharing,
+    videoActive: summary.videoActive,
+    theme: room.theme || getDefaultRoomTheme(),
+    currentMedia: room.currentMedia || null,
+    mediaTitle: room.currentMedia?.title || (room.videoUrl ? "Vory Media" : "Lobby"),
+    isPublic: !!settings.publicRoom,
+    locked: !!settings.roomLocked,
+    inviteOnly: !!settings.inviteOnly,
+    updatedAt: Date.now(),
+  };
+}
+
+function getDiscoveryRooms() {
+  return Object.keys(rooms)
+    .map(serializeDiscoveryRoom)
+    .filter((room) => room && room.isPublic && room.userCount > 0)
+    .sort((a, b) => {
+      const scoreA = Number(a.userCount || 0) * 4 + Number(a.voiceCount || 0) * 2 + Number(a.videoActive || 0);
+      const scoreB = Number(b.userCount || 0) * 4 + Number(b.voiceCount || 0) * 2 + Number(b.videoActive || 0);
+
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return Number(b.updatedAt || 0) - Number(a.updatedAt || 0);
+    });
+}
+
+function emitDiscoveryRooms(targetSocket = null) {
+  const payload = {
+    rooms: getDiscoveryRooms(),
+    updatedAt: Date.now(),
+  };
+
+  if (targetSocket) {
+    targetSocket.emit("discovery-rooms-updated", payload);
+    return;
+  }
+
+  io.emit("discovery-rooms-updated", payload);
+}
+
 function updateSocketPresence(socketId, patch = {}) {
   for (const [userId, user] of onlineUsers.entries()) {
     if (user.socketId !== socketId) continue;
@@ -598,6 +653,7 @@ function buildRoomSnapshot(roomCode) {
     roomSummary: getRoomSummary(roomCode),
     settings: getPublicRoomSettings(roomCode),
     theme: getPublicRoomTheme(roomCode),
+    discoveryRoom: serializeDiscoveryRoom(roomCode),
   };
 }
 
@@ -760,6 +816,8 @@ function removeUserFromRooms(socketId) {
       console.log(`Boş oda silindi: ${roomCode}`);
     }
   }
+
+  emitDiscoveryRooms();
 }
 
 io.on("connection", (socket) => {
@@ -798,6 +856,10 @@ io.on("connection", (socket) => {
   socket.on("get-online-users", () => {
     socket.emit("online-users", Array.from(onlineUsers.values()));
     socket.emit("presence-changed", Array.from(onlineUsers.values()));
+  });
+
+  socket.on("get-discovery-rooms", () => {
+    emitDiscoveryRooms(socket);
   });
 
   socket.on("request-room-snapshot", ({ roomCode }) => {
@@ -944,6 +1006,8 @@ io.on("connection", (socket) => {
       username: username || "Misafir",
       message: `${username || "Misafir"} odayı oluşturdu.`,
     });
+
+    emitDiscoveryRooms();
   });
 
   socket.on("join-room", ({ roomCode, username, avatar }) => {
@@ -1048,6 +1112,7 @@ io.on("connection", (socket) => {
     }
 
     emitRoomSnapshot(socket, targetRoomCode, "join-room");
+    emitDiscoveryRooms();
   });
 
   socket.on("leave-room", ({ roomCode }) => {
@@ -1055,6 +1120,7 @@ io.on("connection", (socket) => {
     removeUserFromRooms(socket.id);
     clearSocketRoomPresence(socket.id);
     emitPresence();
+    emitDiscoveryRooms();
     socket.emit("room-left");
   });
 
@@ -1103,6 +1169,8 @@ io.on("connection", (socket) => {
       username: room.users.find((user) => user.id === socket.id)?.username || "Host",
       message: `Host ${mediaItem.type === "direct-video" ? "MP4/direct video" : "video"} başlattı.`,
     });
+
+    emitDiscoveryRooms();
   });
 
   socket.on("media-add-to-queue", ({ roomCode, videoUrl, title }) => {
@@ -1742,6 +1810,8 @@ io.on("connection", (socket) => {
       updatedAt: Date.now(),
     });
 
+    emitDiscoveryRooms();
+
     emitNotification(targetRoomCode, {
       type: "room",
       title: "Room theme updated",
@@ -1779,12 +1849,15 @@ io.on("connection", (socket) => {
       inviteOnly: !!settings?.inviteOnly,
       muteAll: !!settings?.muteAll,
       chatLocked: !!settings?.chatLocked,
+      publicRoom: !!settings?.publicRoom,
     };
 
     io.to(targetRoomCode).emit("room-settings-updated", {
       roomCode: targetRoomCode,
       settings: room.settings,
     });
+
+    emitDiscoveryRooms();
 
     if (room.settings.muteAll) {
       io.to(targetRoomCode).emit("room-mute-all", {

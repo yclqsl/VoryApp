@@ -14,6 +14,7 @@ import RoomPanel from "../components/RoomPanel";
 import RoomThemePanel from "../components/RoomThemePanel";
 import AnimatedBackground from "../components/AnimatedBackground";
 import InviteBox from "../components/InviteBox";
+import PartyDiscoveryPanel from "../components/PartyDiscoveryPanel";
 import PresenceFriendPanel from "../components/PresenceFriendPanel";
 import UserList from "../components/UserList";
 import ChatPanel from "../components/ChatPanel";
@@ -174,6 +175,9 @@ export default function Home({ authUser, onLogout }) {
   const [roomInput, setRoomInput] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [roomTheme, setRoomTheme] = useState("neon");
+  const [roomSettings, setRoomSettings] = useState({ publicRoom: false });
+  const [discoveryRooms, setDiscoveryRooms] = useState([]);
+  const [discoveryLoading, setDiscoveryLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState("");
@@ -326,6 +330,7 @@ export default function Home({ authUser, onLogout }) {
       });
 
       socket.emit("get-online-users");
+      socket.emit("get-discovery-rooms");
     };
 
     announcePresence();
@@ -499,6 +504,10 @@ export default function Home({ authUser, onLogout }) {
         setRoomTheme(snapshot.theme);
       }
 
+      if (snapshot.settings) {
+        setRoomSettings(snapshot.settings);
+      }
+
       const me = (snapshot.users || []).find((user) => user.id === socket.id);
       setIsHost(!!me?.isHost);
       setLastRestoreMessage(snapshot.reason === "session-restore" ? "Oda geri yüklendi." : "");
@@ -509,6 +518,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
       setRoomTheme(data.theme || "neon");
+      setRoomSettings(data.settings || { publicRoom: false });
       setPendingInviteRoom("");
 	  setLastRestoreMessage("");
       setStatus("Oda oluşturuldu.");
@@ -521,6 +531,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
       setRoomTheme(data.theme || "neon");
+      setRoomSettings(data.settings || { publicRoom: false });
       setPendingInviteRoom("");
 	  setLastRestoreMessage("");
       setStatus("Odaya katıldın.");
@@ -539,6 +550,7 @@ export default function Home({ authUser, onLogout }) {
       setStatus("");
       setIsHost(false);
       setRoomTheme("neon");
+      setRoomSettings({ publicRoom: false });
       setLastRestoreMessage("");
       if (syncIntervalRef.current) {
         clearInterval(syncIntervalRef.current);
@@ -776,6 +788,15 @@ export default function Home({ authUser, onLogout }) {
       setOnlinePresence(presenceUsers || []);
     });
 
+    socket.on("discovery-rooms-updated", ({ rooms }) => {
+      setDiscoveryRooms(Array.isArray(rooms) ? rooms : []);
+      setDiscoveryLoading(false);
+    });
+
+    socket.on("room-settings-updated", ({ settings }) => {
+      setRoomSettings(settings || { publicRoom: false });
+    });
+
     socket.on("activity:new", (activity) => {
       if (!activity) return;
 
@@ -951,6 +972,8 @@ export default function Home({ authUser, onLogout }) {
       socket.off("room-error");
       socket.off("online-users");
       socket.off("presence-changed");
+      socket.off("discovery-rooms-updated");
+      socket.off("room-settings-updated");
       socket.off("activity:new");
       socket.off("dm:received");
       socket.off("dm:sent");
@@ -1046,6 +1069,16 @@ export default function Home({ authUser, onLogout }) {
       watchTime: 0,
     });
   }, [roomCode, videoUrl, currentMedia, presenceIdle]);
+
+  useEffect(() => {
+    refreshDiscoveryRooms();
+
+    const discoveryTimer = setInterval(() => {
+      socket.emit("get-discovery-rooms");
+    }, 20000);
+
+    return () => clearInterval(discoveryTimer);
+  }, []);
 
   useEffect(() => {
     const heartbeat = setInterval(() => {
@@ -1169,6 +1202,36 @@ export default function Home({ authUser, onLogout }) {
     });
 
     toast.success(resumeTime > 5 ? `Devam Et hazırlanıyor: ${formatPlaybackTime(resumeTime)} 🎬` : "Geçmişten medya başlatıldı 🎬");
+  }
+
+  function refreshDiscoveryRooms() {
+    setDiscoveryLoading(true);
+    socket.emit("get-discovery-rooms");
+  }
+
+  function togglePublicRoom(nextPublic) {
+    if (!roomCode) {
+      toast.error("Önce oda oluştur veya odaya gir.");
+      return;
+    }
+
+    if (!isHost) {
+      toast.error("Public / Private ayarını sadece host değiştirebilir.");
+      return;
+    }
+
+    const nextSettings = {
+      ...roomSettings,
+      publicRoom: !!nextPublic,
+    };
+
+    setRoomSettings(nextSettings);
+    socket.emit("room-settings-update", {
+      roomCode,
+      settings: nextSettings,
+    });
+
+    toast.success(nextPublic ? "Oda Discovery'de public oldu 🌍" : "Oda private moda geçti 🔒");
   }
 
   function createRoom() {
@@ -1932,6 +1995,17 @@ export default function Home({ authUser, onLogout }) {
             onLeaveRoom={leaveRoom}
           />
 
+          <PartyDiscoveryPanel
+            rooms={discoveryRooms}
+            loading={discoveryLoading}
+            currentRoomCode={roomCode}
+            isHost={isHost}
+            currentRoomPublic={!!roomSettings?.publicRoom}
+            onRefresh={refreshDiscoveryRooms}
+            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+            onTogglePublic={togglePublicRoom}
+          />
+
           {renderRoomInviteCard()}
           <InviteBox roomCode={roomCode} />
           <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
@@ -2188,6 +2262,17 @@ export default function Home({ authUser, onLogout }) {
             onCreateRoom={createRoom}
             onJoinRoom={() => joinRoom()}
             onLeaveRoom={leaveRoom}
+          />
+
+          <PartyDiscoveryPanel
+            rooms={discoveryRooms}
+            loading={discoveryLoading}
+            currentRoomCode={roomCode}
+            isHost={isHost}
+            currentRoomPublic={!!roomSettings?.publicRoom}
+            onRefresh={refreshDiscoveryRooms}
+            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+            onTogglePublic={togglePublicRoom}
           />
 
           {renderRoomInviteCard()}
