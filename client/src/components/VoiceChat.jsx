@@ -333,6 +333,31 @@ export default function VoiceChat({ roomCode, username }) {
       removePeer(socketId);
     });
 
+    socket.on("room-mute-all", ({ roomCode: targetRoom }) => {
+      if (targetRoom && targetRoom !== roomCode) return;
+
+      const track = localStreamRef.current?.getAudioTracks?.()[0];
+      if (!track) return;
+
+      track.enabled = false;
+      isMutedRef.current = true;
+      setIsMuted(true);
+
+      updateLocalLevel(0);
+
+      socket.emit("voice-mute-state", {
+        roomCode,
+        muted: true,
+      });
+
+      socket.emit("voice-level", {
+        roomCode,
+        level: 0,
+      });
+
+      toast.success("Host tarafından susturuldun 🔇");
+    });
+
     return () => {
       socket.off("voice-users");
       socket.off("voice-level-update");
@@ -342,6 +367,7 @@ export default function VoiceChat({ roomCode, username }) {
       socket.off("voice-answer");
       socket.off("voice-ice-candidate");
       socket.off("voice-user-left");
+      socket.off("room-mute-all");
 
       if (localStreamRef.current) {
         stopVoice();
