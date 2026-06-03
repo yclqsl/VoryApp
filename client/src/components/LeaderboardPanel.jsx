@@ -46,7 +46,7 @@ export default function LeaderboardPanel({ users = [], loading = false, onRefres
                 <div className="min-w-0">
                   <p className="truncate font-black">#{user.rank} @{user.username}</p>
                   <p className="truncate text-xs font-bold text-white/38">
-                    Level {user.profileLevel || 1} • {compactNumber(user.profileXp)} XP
+                    Level {user.profileLevel || 1} • {compactNumber(user.profileXp)} XP • {compactNumber(user.followersCount || user.followers?.length || 0)} Followers
                   </p>
                 </div>
               </div>

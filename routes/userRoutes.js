@@ -420,6 +420,70 @@ async function refreshUserProgress(user, statsInput = null) {
   return { user, unlockedNow };
 }
 
+
+function buildCreatorBadges(user = {}) {
+  const badges = new Set(user?.creatorProfile?.creatorBadges || []);
+  const stats = user?.profileStats || {};
+  const level = Number(user?.profileLevel || 1);
+  const followersCount = Array.isArray(user?.followers) ? user.followers.length : 0;
+
+  if (level >= 5 || followersCount >= 10) badges.add("Community Star");
+  if (Number(stats.roomsJoined || 0) >= 25) badges.add("Top Host");
+  if (Number(stats.mediaPlayed || 0) >= 25) badges.add("Movie Expert");
+  if (followersCount >= 50) badges.add("Verified Creator");
+
+  return Array.from(badges).slice(0, 6);
+}
+
+function serializeCreator(user, currentUserId = "") {
+  if (!user) return null;
+  const followers = (user.followers || []).map((id) => String(id));
+  const following = (user.following || []).map((id) => String(id));
+  const stats = user.profileStats || {};
+  const creatorProfile = user.creatorProfile || {};
+  const watchHours = Math.round(Number(stats.watchSeconds || 0) / 3600);
+
+  return {
+    _id: String(user._id || ""),
+    username: user.username || "creator",
+    avatar: user.avatar || "",
+    profileLevel: user.profileLevel || 1,
+    profileXp: user.profileXp || 0,
+    profileBadges: user.profileBadges || [],
+    creatorProfile: {
+      enabled: creatorProfile.enabled !== false,
+      displayName: creatorProfile.displayName || user.username || "Creator",
+      headline: creatorProfile.headline || "VoryApp creator",
+      category: creatorProfile.category || "Watch Party",
+      featured: !!creatorProfile.featured,
+      totalRoomsHosted: creatorProfile.totalRoomsHosted || stats.roomsJoined || 0,
+      totalWatchHours: creatorProfile.totalWatchHours || watchHours,
+      lastLiveAt: creatorProfile.lastLiveAt || null,
+    },
+    creatorBadges: buildCreatorBadges(user),
+    followersCount: followers.length,
+    followingCount: following.length,
+    isFollowedByMe: currentUserId ? followers.includes(String(currentUserId)) : false,
+    profileStats: stats,
+  };
+}
+
+function serializeCreatorEvent(event = {}, user = {}) {
+  const startsAt = event.startsAt ? new Date(event.startsAt) : null;
+  return {
+    id: event.id || `${user._id || "creator"}-${event.title || "event"}`,
+    title: event.title || "Creator Event",
+    description: event.description || "",
+    icon: event.icon || "📅",
+    startsAt: startsAt ? startsAt.getTime() : null,
+    whenLabel: startsAt ? startsAt.toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }) : "yakında",
+    roomCode: event.roomCode || "",
+    creatorId: String(user._id || ""),
+    creatorUsername: user.username || "creator",
+    reminderCount: Array.isArray(event.reminderUserIds) ? event.reminderUserIds.length : 0,
+  };
+}
+
 router.get("/me", protect, async (req, res) => {
   res.json({ user: req.user });
 });
@@ -645,6 +709,167 @@ router.get("/leaderboard", protect, async (req, res) => {
   } catch (error) {
     console.error("Leaderboard error:", error);
     res.status(500).json({ message: "Leaderboard alınamadı." });
+  }
+});
+
+
+router.get("/creators/hub", protect, async (req, res) => {
+  try {
+    const currentUserId = String(req.user?._id || "");
+    const creators = await User.find({})
+      .select("username avatar profileLevel profileXp profileBadges profileStats creatorProfile followers following creatorEvents")
+      .sort({ profileXp: -1, updatedAt: -1 })
+      .limit(50)
+      .lean();
+
+    const trendingCreators = creators
+      .map((user) => serializeCreator(user, currentUserId))
+      .filter(Boolean)
+      .sort((a, b) => {
+        const scoreA = Number(a.followersCount || 0) * 8 + Number(a.profileXp || 0) + Number(a.creatorProfile?.totalRoomsHosted || 0) * 20;
+        const scoreB = Number(b.followersCount || 0) * 8 + Number(b.profileXp || 0) + Number(b.creatorProfile?.totalRoomsHosted || 0) * 20;
+        return scoreB - scoreA;
+      })
+      .slice(0, 12);
+
+    const liveEvents = creators
+      .flatMap((user) => (user.creatorEvents || []).map((event) => serializeCreatorEvent(event, user)))
+      .filter((event) => event.title)
+      .sort((a, b) => Number(a.startsAt || 0) - Number(b.startsAt || 0))
+      .slice(0, 8);
+
+    const categoryCounts = new Map();
+    trendingCreators.forEach((creator) => {
+      const category = creator.creatorProfile?.category || "Watch Party";
+      categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1);
+    });
+
+    const featuredCategories = Array.from(categoryCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([category]) => category)
+      .slice(0, 8);
+
+    res.json({
+      trendingCreators,
+      liveEvents,
+      featuredCategories,
+      featuredRooms: [],
+      updatedAt: Date.now(),
+    });
+  } catch (error) {
+    console.error("Creator hub alınamadı:", error);
+    res.status(500).json({ message: "Creator hub alınamadı." });
+  }
+});
+
+router.patch("/creators/follow/:creatorId", protect, async (req, res) => {
+  try {
+    const currentUserId = String(req.user?._id || "");
+    const creatorId = String(req.params.creatorId || "");
+
+    if (!creatorId || creatorId === currentUserId) {
+      return res.status(400).json({ message: "Bu creator takip edilemez." });
+    }
+
+    const creator = await User.findById(creatorId);
+    const me = await User.findById(currentUserId);
+
+    if (!creator || !me) {
+      return res.status(404).json({ message: "Kullanıcı bulunamadı." });
+    }
+
+    const followers = (creator.followers || []).map((id) => String(id));
+    const following = (me.following || []).map((id) => String(id));
+    const alreadyFollowing = followers.includes(currentUserId);
+
+    if (alreadyFollowing) {
+      creator.followers = creator.followers.filter((id) => String(id) !== currentUserId);
+      me.following = me.following.filter((id) => String(id) !== creatorId);
+    } else {
+      creator.followers = Array.from(new Set([...(creator.followers || []), me._id]));
+      me.following = Array.from(new Set([...(me.following || []), creator._id]));
+      creator.creatorProfile = {
+        ...(creator.creatorProfile || {}),
+        enabled: true,
+      };
+    }
+
+    await creator.save();
+    await me.save();
+
+    res.json({
+      message: alreadyFollowing ? "Creator takipten çıkarıldı." : "Creator takip edildi.",
+      following: !alreadyFollowing,
+      creator: serializeCreator(creator.toObject(), currentUserId),
+    });
+  } catch (error) {
+    console.error("Creator follow hatası:", error);
+    res.status(500).json({ message: "Creator takip işlemi yapılamadı." });
+  }
+});
+
+router.patch("/creator/settings", protect, async (req, res) => {
+  try {
+    const { displayName, headline, category, enabled } = req.body || {};
+    const user = await User.findById(req.user._id);
+
+    if (!user) return res.status(404).json({ message: "Kullanıcı bulunamadı." });
+
+    user.creatorProfile = {
+      ...(user.creatorProfile || {}),
+      enabled: enabled !== undefined ? !!enabled : true,
+      displayName: String(displayName || user.creatorProfile?.displayName || user.username || "").slice(0, 60),
+      headline: String(headline || user.creatorProfile?.headline || "VoryApp creator").slice(0, 120),
+      category: String(category || user.creatorProfile?.category || "Watch Party").slice(0, 40),
+    };
+
+    await user.save();
+
+    res.json({
+      message: "Creator profili güncellendi.",
+      creator: serializeCreator(user.toObject(), String(req.user._id)),
+      user: user.toObject(),
+    });
+  } catch (error) {
+    console.error("Creator ayar hatası:", error);
+    res.status(500).json({ message: "Creator profili güncellenemedi." });
+  }
+});
+
+router.post("/creator/events", protect, async (req, res) => {
+  try {
+    const { title, description, icon, startsAt, roomCode } = req.body || {};
+    const user = await User.findById(req.user._id);
+
+    if (!user) return res.status(404).json({ message: "Kullanıcı bulunamadı." });
+    if (!title) return res.status(400).json({ message: "Event başlığı gerekli." });
+
+    const event = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title: String(title).slice(0, 80),
+      description: String(description || "").slice(0, 240),
+      icon: String(icon || "📅").slice(0, 4),
+      startsAt: startsAt ? new Date(startsAt) : null,
+      roomCode: String(roomCode || "").trim().toUpperCase(),
+      reminderUserIds: [],
+      createdAt: new Date(),
+    };
+
+    user.creatorProfile = {
+      ...(user.creatorProfile || {}),
+      enabled: true,
+    };
+    user.creatorEvents = [event, ...(user.creatorEvents || [])].slice(0, 12);
+    await user.save();
+
+    res.status(201).json({
+      message: "Creator event oluşturuldu.",
+      event: serializeCreatorEvent(event, user.toObject()),
+      user: user.toObject(),
+    });
+  } catch (error) {
+    console.error("Creator event oluşturulamadı:", error);
+    res.status(500).json({ message: "Creator event oluşturulamadı." });
   }
 });
 

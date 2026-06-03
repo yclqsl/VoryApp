@@ -18,6 +18,7 @@ import PartyDiscoveryPanel from "../components/PartyDiscoveryPanel";
 import LeaderboardPanel from "../components/LeaderboardPanel";
 import DailyMissionsPanel from "../components/DailyMissionsPanel";
 import CustomizationStorePanel from "../components/CustomizationStorePanel";
+import CreatorHubPanel from "../components/CreatorHubPanel";
 import PresenceFriendPanel from "../components/PresenceFriendPanel";
 import UserList from "../components/UserList";
 import ChatPanel from "../components/ChatPanel";
@@ -221,6 +222,8 @@ export default function Home({ authUser, onLogout }) {
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [missionsLoading, setMissionsLoading] = useState(false);
   const [storeLoading, setStoreLoading] = useState(false);
+  const [creatorHub, setCreatorHub] = useState(null);
+  const [creatorHubLoading, setCreatorHubLoading] = useState(false);
   const [friendState, setFriendState] = useState({ friends: [], sent: [], received: [] });
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
   const [friendSearchResults, setFriendSearchResults] = useState([]);
@@ -289,6 +292,38 @@ export default function Home({ authUser, onLogout }) {
       console.error("Leaderboard alınamadı:", error);
     } finally {
       setLeaderboardLoading(false);
+    }
+  }
+
+  async function loadCreatorHub() {
+    if (!currentUserId) return;
+
+    try {
+      setCreatorHubLoading(true);
+      const response = await api.get("/users/creators/hub");
+      const socketRooms = (discoveryRooms || []).slice(0, 6);
+      setCreatorHub({
+        ...(response.data || {}),
+        featuredRooms: socketRooms,
+      });
+    } catch (error) {
+      console.error("Creator hub alınamadı:", error);
+    } finally {
+      setCreatorHubLoading(false);
+    }
+  }
+
+  async function followCreator(creator) {
+    const creatorId = creator?._id || creator?.id;
+    if (!creatorId) return;
+
+    try {
+      const response = await api.patch(`/users/creators/follow/${creatorId}`);
+      toast.success(response.data?.message || "Creator follow güncellendi 👑");
+      loadCreatorHub();
+      loadLeaderboard();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Creator takip edilemedi.");
     }
   }
 
@@ -432,6 +467,7 @@ export default function Home({ authUser, onLogout }) {
     loadProfileProgress();
     loadLeaderboard();
     refreshCustomizationStore();
+    loadCreatorHub();
   }, [currentUserId]);
 
   useEffect(() => {
@@ -955,7 +991,9 @@ export default function Home({ authUser, onLogout }) {
     });
 
     socket.on("discovery-rooms-updated", ({ rooms }) => {
-      setDiscoveryRooms(Array.isArray(rooms) ? rooms : []);
+      const nextRooms = Array.isArray(rooms) ? rooms : [];
+      setDiscoveryRooms(nextRooms);
+      setCreatorHub((prev) => prev ? { ...prev, featuredRooms: nextRooms.slice(0, 6) } : prev);
       setDiscoveryLoading(false);
     });
 
@@ -2252,6 +2290,15 @@ export default function Home({ authUser, onLogout }) {
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onInviteFriend={sendPartyInvite}
             onOpenDM={openDM}
+          />
+
+          <CreatorHubPanel
+            hub={creatorHub}
+            currentUserId={currentUserId}
+            loading={creatorHubLoading}
+            onRefresh={loadCreatorHub}
+            onFollowCreator={followCreator}
+            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
           />
 
           <CustomizationStorePanel

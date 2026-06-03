@@ -105,6 +105,42 @@ const userSchema = new mongoose.Schema(
       enum: ["vory", "violet", "fuchsia", "emerald", "sky", "cinema", "galaxy", "gaming"],
       default: "vory"
     },
+
+    creatorProfile: {
+      enabled: { type: Boolean, default: false },
+      displayName: { type: String, default: "", trim: true, maxlength: 60 },
+      headline: { type: String, default: "", trim: true, maxlength: 120 },
+      category: { type: String, default: "Watch Party", trim: true, maxlength: 40 },
+      creatorBadges: { type: [String], default: [] },
+      featured: { type: Boolean, default: false },
+      totalRoomsHosted: { type: Number, default: 0 },
+      totalWatchHours: { type: Number, default: 0 },
+      lastLiveAt: { type: Date, default: null }
+    },
+    followers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+      }
+    ],
+    following: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+      }
+    ],
+    creatorEvents: [
+      {
+        id: { type: String, default: "" },
+        title: { type: String, default: "" },
+        description: { type: String, default: "" },
+        icon: { type: String, default: "📅" },
+        startsAt: { type: Date, default: null },
+        roomCode: { type: String, default: "" },
+        reminderUserIds: { type: [String], default: [] },
+        createdAt: { type: Date, default: Date.now }
+      }
+    ],
     friends: [
       {
         type: mongoose.Schema.Types.ObjectId,

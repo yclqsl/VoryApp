@@ -270,6 +270,8 @@ function getSyncedVideoState(room) {
   const state = room.videoState || {
     isPlaying: false,
     currentTime: 0,
+    creatorRoom: true,
+    category: room.category || "Watch Party",
     updatedAt: Date.now(),
   };
 

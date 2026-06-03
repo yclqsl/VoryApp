@@ -176,6 +176,10 @@ export default function ProfileCard({
   const platforms = getDefaultPlatforms(authUser?.favoritePlatforms);
   const badges = profileProgress?.profileBadges?.length ? profileProgress.profileBadges : buildLocalBadges(authUser, mergedStats, level);
   const achievements = profileProgress?.achievements?.length ? profileProgress.achievements : [];
+  const creatorProfile = profileProgress?.creatorProfile || authUser?.creatorProfile || {};
+  const followersCount = Number(profileProgress?.followersCount || authUser?.followers?.length || 0);
+  const followingCount = Number(profileProgress?.followingCount || authUser?.following?.length || 0);
+  const creatorBadges = profileProgress?.creatorBadges || creatorProfile?.creatorBadges || [];
   const profileStatus = authUser?.statusMessage ? authUser.statusMessage : roomCode ? `Room ${roomCode} içinde aktif.` : online ? "Lobby'de online. Oda oluştur veya arkadaşına katıl." : "Bağlantı bekleniyor.";
   const bio = authUser?.bio?.trim() ? authUser.bio.trim() : "VoryApp beta kullanıcısı. Watch party, voice chat ve arkadaş sistemiyle takılıyor.";
   const canContinueWatching = !!continueWatching?.url;
@@ -239,6 +243,51 @@ export default function ProfileCard({
             <div className="mt-3 h-3 overflow-hidden rounded-full bg-black/35">
               <div className="h-full rounded-full bg-gradient-to-r from-yellow-300 via-fuchsia-300 to-violet-300 transition-all" style={{ width: `${xpProgress}%` }} />
             </div>
+          </div>
+
+          <div className="mt-4 rounded-[1.75rem] border border-yellow-300/15 bg-gradient-to-br from-yellow-400/12 via-fuchsia-400/8 to-violet-500/10 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-yellow-100/75">
+                  <Crown size={14} /> Creator Mode
+                </div>
+                <p className="mt-2 truncate text-sm font-black text-white">
+                  {creatorProfile?.displayName || username} {creatorProfile?.category ? `• ${creatorProfile.category}` : ""}
+                </p>
+                <p className="mt-1 line-clamp-2 text-xs text-white/45">
+                  {creatorProfile?.headline || "Featured rooms, followers ve creator event sistemi aktif."}
+                </p>
+              </div>
+              <div className="shrink-0 rounded-2xl bg-black/25 px-3 py-2 text-right">
+                <p className="text-sm font-black text-yellow-100">{compactNumber(followersCount)}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">Followers</p>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-2xl bg-white/[0.04] p-2">
+                <p className="text-sm font-black text-white">{compactNumber(followingCount)}</p>
+                <p className="text-[10px] font-bold text-white/35">Following</p>
+              </div>
+              <div className="rounded-2xl bg-white/[0.04] p-2">
+                <p className="text-sm font-black text-white">{compactNumber(creatorProfile?.totalRoomsHosted || mergedStats.roomsJoined || 0)}</p>
+                <p className="text-[10px] font-bold text-white/35">Hosted</p>
+              </div>
+              <div className="rounded-2xl bg-white/[0.04] p-2">
+                <p className="text-sm font-black text-white">{compactNumber(creatorProfile?.totalWatchHours || Math.floor(Number(mergedStats.watchSeconds || 0) / 3600))}h</p>
+                <p className="text-[10px] font-bold text-white/35">Watch</p>
+              </div>
+            </div>
+
+            {creatorBadges.length ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {creatorBadges.slice(0, 4).map((badge) => (
+                  <span key={badge} className="rounded-full bg-yellow-400/10 px-3 py-1 text-[10px] font-black text-yellow-100">
+                    👑 {badge}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           {canContinueWatching ? (
