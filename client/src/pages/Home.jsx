@@ -248,7 +248,8 @@ export default function Home({ authUser, onLogout }) {
       setPendingInviteRoom(cleanRoom);
       setAppSection("room");
       setActiveMobileTab("room");
-      toast.success(`Davet linki algılandı: ${cleanRoom}`);
+      // V13.3.1.4 polish: gereksiz "Davet linki algılandı" toastını kaldırdık.
+      // Oda aktif değilse sadece net hata/UX mesajı gösterilecek.
 
       const joinTimer = setTimeout(() => {
         joinRoom(cleanRoom);
@@ -1439,22 +1440,29 @@ export default function Home({ authUser, onLogout }) {
             </div>
           )}
 
-          {pendingInviteRoom && !roomCode && (
+          {(pendingInviteRoom || lastRestoreMessage) && !roomCode && (
             <div className="glass-panel flex flex-col gap-4 border-emerald-400/25 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-300/70">
-                  Room Link Algılandı
+                  {pendingInviteRoom ? "Room Link Algılandı" : "Room Link Aktif Değil"}
                 </p>
                 <h2 className="mt-1 text-xl font-black text-white">
                   {pendingInviteRoom
                     ? `${pendingInviteRoom} odasına yönlendiriliyorsun`
                     : "Bu oda artık aktif değil"}
                 </h2>
+                {!pendingInviteRoom && lastRestoreMessage ? (
+                  <p className="mt-1 text-sm font-bold text-white/45">
+                    {lastRestoreMessage}
+                  </p>
+                ) : null}
               </div>
 
-              <button className="btn-primary w-full sm:w-auto" onClick={joinPendingInvite}>
-                Tekrar Katıl
-              </button>
+              {pendingInviteRoom ? (
+                <button className="btn-primary w-full sm:w-auto" onClick={joinPendingInvite}>
+                  Tekrar Katıl
+                </button>
+              ) : null}
             </div>
           )}
 
