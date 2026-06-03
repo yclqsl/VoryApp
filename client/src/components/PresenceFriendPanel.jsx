@@ -1,7 +1,19 @@
 import { Activity, Clock, Copy, Monitor, Radio, UserPlus, Users, Video } from "lucide-react";
 import toast from "react-hot-toast";
 
+function getId(user) {
+  return String(user?._id || user?.id || user?.userId || "");
+}
+
 function getPresenceStatus(user) {
+  if (!user?.isOnline) {
+    return {
+      dot: "bg-white/20",
+      badge: "bg-white/5 text-white/40 border-white/10",
+      label: "Offline",
+    };
+  }
+
   if (user.screenSharing || user.activity === "sharing-screen") {
     return {
       dot: "bg-fuchsia-400 shadow-[0_0_14px_rgba(232,121,249,0.85)]",
@@ -42,6 +54,13 @@ function getPresenceStatus(user) {
 }
 
 function getActivityLabel(user) {
+  if (!user?.isOnline) {
+    return {
+      icon: <Activity size={14} className="text-white/25" />,
+      text: "Offline",
+    };
+  }
+
   if (user.screenSharing || user.activity === "sharing-screen") {
     return {
       icon: <Monitor size={14} className="text-fuchsia-300" />,
@@ -76,7 +95,8 @@ function getActivityLabel(user) {
   };
 }
 
-function getLastSeenText(updatedAt) {
+function getLastSeenText(updatedAt, isOnline) {
+  if (!isOnline) return "offline";
   if (!updatedAt) return "az önce";
 
   const diffSeconds = Math.max(0, Math.floor((Date.now() - updatedAt) / 1000));
@@ -104,10 +124,34 @@ async function copyRoomLink(roomCode) {
   }
 }
 
-export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId, onJoinRoom, onInviteFriend }) {
-  const users = onlineUsers
-    .filter((user) => user?.socketId && user.socketId !== currentSocketId)
+function buildFriendActivity({ friends = [], onlineUsers = [], currentSocketId }) {
+  const onlineByUserId = new Map();
+
+  (onlineUsers || []).forEach((user) => {
+    const userId = String(user?.userId || "");
+    if (!userId || user?.socketId === currentSocketId) return;
+    onlineByUserId.set(userId, user);
+  });
+
+  return (friends || [])
+    .map((friend) => {
+      const friendId = getId(friend);
+      const online = onlineByUserId.get(friendId);
+
+      return {
+        ...friend,
+        ...(online || {}),
+        _id: friend?._id || friend?.id || friendId,
+        userId: friendId,
+        username: friend?.username || online?.username || "Kullanıcı",
+        email: friend?.email || online?.email || "",
+        avatar: friend?.avatar || online?.avatar || "",
+        isOnline: !!online,
+      };
+    })
     .sort((a, b) => {
+      if (Number(b.isOnline) !== Number(a.isOnline)) return Number(b.isOnline) - Number(a.isOnline);
+
       const priority = {
         "sharing-screen": 5,
         voice: 4,
@@ -116,17 +160,30 @@ export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId,
         idle: 1,
       };
 
-      const aPriority = priority[a.activity] || (a.roomCode ? 2 : 1);
-      const bPriority = priority[b.activity] || (b.roomCode ? 2 : 1);
+      const aPriority = priority[a.activity] || (a.roomCode ? 2 : 0);
+      const bPriority = priority[b.activity] || (b.roomCode ? 2 : 0);
 
       if (bPriority !== aPriority) return bPriority - aPriority;
       if (!!b.roomCode !== !!a.roomCode) return Number(!!b.roomCode) - Number(!!a.roomCode);
       return (b.updatedAt || 0) - (a.updatedAt || 0);
     });
+}
 
-  const watchingCount = users.filter((user) => user.activity === "watching").length;
-  const roomCount = users.filter((user) => user.roomCode).length;
-  const voiceCount = users.filter((user) => user.voiceActive || user.activity === "voice").length;
+export default function PresenceFriendPanel({
+  friendState,
+  friends,
+  onlineUsers = [],
+  currentSocketId,
+  onJoinRoom,
+  onInviteFriend,
+}) {
+  const friendList = friends || friendState?.friends || [];
+  const users = buildFriendActivity({ friends: friendList, onlineUsers, currentSocketId });
+
+  const onlineCount = users.filter((user) => user.isOnline).length;
+  const watchingCount = users.filter((user) => user.isOnline && user.activity === "watching").length;
+  const roomCount = users.filter((user) => user.isOnline && user.roomCode).length;
+  const voiceCount = users.filter((user) => user.isOnline && (user.voiceActive || user.activity === "voice")).length;
 
   return (
     <section className="glass overflow-hidden">
@@ -137,7 +194,7 @@ export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId,
             <h2 className="text-lg font-black">Arkadaş Aktivitesi</h2>
           </div>
           <p className="mt-1 text-xs text-white/40">
-            Online, izliyor, voice ve live durumları.
+            Sadece arkadaşların görünür: online, izliyor, voice, live ve offline.
           </p>
         </div>
 
@@ -148,7 +205,7 @@ export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId,
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         <div className="rounded-2xl border border-white/5 bg-white/[0.04] p-3 text-center">
-          <p className="text-base font-black text-white">{users.length}</p>
+          <p className="text-base font-black text-white">{onlineCount}</p>
           <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">Online</p>
         </div>
         <div className="rounded-2xl border border-sky-300/10 bg-sky-400/5 p-3 text-center">
@@ -164,7 +221,7 @@ export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId,
       <div className="mt-4 space-y-2">
         {users.length === 0 ? (
           <div className="rounded-3xl border border-white/5 bg-black/25 p-4 text-sm text-white/40">
-            Şu an başka online kullanıcı görünmüyor.
+            Henüz arkadaş yok. Friend Requests bölümünden arkadaş ekle.
           </div>
         ) : (
           users.map((user) => {
@@ -174,8 +231,8 @@ export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId,
 
             return (
               <div
-                key={user.socketId}
-                className="group rounded-3xl border border-white/5 bg-black/25 p-4 transition hover:border-violet-300/20 hover:bg-white/[0.06]"
+                key={user.userId || user.socketId}
+                className={`group rounded-3xl border border-white/5 bg-black/25 p-4 transition hover:border-violet-300/20 hover:bg-white/[0.06] ${!user.isOnline ? "opacity-75" : ""}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -195,7 +252,7 @@ export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId,
                       <span className="text-white/20">•</span>
                       <span className="inline-flex items-center gap-1 text-white/35">
                         <Clock size={12} />
-                        {getLastSeenText(user.updatedAt)}
+                        {getLastSeenText(user.updatedAt, user.isOnline)}
                       </span>
                     </div>
 
@@ -255,7 +312,8 @@ export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId,
                     <button
                       className="rounded-2xl bg-fuchsia-500/15 px-3 py-2 text-xs font-black text-fuchsia-200 transition hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-40"
                       onClick={() => onInviteFriend?.(user)}
-                      disabled={!onInviteFriend}
+                      disabled={!user.isOnline || !user.socketId || !onInviteFriend}
+                      title={!user.isOnline ? "Arkadaş offline" : "Arkadaşını odana davet et"}
                     >
                       Davet Et
                     </button>
@@ -270,7 +328,7 @@ export default function PresenceFriendPanel({ onlineUsers = [], currentSocketId,
       <div className="mt-4 rounded-3xl bg-white/[0.04] p-3 text-xs text-white/35">
         <div className="flex items-center gap-2">
           <UserPlus size={14} />
-          Odadaki arkadaşına katılabilir, linkini kopyalayabilir veya kendi odana davet edebilirsin.
+          Online arkadaşına katılabilir, linkini kopyalayabilir veya kendi odana davet edebilirsin.
         </div>
       </div>
     </section>

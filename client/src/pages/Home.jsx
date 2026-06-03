@@ -1194,6 +1194,7 @@ export default function Home({ authUser, onLogout }) {
             onRemoveFriend={removeFriend}
           />
           <PresenceFriendPanel
+            friendState={friendState}
             onlineUsers={onlinePresence}
             currentSocketId={socket.id}
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
@@ -1350,6 +1351,7 @@ export default function Home({ authUser, onLogout }) {
           onRemoveFriend={removeFriend}
         />
         <PresenceFriendPanel
+          friendState={friendState}
           onlineUsers={onlinePresence}
           currentSocketId={socket.id}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
