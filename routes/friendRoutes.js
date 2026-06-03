@@ -12,6 +12,16 @@ function normalizeId(id) {
   return String(id || "");
 }
 
+function idListHas(list = [], targetId) {
+  const cleanTargetId = normalizeId(targetId);
+  return (list || []).some((id) => normalizeId(id) === cleanTargetId);
+}
+
+function idListRemove(list = [], targetId) {
+  const cleanTargetId = normalizeId(targetId);
+  return (list || []).filter((id) => normalizeId(id) !== cleanTargetId);
+}
+
 function publicUser(user) {
   if (!user) return null;
 
@@ -110,17 +120,45 @@ router.post("/request", async (req, res) => {
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
 
-    const alreadyFriends = (fromUser.friends || []).some((id) => normalizeId(id) === normalizeId(toUserId));
+    const alreadyFriends =
+      idListHas(fromUser.friends, toUserId) ||
+      idListHas(toUser.friends, fromUserId);
 
     if (alreadyFriends) {
-      return res.status(409).json({ message: "Zaten arkadaşsınız." });
+      // Hotfix: Eski datada tek taraflı arkadaşlık kalmışsa iki tarafı da düzelt,
+      // ama yeni arkadaşlık isteği oluşturma.
+      fromUser.friends.addToSet(toUser._id);
+      toUser.friends.addToSet(fromUser._id);
+      fromUser.friendRequestsSent = idListRemove(fromUser.friendRequestsSent, toUserId);
+      fromUser.friendRequestsReceived = idListRemove(fromUser.friendRequestsReceived, toUserId);
+      toUser.friendRequestsSent = idListRemove(toUser.friendRequestsSent, fromUserId);
+      toUser.friendRequestsReceived = idListRemove(toUser.friendRequestsReceived, fromUserId);
+      await Promise.all([fromUser.save(), toUser.save()]);
+
+      return res.status(409).json({
+        message: "Zaten arkadaşsınız.",
+        state: await getHydratedFriendState(fromUserId),
+      });
     }
 
-    const reversePending = (fromUser.friendRequestsReceived || []).some((id) => normalizeId(id) === normalizeId(toUserId));
+    const alreadySent =
+      idListHas(fromUser.friendRequestsSent, toUserId) ||
+      idListHas(toUser.friendRequestsReceived, fromUserId);
+
+    if (alreadySent) {
+      return res.status(409).json({
+        message: "Arkadaşlık isteği zaten gönderilmiş.",
+        state: await getHydratedFriendState(fromUserId),
+      });
+    }
+
+    const reversePending =
+      idListHas(fromUser.friendRequestsReceived, toUserId) ||
+      idListHas(toUser.friendRequestsSent, fromUserId);
 
     if (reversePending) {
-      fromUser.friendRequestsReceived = fromUser.friendRequestsReceived.filter((id) => normalizeId(id) !== normalizeId(toUserId));
-      toUser.friendRequestsSent = toUser.friendRequestsSent.filter((id) => normalizeId(id) !== normalizeId(fromUserId));
+      fromUser.friendRequestsReceived = idListRemove(fromUser.friendRequestsReceived, toUserId);
+      toUser.friendRequestsSent = idListRemove(toUser.friendRequestsSent, fromUserId);
       fromUser.friends.addToSet(toUser._id);
       toUser.friends.addToSet(fromUser._id);
       await Promise.all([fromUser.save(), toUser.save()]);
@@ -163,8 +201,10 @@ router.post("/accept", async (req, res) => {
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
 
-    currentUser.friendRequestsReceived = currentUser.friendRequestsReceived.filter((id) => normalizeId(id) !== normalizeId(requesterId));
-    requester.friendRequestsSent = requester.friendRequestsSent.filter((id) => normalizeId(id) !== normalizeId(currentUserId));
+    currentUser.friendRequestsReceived = idListRemove(currentUser.friendRequestsReceived, requesterId);
+    currentUser.friendRequestsSent = idListRemove(currentUser.friendRequestsSent, requesterId);
+    requester.friendRequestsSent = idListRemove(requester.friendRequestsSent, currentUserId);
+    requester.friendRequestsReceived = idListRemove(requester.friendRequestsReceived, currentUserId);
     currentUser.friends.addToSet(requester._id);
     requester.friends.addToSet(currentUser._id);
 

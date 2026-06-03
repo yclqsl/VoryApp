@@ -946,21 +946,47 @@ export default function Home({ authUser, onLogout }) {
     bumpProfileStat("reactionsUsed", 1);
   }
 
+  function friendStateHas(list = [], targetId = "") {
+    const cleanTargetId = String(targetId || "");
+    return (list || []).some((user) => String(user?._id || user?.id || user || "") === cleanTargetId);
+  }
+
   async function sendFriendRequest(targetUser) {
-    if (!currentUserId || !targetUser?._id) {
+    const targetId = targetUser?._id || targetUser?.id || "";
+
+    if (!currentUserId || !targetId) {
       toast.error("Arkadaşlık isteği için giriş gerekli.");
+      return;
+    }
+
+    if (friendStateHas(friendState.friends, targetId)) {
+      toast("Zaten arkadaşsınız 👥");
+      return;
+    }
+
+    if (friendStateHas(friendState.sent, targetId)) {
+      toast("Bu kullanıcıya zaten istek gönderilmiş.");
+      return;
+    }
+
+    if (friendStateHas(friendState.received, targetId)) {
+      toast("Bu kullanıcı sana istek atmış, Accept ile kabul edebilirsin.");
       return;
     }
 
     try {
       const response = await api.post("/friends/request", {
         fromUserId: currentUserId,
-        toUserId: targetUser._id,
+        toUserId: targetId,
       });
 
       setFriendState(response.data?.state || friendState);
       toast.success(response.data?.message || "Arkadaşlık isteği gönderildi.");
     } catch (error) {
+      if (error?.response?.data?.state) {
+        setFriendState(error.response.data.state);
+      }
+
       toast.error(error?.response?.data?.message || "Arkadaşlık isteği gönderilemedi.");
     }
   }
