@@ -2,6 +2,7 @@ import { Camera, Loader2, ShieldCheck } from "lucide-react";
 import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
+import WatchHistory from "./WatchHistory";
 
 function Avatar({ user }) {
   if (user?.avatar) {
@@ -136,6 +137,8 @@ export default function ProfileCard({ authUser, onUserUpdate }) {
               VoryApp closed beta explorer profile is active.
             </p>
           </div>
+
+          <WatchHistory />
         </div>
       </div>
     </section>
