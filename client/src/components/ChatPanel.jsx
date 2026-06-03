@@ -17,7 +17,7 @@ export default function ChatPanel({
     <section className="glass flex min-h-[420px] flex-col">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-black">Canlı Sohbet</h2>
+          <h2 className="text-lg font-black">Live Chat</h2>
           <p className="text-xs text-white/35">Oda içi mesajlar ve aktiviteler</p>
         </div>
 
@@ -26,7 +26,7 @@ export default function ChatPanel({
         </span>
       </div>
 
-      <div className="custom-scroll mt-4 flex-1 overflow-y-auto rounded-3xl bg-black/25 p-3">
+      <div className="custom-scroll mt-4 flex-1 overflow-y-auto rounded-3xl border border-white/5 bg-black/25 p-4">
         {messages.length === 0 && (
           <div className="flex h-full min-h-[180px] items-center justify-center text-center">
             <div>
@@ -53,7 +53,7 @@ export default function ChatPanel({
           }
 
           return (
-            <div key={index} className="mb-3 rounded-3xl bg-violet-500/12 px-4 py-3 text-sm">
+            <div key={index} className="mb-3 rounded-3xl border border-violet-400/10 bg-violet-500/12 px-4 py-3 text-sm shadow-lg">
               <div className="mb-1 text-xs font-black text-violet-200">
                 {sender || "Misafir"}
               </div>
