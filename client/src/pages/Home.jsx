@@ -66,6 +66,22 @@ function writeLocalJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function getVoryAuthToken() {
+  try {
+    return localStorage.getItem("vory_token") || localStorage.getItem("token") || "";
+  } catch {
+    return "";
+  }
+}
+
+function hasVoryAuthSession(userId = "") {
+  return !!String(userId || "").trim() && !!getVoryAuthToken();
+}
+
+function isUnauthorizedError(error) {
+  return error?.response?.status === 401 || error?.response?.status === 403;
+}
+
 function createEmptyVoryStats() {
   return {
     roomsJoined: 0,
@@ -271,32 +287,36 @@ export default function Home({ authUser, onLogout }) {
 
 
   async function loadProfileProgress() {
-    if (!currentUserId) return;
+    if (!hasVoryAuthSession(currentUserId)) return;
 
     try {
       const response = await api.get("/users/profile-summary");
       setProfileProgress(response.data?.user || null);
     } catch (error) {
-      console.error("Profile progress alınamadı:", error);
+      if (!isUnauthorizedError(error)) {
+        console.error("Profile progress alınamadı:", error);
+      }
     }
   }
 
   async function loadLeaderboard() {
-    if (!currentUserId) return;
+    if (!hasVoryAuthSession(currentUserId)) return;
 
     try {
       setLeaderboardLoading(true);
       const response = await api.get("/users/leaderboard");
       setLeaderboardUsers(response.data?.users || []);
     } catch (error) {
-      console.error("Leaderboard alınamadı:", error);
+      if (!isUnauthorizedError(error)) {
+        console.error("Leaderboard alınamadı:", error);
+      }
     } finally {
       setLeaderboardLoading(false);
     }
   }
 
   async function loadCreatorHub() {
-    if (!currentUserId) return;
+    if (!hasVoryAuthSession(currentUserId)) return;
 
     try {
       setCreatorHubLoading(true);
@@ -307,7 +327,9 @@ export default function Home({ authUser, onLogout }) {
         featuredRooms: socketRooms,
       });
     } catch (error) {
-      console.error("Creator hub alınamadı:", error);
+      if (!isUnauthorizedError(error)) {
+        console.error("Creator hub alınamadı:", error);
+      }
     } finally {
       setCreatorHubLoading(false);
     }
@@ -328,7 +350,7 @@ export default function Home({ authUser, onLogout }) {
   }
 
   function syncProfileProgress(nextStats) {
-    if (!currentUserId) return;
+    if (!hasVoryAuthSession(currentUserId)) return;
 
     api
       .patch("/users/profile/progress", {
@@ -349,7 +371,7 @@ export default function Home({ authUser, onLogout }) {
 
 
   async function claimDailyMission(mission) {
-    if (!currentUserId || !mission?.id) return;
+    if (!hasVoryAuthSession(currentUserId) || !mission?.id) return;
 
     try {
       setMissionsLoading(true);
@@ -378,7 +400,7 @@ export default function Home({ authUser, onLogout }) {
 
 
   async function refreshCustomizationStore() {
-    if (!currentUserId) return;
+    if (!hasVoryAuthSession(currentUserId)) return;
 
     try {
       setStoreLoading(true);
@@ -387,14 +409,16 @@ export default function Home({ authUser, onLogout }) {
         setProfileProgress(response.data.user);
       }
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Store alınamadı.");
+      if (!isUnauthorizedError(error)) {
+        toast.error(error?.response?.data?.message || "Store alınamadı.");
+      }
     } finally {
       setStoreLoading(false);
     }
   }
 
   async function unlockCustomizationItem(item) {
-    if (!currentUserId || !item?.id) return;
+    if (!hasVoryAuthSession(currentUserId) || !item?.id) return;
 
     try {
       setStoreLoading(true);
@@ -420,7 +444,7 @@ export default function Home({ authUser, onLogout }) {
   }
 
   async function equipCustomizationItem(item) {
-    if (!currentUserId || !item?.id) return;
+    if (!hasVoryAuthSession(currentUserId) || !item?.id) return;
 
     try {
       setStoreLoading(true);
@@ -445,15 +469,17 @@ export default function Home({ authUser, onLogout }) {
   }
 
   async function loadFriendState() {
-    if (!currentUserId) return;
+    if (!hasVoryAuthSession(currentUserId)) return;
 
     try {
       setFriendsLoading(true);
       const response = await api.get(`/friends/state/${currentUserId}`);
       setFriendState(response.data || { friends: [], sent: [], received: [] });
     } catch (error) {
-      console.error("Friend state alınamadı:", error);
-      toast.error(error?.response?.data?.message || "Friend listesi alınamadı.");
+      if (!isUnauthorizedError(error)) {
+        console.error("Friend state alınamadı:", error);
+        toast.error(error?.response?.data?.message || "Friend listesi alınamadı.");
+      }
     } finally {
       setFriendsLoading(false);
     }
@@ -471,7 +497,7 @@ export default function Home({ authUser, onLogout }) {
   }, [currentUserId]);
 
   useEffect(() => {
-    if (!currentUserId || friendSearchQuery.trim().length < 2) {
+    if (!hasVoryAuthSession(currentUserId) || friendSearchQuery.trim().length < 2) {
       setFriendSearchResults([]);
       return;
     }
@@ -578,7 +604,7 @@ export default function Home({ authUser, onLogout }) {
   }, [profileStats]);
 
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!hasVoryAuthSession(currentUserId)) return;
 
     const syncTimer = setTimeout(() => {
       syncProfileProgress(profileStats);
