@@ -468,19 +468,29 @@ function serializeCreator(user, currentUserId = "") {
   };
 }
 
-function serializeCreatorEvent(event = {}, user = {}) {
+function serializeCreatorEvent(event = {}, user = {}, currentUserId = "") {
   const startsAt = event.startsAt ? new Date(event.startsAt) : null;
+  const startsAtMs = startsAt ? startsAt.getTime() : null;
+  const now = Date.now();
+  const liveNow = !!startsAtMs && now >= startsAtMs && now <= startsAtMs + 3 * 60 * 60 * 1000;
+  const reminderUserIds = Array.isArray(event.reminderUserIds)
+    ? event.reminderUserIds.map((id) => String(id))
+    : [];
+
   return {
     id: event.id || `${user._id || "creator"}-${event.title || "event"}`,
     title: event.title || "Creator Event",
     description: event.description || "",
     icon: event.icon || "📅",
-    startsAt: startsAt ? startsAt.getTime() : null,
+    startsAt: startsAtMs,
     whenLabel: startsAt ? startsAt.toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }) : "yakında",
     roomCode: event.roomCode || "",
     creatorId: String(user._id || ""),
     creatorUsername: user.username || "creator",
-    reminderCount: Array.isArray(event.reminderUserIds) ? event.reminderUserIds.length : 0,
+    reminderCount: reminderUserIds.length,
+    remindedByMe: currentUserId ? reminderUserIds.includes(String(currentUserId)) : false,
+    liveNow,
+    status: liveNow ? "live" : startsAtMs && startsAtMs > now ? "upcoming" : "past",
   };
 }
 
@@ -733,7 +743,7 @@ router.get("/creators/hub", protect, async (req, res) => {
       .slice(0, 12);
 
     const liveEvents = creators
-      .flatMap((user) => (user.creatorEvents || []).map((event) => serializeCreatorEvent(event, user)))
+      .flatMap((user) => (user.creatorEvents || []).map((event) => serializeCreatorEvent(event, user, currentUserId)))
       .filter((event) => event.title)
       .sort((a, b) => Number(a.startsAt || 0) - Number(b.startsAt || 0))
       .slice(0, 8);
@@ -864,12 +874,56 @@ router.post("/creator/events", protect, async (req, res) => {
 
     res.status(201).json({
       message: "Creator event oluşturuldu.",
-      event: serializeCreatorEvent(event, user.toObject()),
+      event: serializeCreatorEvent(event, user.toObject(), String(req.user._id)),
       user: user.toObject(),
     });
   } catch (error) {
     console.error("Creator event oluşturulamadı:", error);
     res.status(500).json({ message: "Creator event oluşturulamadı." });
+  }
+});
+
+router.patch("/creator/events/:eventId/remind", protect, async (req, res) => {
+  try {
+    const eventId = String(req.params.eventId || "");
+    const creatorId = String(req.body?.creatorId || "");
+    const currentUserId = String(req.user?._id || "");
+
+    const query = creatorId
+      ? { _id: creatorId, "creatorEvents.id": eventId }
+      : { "creatorEvents.id": eventId };
+
+    const creator = await User.findOne(query);
+
+    if (!creator) {
+      return res.status(404).json({ message: "Creator event bulunamadı." });
+    }
+
+    const event = (creator.creatorEvents || []).find((item) => String(item.id) === eventId);
+
+    if (!event) {
+      return res.status(404).json({ message: "Creator event bulunamadı." });
+    }
+
+    const reminderUserIds = Array.isArray(event.reminderUserIds)
+      ? event.reminderUserIds.map((id) => String(id))
+      : [];
+    const alreadyReminded = reminderUserIds.includes(currentUserId);
+
+    event.reminderUserIds = alreadyReminded
+      ? reminderUserIds.filter((id) => id !== currentUserId)
+      : Array.from(new Set([...reminderUserIds, currentUserId]));
+
+    await creator.save();
+
+    res.json({
+      message: alreadyReminded ? "Event hatırlatıcısı kaldırıldı." : "Event hatırlatıcısı eklendi.",
+      reminded: !alreadyReminded,
+      event: serializeCreatorEvent(event, creator.toObject(), currentUserId),
+    });
+  } catch (error) {
+    console.error("Creator event reminder hatası:", error);
+    res.status(500).json({ message: "Event reminder güncellenemedi." });
   }
 });
 

@@ -349,6 +349,41 @@ export default function Home({ authUser, onLogout }) {
     }
   }
 
+  async function createCreatorEvent(eventPayload) {
+    if (!hasVoryAuthSession(currentUserId)) return;
+
+    try {
+      setCreatorHubLoading(true);
+      const response = await api.post("/users/creator/events", {
+        ...eventPayload,
+        roomCode: eventPayload?.roomCode || roomCode || "",
+      });
+
+      toast.success(response.data?.message || "Creator event oluşturuldu 📅");
+      await loadCreatorHub();
+      await loadProfileProgress();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Creator event oluşturulamadı.");
+    } finally {
+      setCreatorHubLoading(false);
+    }
+  }
+
+  async function remindCreatorEvent(event) {
+    if (!hasVoryAuthSession(currentUserId) || !event?.id) return;
+
+    try {
+      const response = await api.patch(`/users/creator/events/${event.id}/remind`, {
+        creatorId: event.creatorId,
+      });
+
+      toast.success(response.data?.message || "Event reminder güncellendi 🔔");
+      loadCreatorHub();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Event reminder güncellenemedi.");
+    }
+  }
+
   function syncProfileProgress(nextStats) {
     if (!hasVoryAuthSession(currentUserId)) return;
 
@@ -2325,6 +2360,9 @@ export default function Home({ authUser, onLogout }) {
             onRefresh={loadCreatorHub}
             onFollowCreator={followCreator}
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+            onCreateEvent={createCreatorEvent}
+            onRemindEvent={remindCreatorEvent}
+            currentRoomCode={roomCode}
           />
 
           <CustomizationStorePanel

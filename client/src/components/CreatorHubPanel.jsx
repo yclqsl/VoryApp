@@ -1,4 +1,5 @@
-import { CalendarPlus, Crown, Flame, Radio, Star, Users, Video } from "lucide-react";
+import { useState } from "react";
+import { CalendarPlus, Crown, Flame, Radio, Star, Users } from "lucide-react";
 
 function compactNumber(value = 0) {
   const safeValue = Math.max(0, Number(value) || 0);
@@ -15,18 +16,54 @@ function creatorBadgeIcon(badge = "") {
   return "👑";
 }
 
+function getDefaultEventTime() {
+  const date = new Date(Date.now() + 60 * 60 * 1000);
+  date.setMinutes(0, 0, 0);
+  return date.toISOString().slice(0, 16);
+}
+
 export default function CreatorHubPanel({
   hub = null,
   currentUserId = "",
+  currentRoomCode = "",
   loading = false,
   onRefresh,
   onFollowCreator,
   onJoinRoom,
+  onCreateEvent,
+  onRemindEvent,
 }) {
   const featuredRooms = hub?.featuredRooms || [];
   const trendingCreators = hub?.trendingCreators || [];
   const liveEvents = hub?.liveEvents || [];
   const featuredCategories = hub?.featuredCategories || [];
+  const liveNowEvents = liveEvents.filter((event) => event.liveNow);
+  const upcomingEvents = liveEvents.filter((event) => event.status !== "past");
+
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventDescription, setEventDescription] = useState("");
+  const [eventIcon, setEventIcon] = useState("🎬");
+  const [eventStartsAt, setEventStartsAt] = useState(getDefaultEventTime());
+  const [eventRoomCode, setEventRoomCode] = useState(currentRoomCode || "");
+
+  function submitEvent(event) {
+    event.preventDefault();
+
+    if (!eventTitle.trim()) return;
+
+    onCreateEvent?.({
+      title: eventTitle.trim(),
+      description: eventDescription.trim(),
+      icon: eventIcon.trim() || "📅",
+      startsAt: eventStartsAt ? new Date(eventStartsAt).toISOString() : null,
+      roomCode: (eventRoomCode || currentRoomCode || "").trim().toUpperCase(),
+    });
+
+    setEventTitle("");
+    setEventDescription("");
+    setEventIcon("🎬");
+    setEventStartsAt(getDefaultEventTime());
+  }
 
   return (
     <section className="glass overflow-hidden">
@@ -49,6 +86,33 @@ export default function CreatorHubPanel({
         </button>
       </div>
 
+      {liveNowEvents.length > 0 ? (
+        <div className="mt-4 rounded-[1.75rem] border border-red-300/15 bg-gradient-to-br from-red-500/15 to-fuchsia-500/10 p-4 shadow-[0_20px_80px_rgba(239,68,68,0.10)]">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.22em] text-red-100/80">
+            <Radio size={14} className="animate-pulse text-red-200" /> LIVE NOW
+          </div>
+          <div className="mt-3 space-y-2">
+            {liveNowEvents.slice(0, 2).map((event) => (
+              <div key={event.id} className="flex items-center justify-between gap-3 rounded-2xl bg-black/20 p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black">{event.icon || "🔴"} {event.title}</p>
+                  <p className="mt-1 truncate text-xs text-white/45">@{event.creatorUsername} • {event.whenLabel}</p>
+                </div>
+                {event.roomCode ? (
+                  <button
+                    type="button"
+                    onClick={() => onJoinRoom?.(event.roomCode)}
+                    className="rounded-2xl bg-red-400/20 px-3 py-2 text-xs font-black text-red-100 transition hover:bg-red-400/30"
+                  >
+                    Odaya Git
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="rounded-2xl border border-yellow-300/10 bg-yellow-400/5 p-3">
           <p className="text-base font-black text-yellow-100">{compactNumber(trendingCreators.length)}</p>
@@ -59,7 +123,7 @@ export default function CreatorHubPanel({
           <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">Rooms</p>
         </div>
         <div className="rounded-2xl border border-sky-300/10 bg-sky-400/5 p-3">
-          <p className="text-base font-black text-sky-100">{compactNumber(liveEvents.length)}</p>
+          <p className="text-base font-black text-sky-100">{compactNumber(upcomingEvents.length)}</p>
           <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">Events</p>
         </div>
         <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/5 p-3">
@@ -67,6 +131,52 @@ export default function CreatorHubPanel({
           <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">Categories</p>
         </div>
       </div>
+
+      <form onSubmit={submitEvent} className="mt-5 rounded-[1.75rem] border border-sky-300/10 bg-sky-400/5 p-4">
+        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-sky-100/70">
+          <CalendarPlus size={14} /> Schedule Event
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <input
+            value={eventTitle}
+            onChange={(event) => setEventTitle(event.target.value)}
+            placeholder="Event title: Marvel Marathon"
+            className="rounded-2xl border border-white/8 bg-black/25 px-3 py-3 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-sky-300/30"
+          />
+          <input
+            value={eventIcon}
+            onChange={(event) => setEventIcon(event.target.value)}
+            placeholder="Icon"
+            maxLength={4}
+            className="rounded-2xl border border-white/8 bg-black/25 px-3 py-3 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-sky-300/30"
+          />
+          <input
+            type="datetime-local"
+            value={eventStartsAt}
+            onChange={(event) => setEventStartsAt(event.target.value)}
+            className="rounded-2xl border border-white/8 bg-black/25 px-3 py-3 text-sm font-bold text-white outline-none focus:border-sky-300/30"
+          />
+          <input
+            value={eventRoomCode}
+            onChange={(event) => setEventRoomCode(event.target.value.toUpperCase())}
+            placeholder={currentRoomCode ? `Room ${currentRoomCode}` : "Room code optional"}
+            className="rounded-2xl border border-white/8 bg-black/25 px-3 py-3 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-sky-300/30"
+          />
+        </div>
+        <textarea
+          value={eventDescription}
+          onChange={(event) => setEventDescription(event.target.value)}
+          placeholder="Kısa açıklama..."
+          className="mt-2 min-h-[76px] w-full rounded-2xl border border-white/8 bg-black/25 px-3 py-3 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-sky-300/30"
+        />
+        <button
+          type="submit"
+          disabled={!eventTitle.trim() || loading}
+          className="mt-3 rounded-2xl bg-sky-400/18 px-4 py-3 text-xs font-black text-sky-100 transition hover:bg-sky-400/28 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Event Oluştur
+        </button>
+      </form>
 
       <div className="mt-5">
         <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.22em] text-white/40">
@@ -154,16 +264,30 @@ export default function CreatorHubPanel({
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-white/40">
-            <CalendarPlus size={14} className="text-sky-200" /> Live Events
+            <CalendarPlus size={14} className="text-sky-200" /> Upcoming Events
           </div>
           <div className="mt-3 space-y-2">
-            {liveEvents.length === 0 ? (
+            {upcomingEvents.length === 0 ? (
               <p className="text-sm text-white/35">Yaklaşan event yok.</p>
             ) : (
-              liveEvents.slice(0, 3).map((event) => (
+              upcomingEvents.slice(0, 6).map((event) => (
                 <div key={event.id} className="rounded-2xl bg-white/[0.04] p-3">
-                  <p className="text-sm font-black">{event.icon || "📅"} {event.title}</p>
-                  <p className="mt-1 text-xs text-white/40">@{event.creatorUsername} • {event.whenLabel || "yakında"}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-black">
+                        {event.liveNow ? "🔴 " : ""}{event.icon || "📅"} {event.title}
+                      </p>
+                      <p className="mt-1 text-xs text-white/40">@{event.creatorUsername} • {event.whenLabel || "yakında"}</p>
+                      <p className="mt-1 text-[11px] font-bold text-white/30">🔔 {compactNumber(event.reminderCount)} reminder</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onRemindEvent?.(event)}
+                      className={`shrink-0 rounded-2xl px-3 py-2 text-xs font-black transition ${event.remindedByMe ? "bg-emerald-400/15 text-emerald-100 hover:bg-emerald-400/25" : "bg-white/8 text-white/70 hover:bg-white/12 hover:text-white"}`}
+                    >
+                      {event.remindedByMe ? "Reminded" : "Remind Me"}
+                    </button>
+                  </div>
                 </div>
               ))
             )}
