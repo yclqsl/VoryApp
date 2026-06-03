@@ -214,6 +214,25 @@ function clearSocketRoomPresence(socketId) {
   });
 }
 
+function emitActivity(roomCode, payload = {}) {
+  const activity = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: payload.type || "system",
+    title: payload.title || "VoryApp",
+    message: payload.message || "",
+    username: payload.username || "",
+    roomCode: roomCode || "",
+    createdAt: Date.now(),
+  };
+
+  if (roomCode) {
+    io.to(roomCode).emit("activity:new", activity);
+    return;
+  }
+
+  io.emit("activity:new", activity);
+}
+
 function emitNotification(roomCode, payload = {}) {
   const notification = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1161,6 +1180,34 @@ io.on("connection", (socket) => {
     emitPresence();
   });
 
+
+
+  socket.on("reaction:send", ({ roomCode, emoji, username }) => {
+    if (!roomCode || !rooms[roomCode]) return;
+
+    const safeEmoji = String(emoji || "").slice(0, 4);
+    const safeUsername = username || "Kullanıcı";
+
+    if (!safeEmoji) return;
+
+    const reaction = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      emoji: safeEmoji,
+      username: safeUsername,
+      socketId: socket.id,
+      roomCode,
+      createdAt: Date.now(),
+    };
+
+    io.to(roomCode).emit("reaction:new", reaction);
+
+    emitActivity(roomCode, {
+      type: "reaction",
+      title: "Reaction",
+      message: `${safeUsername} ${safeEmoji} reaksiyon attı.`,
+      username: safeUsername,
+    });
+  });
 
   socket.on("typing-start", ({ roomCode, username }) => {
     if (!roomCode || !rooms[roomCode]) return;

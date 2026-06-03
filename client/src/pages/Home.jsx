@@ -5,6 +5,7 @@ import VorySidebar from "../components/VorySidebar";
 import VoryTopBar from "../components/VoryTopBar";
 import VoryRightPanel from "../components/VoryRightPanel";
 import VoryBottomDock from "../components/VoryBottomDock";
+import ReactionBurst from "../components/ReactionBurst";
 import MediaQueue from "../components/MediaQueue";
 import DevHealthOverlay from "../components/DevHealthOverlay";
 import FeedbackWidget from "../components/FeedbackWidget";
@@ -41,6 +42,7 @@ export default function Home({ authUser, onLogout }) {
   const [connectionStatus, setConnectionStatus] = useState(socket.connected ? "connected" : "offline");
   const [lastRestoreMessage, setLastRestoreMessage] = useState("");
   const [onlinePresence, setOnlinePresence] = useState([]);
+  const [reactions, setReactions] = useState([]);
   const [typingUser, setTypingUser] = useState("");
 
   const currentUserPayload = {
@@ -342,6 +344,23 @@ export default function Home({ authUser, onLogout }) {
       setCurrentMedia(mediaItem || null);
     });
 
+    socket.on("reaction:new", (reaction) => {
+      const visualReaction = {
+        ...reaction,
+        visualId: `${reaction.id}-${Math.random().toString(36).slice(2, 6)}`,
+        x: 18 + Math.random() * 64,
+        delay: Math.random() * 120,
+      };
+
+      setReactions((prev) => [...prev.slice(-14), visualReaction]);
+
+      setTimeout(() => {
+        setReactions((prev) =>
+          prev.filter((item) => item.visualId !== visualReaction.visualId)
+        );
+      }, 2400);
+    });
+
     return () => {
       socket.off("connect");
       socket.off("disconnect");
@@ -374,6 +393,7 @@ export default function Home({ authUser, onLogout }) {
       socket.off("notification:new");
       socket.off("media-queue-updated");
       socket.off("media-current-updated");
+      socket.off("reaction:new");
     };
   }, []);
 
@@ -603,6 +623,19 @@ export default function Home({ authUser, onLogout }) {
 
   function clearNotifications() {
     setNotifications([]);
+  }
+
+  function sendReaction(emoji) {
+    if (!roomCode) {
+      toast.error("Önce odaya gir.");
+      return;
+    }
+
+    socket.emit("reaction:send", {
+      roomCode,
+      emoji,
+      username: currentUserPayload.username,
+    });
   }
 
   function handleSectionChange(section) {
@@ -870,7 +903,13 @@ export default function Home({ authUser, onLogout }) {
           )}
 
           <main className="hidden min-h-0 flex-1 lg:block">
-            {renderDesktopMain()}
+            <div className="relative">
+              {renderDesktopMain()}
+
+              {appSection === "watch" && (
+                <ReactionBurst reactions={reactions} />
+              )}
+            </div>
 
             {appSection === "watch" && (
               <VoryBottomDock
@@ -882,6 +921,7 @@ export default function Home({ authUser, onLogout }) {
                   setRightPanelTab("chat");
                   setAppSection("watch");
                 }}
+                onReaction={sendReaction}
                 screenShare={
                   <ScreenShare
                     roomCode={roomCode}
