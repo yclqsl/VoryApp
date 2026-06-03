@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const dns = require("dns");
+const path = require("path");
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 const rooms = {};
@@ -116,6 +117,10 @@ app.get("/api/feedback", (req, res) => {
 });
 
 
+app.get(/^\/(?!api).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -126,7 +131,17 @@ const io = new Server(server, {
 });
 
 function createRoomCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+  let code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+  while (rooms[code]) {
+    code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
+
+  return code;
+}
+
+function normalizeRoomCode(roomCode = "") {
+  return String(roomCode).trim().toUpperCase();
 }
 
 function isHost(roomCode, socketId) {
@@ -464,12 +479,14 @@ io.on("connection", (socket) => {
   });
 
   socket.on("request-room-snapshot", ({ roomCode }) => {
-    if (!roomCode || !rooms[roomCode]) {
+    const targetRoomCode = normalizeRoomCode(roomCode);
+
+    if (!targetRoomCode || !rooms[targetRoomCode]) {
       socket.emit("room-error", "Oda bulunamadı");
       return;
     }
 
-    emitRoomSnapshot(socket, roomCode, "manual-snapshot");
+    emitRoomSnapshot(socket, targetRoomCode, "manual-snapshot");
   });
 
   socket.on("request-sync", ({ roomCode }) => {
@@ -597,43 +614,59 @@ io.on("connection", (socket) => {
   });
 
   socket.on("join-room", ({ roomCode, username, avatar }) => {
-    const room = rooms[roomCode];
+    const targetRoomCode = normalizeRoomCode(roomCode);
+    const room = rooms[targetRoomCode];
 
     if (!room) {
       socket.emit("room-error", "Oda bulunamadı");
       return;
     }
 
-    socket.join(roomCode);
+    socket.join(targetRoomCode);
 
-    room.users.push({
-      id: socket.id,
-      username: username || "Misafir",
-      avatar: avatar || "",
-      isHost: false,
-    });
+    const existingIndex = room.users.findIndex((user) => user.id === socket.id);
+
+    if (existingIndex >= 0) {
+      room.users[existingIndex] = {
+        ...room.users[existingIndex],
+        username: username || room.users[existingIndex].username || "Misafir",
+        avatar: avatar || room.users[existingIndex].avatar || "",
+      };
+    } else {
+      room.users.push({
+        id: socket.id,
+        username: username || "Misafir",
+        avatar: avatar || "",
+        isHost: false,
+      });
+    }
+
+    room.users = room.users.map((user) => ({
+      ...user,
+      isHost: user.id === room.host,
+    }));
 
     socket.emit("room-joined", {
-      roomCode,
-      isHost: false,
+      roomCode: targetRoomCode,
+      isHost: room.host === socket.id,
     });
 
-    io.to(roomCode).emit("room-users", room.users);
+    io.to(targetRoomCode).emit("room-users", room.users);
 
-    updateRoomPresence(socket.id, roomCode, {
+    updateRoomPresence(socket.id, targetRoomCode, {
       activity: room.videoUrl ? "watching" : "in-room",
       voiceActive: false,
-      screenSharing: !!screenShares[roomCode],
+      screenSharing: !!screenShares[targetRoomCode],
     });
 
     emitPresence();
 
-    io.to(roomCode).emit(
+    io.to(targetRoomCode).emit(
       "system-message",
       `${username || "Misafir"} odaya katıldı.`
     );
 
-    emitNotification(roomCode, {
+    emitNotification(targetRoomCode, {
       type: "room",
       title: "Odaya katıldı",
       message: `${username || "Misafir"} odaya katıldı.`,
@@ -649,13 +682,13 @@ io.on("connection", (socket) => {
       queue: room.mediaQueue || [],
     });
 
-    if (screenShares[roomCode]) {
+    if (screenShares[targetRoomCode]) {
       socket.emit("screen-share-started", {
-        broadcaster: screenShares[roomCode],
+        broadcaster: screenShares[targetRoomCode],
       });
     }
 
-    emitRoomSnapshot(socket, roomCode, "join-room");
+    emitRoomSnapshot(socket, targetRoomCode, "join-room");
   });
 
   socket.on("leave-room", ({ roomCode }) => {

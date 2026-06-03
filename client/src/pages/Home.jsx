@@ -21,6 +21,28 @@ import VoiceChat from "../components/VoiceChat";
 import ScreenShare from "../components/ScreenShare";
 import MobileBottomNav from "../components/MobileBottomNav";
 
+function getRoomCodeFromLocation() {
+  const pathMatch = window.location.pathname.match(/^\/room\/([^/?#]+)/i);
+
+  if (pathMatch?.[1]) {
+    return decodeURIComponent(pathMatch[1]).trim().toUpperCase();
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const queryRoom = params.get("room");
+
+  return queryRoom ? queryRoom.trim().toUpperCase() : "";
+}
+
+function setRoomUrl(roomCode) {
+  if (!roomCode) {
+    window.history.replaceState({}, "", "/");
+    return;
+  }
+
+  window.history.replaceState({}, "", `/room/${roomCode}`);
+}
+
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
   const [roomInput, setRoomInput] = useState("");
@@ -85,15 +107,21 @@ export default function Home({ authUser, onLogout }) {
   const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const invitedRoom = params.get("room");
+    const invitedRoom = getRoomCodeFromLocation();
 
     if (invitedRoom) {
       const cleanRoom = invitedRoom.trim().toUpperCase();
       setRoomInput(cleanRoom);
       setPendingInviteRoom(cleanRoom);
-      toast.success(`Davet odası hazır: ${cleanRoom}`);
-      return;
+      setAppSection("room");
+      setActiveMobileTab("room");
+      toast.success(`Davet linki algılandı: ${cleanRoom}`);
+
+      const joinTimer = setTimeout(() => {
+        joinRoom(cleanRoom);
+      }, 350);
+
+      return () => clearTimeout(joinTimer);
     }
 
     const restoreTimer = setTimeout(() => {
@@ -165,6 +193,7 @@ export default function Home({ authUser, onLogout }) {
     });
 
     socket.on("room-created", (data) => {
+      setRoomUrl(data.roomCode);
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
       setPendingInviteRoom("");
@@ -173,6 +202,7 @@ export default function Home({ authUser, onLogout }) {
     });
 
     socket.on("room-joined", (data) => {
+      setRoomUrl(data.roomCode);
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
       setPendingInviteRoom("");
@@ -181,6 +211,7 @@ export default function Home({ authUser, onLogout }) {
     });
 
     socket.on("room-left", () => {
+      setRoomUrl("");
       setRoomCode("");
       setUsers([]);
       setMessages([]);
@@ -494,6 +525,27 @@ export default function Home({ authUser, onLogout }) {
     socket.emit("leave-room", { roomCode });
   }
 
+  function getInviteLink() {
+    if (!roomCode) return "";
+    return `${window.location.origin}/room/${roomCode}`;
+  }
+
+  async function copyInviteLink() {
+    const inviteLink = getInviteLink();
+
+    if (!inviteLink) {
+      toast.error("Önce oda oluştur veya odaya gir.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      toast.success("Invite link copied 🔗");
+    } catch (error) {
+      toast.error("Link kopyalanamadı, manuel kopyala.");
+    }
+  }
+
   function setRoomVideo() {
     if (!roomCode) {
       toast.error("Önce odaya gir");
@@ -733,6 +785,30 @@ export default function Home({ authUser, onLogout }) {
     setActiveMobileTab(section);
   }
 
+  function renderRoomInviteCard() {
+    if (!roomCode) return null;
+
+    return (
+      <div className="glass-panel flex flex-col gap-4 border-violet-400/20 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-violet-200/60">
+            V12 Room Join Link
+          </p>
+          <h2 className="mt-1 text-xl font-black text-white">
+            Arkadaşını direkt odaya al
+          </h2>
+          <p className="mt-2 break-all rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-bold text-white/70">
+            {getInviteLink()}
+          </p>
+        </div>
+
+        <button className="btn-primary w-full sm:w-auto" onClick={copyInviteLink}>
+          Linki Kopyala
+        </button>
+      </div>
+    );
+  }
+
   function renderDesktopMain() {
     if (appSection === "room") {
       return (
@@ -749,6 +825,7 @@ export default function Home({ authUser, onLogout }) {
             onLeaveRoom={leaveRoom}
           />
 
+          {renderRoomInviteCard()}
           <InviteBox roomCode={roomCode} />
           <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
           <UserList users={users} />
@@ -908,6 +985,7 @@ export default function Home({ authUser, onLogout }) {
             onLeaveRoom={leaveRoom}
           />
 
+          {renderRoomInviteCard()}
           <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
         </section>
       );
@@ -991,15 +1069,15 @@ export default function Home({ authUser, onLogout }) {
             <div className="glass-panel flex flex-col gap-4 border-emerald-400/25 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-300/70">
-                  Davet Linki Algılandı
+                  Room Link Algılandı
                 </p>
                 <h2 className="mt-1 text-xl font-black text-white">
-                  {pendingInviteRoom} odasına katılmaya hazırsın
+                  {pendingInviteRoom} odasına yönlendiriliyorsun
                 </h2>
               </div>
 
               <button className="btn-primary w-full sm:w-auto" onClick={joinPendingInvite}>
-                Odaya Katıl
+                Tekrar Katıl
               </button>
             </div>
           )}
