@@ -369,3 +369,34 @@
     gap:12px;
   }
 }
+
+
+/* Activity Feed V10 */
+.vory-v5-panel-tabs {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.vory-activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vory-activity-item {
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 22px;
+  background: rgba(255,255,255,0.04);
+  padding: 12px;
+}
+
+.vory-activity-icon {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: rgba(124,58,237,0.16);
+  color: rgb(221,214,254);
+}

@@ -41,6 +41,7 @@ export default function Home({ authUser, onLogout }) {
   const [connectionStatus, setConnectionStatus] = useState(socket.connected ? "connected" : "offline");
   const [lastRestoreMessage, setLastRestoreMessage] = useState("");
   const [onlinePresence, setOnlinePresence] = useState([]);
+  const [activities, setActivities] = useState([]);
 
   const currentUserPayload = {
     username: username || authUser?.username || "Misafir",
@@ -319,6 +320,10 @@ export default function Home({ authUser, onLogout }) {
       setCurrentMedia(mediaItem || null);
     });
 
+    socket.on("activity:new", (activity) => {
+      setActivities((prev) => [activity, ...prev].slice(0, 60));
+    });
+
     return () => {
       socket.off("connect");
       socket.off("disconnect");
@@ -349,6 +354,7 @@ export default function Home({ authUser, onLogout }) {
       socket.off("notification:new");
       socket.off("media-queue-updated");
       socket.off("media-current-updated");
+      socket.off("activity:new");
     };
   }, []);
 
@@ -685,6 +691,7 @@ export default function Home({ authUser, onLogout }) {
           onlinePresence={onlinePresence}
           currentSocketId={socket.id}
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+          activities={activities}
         />
       </div>
     );

@@ -1,13 +1,15 @@
-import { ListVideo, MessageCircle, UsersRound } from "lucide-react";
+import { Activity, ListVideo, MessageCircle, UsersRound } from "lucide-react";
 import ChatPanel from "./ChatPanel";
 import MediaQueue from "./MediaQueue";
 import PresenceFriendPanel from "./PresenceFriendPanel";
 import UserList from "./UserList";
+import ActivityFeed from "./ActivityFeed";
 
 const tabs = [
   { id: "queue", label: "Queue", icon: ListVideo },
   { id: "chat", label: "Chat", icon: MessageCircle },
   { id: "people", label: "People", icon: UsersRound },
+  { id: "activity", label: "Activity", icon: Activity },
 ];
 
 export default function VoryRightPanel({
@@ -29,10 +31,11 @@ export default function VoryRightPanel({
   onlinePresence,
   currentSocketId,
   onJoinRoom,
+  activities = [],
 }) {
   return (
-    <aside className="vory-v5-right-panel vory-right-panel-fix">
-      <div className="vory-v5-panel-tabs vory-right-tabs-fix">
+    <aside className="vory-v5-right-panel">
+      <div className="vory-v5-panel-tabs">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -51,7 +54,7 @@ export default function VoryRightPanel({
         })}
       </div>
 
-      <div className="vory-right-panel-body min-h-0 flex-1 overflow-auto">
+      <div className="min-h-0 flex-1 overflow-auto pr-1">
         {activeTab === "queue" && (
           <MediaQueue
             roomCode={roomCode}
@@ -83,6 +86,10 @@ export default function VoryRightPanel({
               onJoinRoom={onJoinRoom}
             />
           </div>
+        )}
+
+        {activeTab === "activity" && (
+          <ActivityFeed activities={activities} />
         )}
       </div>
     </aside>
