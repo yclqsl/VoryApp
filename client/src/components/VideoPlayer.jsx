@@ -147,12 +147,14 @@ export default function VideoPlayer({
 
   return (
     <section className="glass flex min-h-[560px] flex-1 flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-white/35">
-            Media Center
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-white/30">
+            Vory Player
           </p>
-          <h2 className="text-2xl font-black text-white">Add Media</h2>
+          <h2 className="text-xl font-black text-white">
+            {videoId ? "Now Playing" : "Ready to Watch"}
+          </h2>
         </div>
 
         <div
@@ -167,32 +169,7 @@ export default function VideoPlayer({
         </div>
       </div>
 
-      <div className="mt-5 flex gap-2">
-        <input
-          className="input mt-0"
-          placeholder="YouTube veya MP4 linki yapıştır..."
-          value={videoInput}
-          onChange={(e) => setVideoInput(e.target.value)}
-          disabled={!isHost}
-        />
-
-        <button
-          className="btn mt-0 flex w-auto items-center gap-2 px-5"
-          onClick={onSetVideo}
-          disabled={!isHost}
-        >
-          <PlayCircle size={18} />
-          Add Media
-        </button>
-      </div>
-
-      {!isHost && (
-        <p className="mt-3 rounded-2xl bg-black/30 p-3 text-sm text-white/45">
-          İzleyici modundasın. Ses ve tam ekran kontrolleri açık; hostu etkilemezsin.
-        </p>
-      )}
-
-      <div className="relative mt-5 flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl">
         {videoId ? (
           <YouTube
             key={videoId}
