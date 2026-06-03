@@ -31,8 +31,8 @@ export default function VoryRightPanel({
   onJoinRoom,
 }) {
   return (
-    <aside className="vory-v5-right-panel">
-      <div className="vory-v5-panel-tabs">
+    <aside className="vory-v5-right-panel vory-right-panel-fix">
+      <div className="vory-v5-panel-tabs vory-right-tabs-fix">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -51,7 +51,7 @@ export default function VoryRightPanel({
         })}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto pr-1">
+      <div className="vory-right-panel-body min-h-0 flex-1 overflow-auto">
         {activeTab === "queue" && (
           <MediaQueue
             roomCode={roomCode}

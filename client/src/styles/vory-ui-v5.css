@@ -297,39 +297,52 @@
 }
 
 
-/* Layout Cleanup V7.1 */
-.vory-v5-player-card > .glass,
-.vory-v5-player-card section.glass {
-  min-height: calc(100vh - 190px);
+/* Right Panel Layout Fix */
+.vory-right-panel-fix {
+  gap: 14px;
+  overflow: hidden;
 }
 
-.vory-v5-player-card section.glass {
-  padding: 0;
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
+.vory-right-tabs-fix {
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+  margin-bottom: 2px;
 }
 
-.vory-v5-player-card section.glass > div:first-child {
-  padding: 4px 4px 0;
+.vory-right-panel-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 2px 2px 0;
 }
 
-.vory-v5-player-card section.glass > div:nth-last-child(2) {
-  min-height: 66vh;
+.vory-right-panel-body > * {
+  width: 100%;
+  min-width: 0;
 }
 
-.vory-v5-player-card section.glass > div:last-child {
-  padding: 0 4px 4px;
+/* Prevent inner cards from visually colliding with tab bar */
+.vory-right-panel-body .glass,
+.vory-right-panel-body .glass-panel,
+.vory-right-panel-body section,
+.vory-right-panel-body article {
+  margin-top: 0 !important;
 }
 
-@media (min-width: 1280px) {
-  .vory-v5-watch-layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
-  }
+/* MediaQueue form spacing safety */
+.vory-right-panel-body input,
+.vory-right-panel-body button {
+  min-width: 0;
 }
 
-@media (min-width: 1536px) {
-  .vory-v5-watch-layout {
-    grid-template-columns: minmax(0, 1fr) 340px;
-  }
+.vory-right-panel-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.vory-right-panel-body::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 999px;
 }
