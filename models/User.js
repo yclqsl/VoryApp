@@ -65,6 +65,23 @@ const userSchema = new mongoose.Schema(
       invitesSent: { type: Number, default: 0 },
       friends: { type: Number, default: 0 }
     },
+    achievements: [
+      {
+        id: { type: String, required: true },
+        title: { type: String, default: "" },
+        description: { type: String, default: "" },
+        icon: { type: String, default: "🏆" },
+        xpReward: { type: Number, default: 0 },
+        unlockedAt: { type: Date, default: Date.now }
+      }
+    ],
+    dailyMissions: {
+      dateKey: { type: String, default: "" },
+      claimedMissionIds: { type: [String], default: [] },
+      completedMissionIds: { type: [String], default: [] },
+      totalXpClaimed: { type: Number, default: 0 },
+      updatedAt: { type: Date, default: null }
+    },
     lastProfileSyncAt: {
       type: Date,
       default: null

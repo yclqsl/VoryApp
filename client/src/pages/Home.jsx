@@ -16,6 +16,7 @@ import AnimatedBackground from "../components/AnimatedBackground";
 import InviteBox from "../components/InviteBox";
 import PartyDiscoveryPanel from "../components/PartyDiscoveryPanel";
 import LeaderboardPanel from "../components/LeaderboardPanel";
+import DailyMissionsPanel from "../components/DailyMissionsPanel";
 import PresenceFriendPanel from "../components/PresenceFriendPanel";
 import UserList from "../components/UserList";
 import ChatPanel from "../components/ChatPanel";
@@ -217,6 +218,7 @@ export default function Home({ authUser, onLogout }) {
   const [profileProgress, setProfileProgress] = useState(null);
   const [leaderboardUsers, setLeaderboardUsers] = useState([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [missionsLoading, setMissionsLoading] = useState(false);
   const [friendState, setFriendState] = useState({ friends: [], sent: [], received: [] });
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
   const [friendSearchResults, setFriendSearchResults] = useState([]);
@@ -306,6 +308,33 @@ export default function Home({ authUser, onLogout }) {
       .catch((error) => {
         console.error("Profile progress sync hatası:", error);
       });
+  }
+
+
+  async function claimDailyMission(mission) {
+    if (!currentUserId || !mission?.id) return;
+
+    try {
+      setMissionsLoading(true);
+      const response = await api.patch("/users/missions/claim", {
+        missionId: mission.id,
+        stats: {
+          ...(profileStats || {}),
+          friends: friendState.friends?.length || profileStats?.friends || 0,
+        },
+      });
+
+      if (response.data?.user) {
+        setProfileProgress(response.data.user);
+      }
+
+      toast.success(response.data?.message || `+${mission.xpReward || 0} XP alındı 🏆`);
+      loadLeaderboard();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Görev ödülü alınamadı.");
+    } finally {
+      setMissionsLoading(false);
+    }
   }
 
 
@@ -2076,6 +2105,14 @@ export default function Home({ authUser, onLogout }) {
             onTogglePublic={togglePublicRoom}
           />
 
+          <DailyMissionsPanel
+            profileProgress={profileProgress}
+            stats={displayProfileStats}
+            loading={missionsLoading}
+            onRefresh={loadProfileProgress}
+            onClaimMission={claimDailyMission}
+          />
+
           {renderRoomInviteCard()}
           <InviteBox roomCode={roomCode} />
           <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
@@ -2348,6 +2385,14 @@ export default function Home({ authUser, onLogout }) {
             onRefresh={refreshDiscoveryRooms}
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onTogglePublic={togglePublicRoom}
+          />
+
+          <DailyMissionsPanel
+            profileProgress={profileProgress}
+            stats={displayProfileStats}
+            loading={missionsLoading}
+            onRefresh={loadProfileProgress}
+            onClaimMission={claimDailyMission}
           />
 
           {renderRoomInviteCard()}

@@ -95,6 +95,10 @@ function buildLocalBadges(user, stats = {}, level = 1) {
   return Array.from(badges).slice(0, 12);
 }
 
+function achievementIcon(achievement = {}) {
+  return achievement.icon || "🏆";
+}
+
 function badgeIcon(badge = "") {
   const clean = badge.toLowerCase();
   if (clean.includes("founder")) return "👑";
@@ -168,6 +172,7 @@ export default function ProfileCard({
   const frame = profileProgress?.profileFrame || authUser?.profileFrame || (level >= 10 ? "neon" : "rookie");
   const platforms = getDefaultPlatforms(authUser?.favoritePlatforms);
   const badges = profileProgress?.profileBadges?.length ? profileProgress.profileBadges : buildLocalBadges(authUser, mergedStats, level);
+  const achievements = profileProgress?.achievements?.length ? profileProgress.achievements : [];
   const profileStatus = authUser?.statusMessage ? authUser.statusMessage : roomCode ? `Room ${roomCode} içinde aktif.` : online ? "Lobby'de online. Oda oluştur veya arkadaşına katıl." : "Bağlantı bekleniyor.";
   const bio = authUser?.bio?.trim() ? authUser.bio.trim() : "VoryApp beta kullanıcısı. Watch party, voice chat ve arkadaş sistemiyle takılıyor.";
   const canContinueWatching = !!continueWatching?.url;
@@ -256,6 +261,21 @@ export default function ProfileCard({
               <span key={badge} className="rounded-full bg-fuchsia-500/15 px-3 py-1 text-xs font-black text-fuchsia-200">{badgeIcon(badge)} {badge}</span>
             ))}
           </div>
+
+
+          {achievements.length ? (
+            <div className="mt-4 rounded-3xl border border-yellow-300/10 bg-yellow-400/5 p-3">
+              <div className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-yellow-100/60"><Trophy size={13} /> Achievement Gallery</div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {achievements.slice(0, 8).map((achievement) => (
+                  <div key={achievement.id || achievement.title} className="rounded-2xl border border-white/5 bg-black/20 p-3">
+                    <p className="text-sm font-black text-white">{achievementIcon(achievement)} {achievement.title}</p>
+                    <p className="mt-1 line-clamp-2 text-[11px] font-bold text-white/38">{achievement.description || "+XP achievement unlocked"}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-4 rounded-3xl border border-violet-400/10 bg-violet-500/10 p-3">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-200/55">Profile Status</p>
