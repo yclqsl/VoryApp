@@ -19,6 +19,7 @@ export default function ScreenShare({ roomCode, username }) {
 
   const localStreamRef = useRef(null);
   const peersRef = useRef({});
+  const pendingIceRef = useRef({});
   const remoteVideoRef = useRef(null);
   const localVideoRef = useRef(null);
   const activeBroadcasterRef = useRef(null);
@@ -29,6 +30,8 @@ export default function ScreenShare({ roomCode, username }) {
 
   function closePeer(peerId) {
     const peer = peersRef.current[peerId];
+
+    delete pendingIceRef.current[peerId];
 
     if (peer) {
       try {
@@ -49,6 +52,7 @@ export default function ScreenShare({ roomCode, username }) {
     });
 
     peersRef.current = {};
+    pendingIceRef.current = {};
     setViewerCount(0);
   }
 
@@ -82,6 +86,29 @@ export default function ScreenShare({ roomCode, username }) {
     setBroadcasterName("");
     setIsSharing(false);
     setConnectionStatus("Kapalı");
+  }
+
+  async function flushPendingIce(targetSocketId) {
+    const peer = peersRef.current[targetSocketId];
+    const pending = pendingIceRef.current[targetSocketId] || [];
+
+    if (!peer || !peer.remoteDescription || !pending.length) return;
+
+    pendingIceRef.current[targetSocketId] = [];
+
+    for (const candidate of pending) {
+      try {
+        await peer.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch {}
+    }
+  }
+
+  function requestActiveScreenShare() {
+    if (!roomCode) return;
+
+    socket.emit("request-screen-share-state", {
+      roomCode,
+    });
   }
 
   function createPeer(targetSocketId, initiator) {
@@ -226,6 +253,7 @@ export default function ScreenShare({ roomCode, username }) {
 
       socket.emit("request-screen-stream", {
         roomCode,
+        broadcaster,
       });
     }
 
@@ -246,6 +274,7 @@ export default function ScreenShare({ roomCode, username }) {
         const peer = createPeer(from, false);
 
         await peer.setRemoteDescription(new RTCSessionDescription(offer));
+        await flushPendingIce(from);
         const answer = await peer.createAnswer();
         await peer.setLocalDescription(answer);
 
@@ -264,6 +293,7 @@ export default function ScreenShare({ roomCode, username }) {
         if (!peer) return;
 
         await peer.setRemoteDescription(new RTCSessionDescription(answer));
+        await flushPendingIce(from);
       } catch {
         closePeer(from);
       }
@@ -272,10 +302,23 @@ export default function ScreenShare({ roomCode, username }) {
     async function handleIceCandidate({ from, candidate }) {
       try {
         const peer = peersRef.current[from];
-        if (!peer) return;
+
+        if (!peer || !peer.remoteDescription) {
+          pendingIceRef.current[from] = [
+            ...(pendingIceRef.current[from] || []),
+            candidate,
+          ];
+          return;
+        }
 
         await peer.addIceCandidate(new RTCIceCandidate(candidate));
       } catch {}
+    }
+
+    function handleShareState(payload = {}) {
+      if (payload.active === false) {
+        resetShareState();
+      }
     }
 
     function handleShareError(message) {
@@ -289,7 +332,16 @@ export default function ScreenShare({ roomCode, username }) {
     socket.on("screen-offer", handleScreenOffer);
     socket.on("screen-answer", handleScreenAnswer);
     socket.on("screen-ice-candidate", handleIceCandidate);
+    socket.on("screen-share-state", handleShareState);
     socket.on("screen-share-error", handleShareError);
+
+    requestActiveScreenShare();
+
+    const handleSocketReconnect = () => {
+      requestActiveScreenShare();
+    };
+
+    socket.on("connect", handleSocketReconnect);
 
     return () => {
       socket.off("screen-share-started", handleShareStarted);
@@ -298,7 +350,9 @@ export default function ScreenShare({ roomCode, username }) {
       socket.off("screen-offer", handleScreenOffer);
       socket.off("screen-answer", handleScreenAnswer);
       socket.off("screen-ice-candidate", handleIceCandidate);
+      socket.off("screen-share-state", handleShareState);
       socket.off("screen-share-error", handleShareError);
+      socket.off("connect", handleSocketReconnect);
 
       if (isMeBroadcaster() && roomCode) {
         socket.emit("screen-share-stop", { roomCode });
