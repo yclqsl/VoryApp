@@ -689,7 +689,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomInput(cleanRoom);
       setPendingInviteRoom(cleanRoom);
       setAppSection("room");
-      setActiveMobileTab("room");
+      setActiveMobileTab("settings");
       // V13.3.1.4 polish: gereksiz "Davet linki algılandı" toastını kaldırdık.
       // Oda aktif değilse sadece net hata/UX mesajı gösterilecek.
 
@@ -2165,43 +2165,34 @@ export default function Home({ authUser, onLogout }) {
   }
 
   function handleSectionChange(section) {
-    if (section === "admin" && !isAdminUser) {
+    const nextSectionMap = {
+      room: "settings",
+      voice: "watch",
+      chat: "watch",
+      dm: "friends",
+      social: "friends",
+    };
+
+    const nextSection = nextSectionMap[section] || section || "watch";
+
+    if (nextSection === "admin" && !isAdminUser) {
       toast.error("Admin panel sadece admin kullanıcıya açık.");
       return;
     }
 
-    setAppSection(section);
-
-    if (section === "watch") {
-      setRightPanelTab("queue");
-      setActiveMobileTab("watch");
-      return;
-    }
+    setAppSection(nextSection);
 
     if (section === "chat") {
       setRightPanelTab("chat");
-      setActiveMobileTab("chat");
-      return;
-    }
-
-    if (section === "dm") {
+    } else if (section === "voice") {
       setRightPanelTab("people");
-      setActiveMobileTab("dm");
-      return;
-    }
-
-    if (section === "friends") {
+    } else if (nextSection === "watch") {
+      setRightPanelTab("queue");
+    } else if (nextSection === "friends") {
       setRightPanelTab("people");
-      setActiveMobileTab("social");
-      return;
     }
 
-    if (section === "admin") {
-      setActiveMobileTab("admin");
-      return;
-    }
-
-    setActiveMobileTab(section);
+    setActiveMobileTab(nextSection);
   }
 
   function changeRoomTheme(theme) {
@@ -2250,79 +2241,6 @@ export default function Home({ authUser, onLogout }) {
       return null;
     }
 
-    if (appSection === "room") {
-      return (
-        <div className="vory-v5-page-grid">
-          <RoomPanel
-            username={username}
-            setUsername={setUsername}
-            roomInput={roomInput}
-            setRoomInput={setRoomInput}
-            roomCode={roomCode}
-            status={status}
-            onCreateRoom={createRoom}
-            onJoinRoom={() => joinRoom()}
-            onLeaveRoom={leaveRoom}
-          />
-
-          <PartyDiscoveryPanel
-            rooms={discoveryRooms}
-            loading={discoveryLoading}
-            currentRoomCode={roomCode}
-            isHost={isHost}
-            currentRoomPublic={!!roomSettings?.publicRoom}
-            onRefresh={refreshDiscoveryRooms}
-            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-            onTogglePublic={togglePublicRoom}
-          />
-
-          <DailyMissionsPanel
-            profileProgress={profileProgress}
-            stats={displayProfileStats}
-            loading={missionsLoading}
-            onRefresh={loadProfileProgress}
-            onClaimMission={claimDailyMission}
-          />
-
-          {renderRoomInviteCard()}
-          <InviteBox roomCode={roomCode} />
-          <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
-          <RoomThemePanel
-            roomCode={roomCode}
-            isHost={isHost}
-            activeTheme={roomTheme}
-            onThemeChange={changeRoomTheme}
-          />
-          <UserList users={users} />
-        </div>
-      );
-    }
-
-    if (appSection === "voice") {
-      return (
-        <div className="vory-v5-page-grid">
-          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
-          <UserList users={users} />
-          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} profileProgress={profileProgress} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
-        </div>
-      );
-    }
-
-    if (appSection === "chat") {
-      return (
-        <div className="vory-v5-chat-focus">
-          <ChatPanel
-            messages={messages}
-            message={message}
-            setMessage={setMessage}
-            onSendMessage={sendMessage}
-            typingUser={typingUser}
-            onTyping={handleTyping}
-          />
-        </div>
-      );
-    }
-
     if (appSection === "friends") {
       return (
         <div className="vory-v5-page-grid">
@@ -2338,6 +2256,7 @@ export default function Home({ authUser, onLogout }) {
             onRejectRequest={rejectFriendRequest}
             onRemoveFriend={removeFriend}
           />
+
           <PresenceFriendPanel
             friendState={friendState}
             onlineUsers={onlinePresence}
@@ -2352,6 +2271,23 @@ export default function Home({ authUser, onLogout }) {
             onInviteFriend={sendPartyInvite}
             onOpenDM={openDM}
           />
+        </div>
+      );
+    }
+
+    if (appSection === "discover") {
+      return (
+        <div className="vory-v5-page-grid">
+          <PartyDiscoveryPanel
+            rooms={discoveryRooms}
+            loading={discoveryLoading}
+            currentRoomCode={roomCode}
+            isHost={isHost}
+            currentRoomPublic={!!roomSettings?.publicRoom}
+            onRefresh={refreshDiscoveryRooms}
+            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+            onTogglePublic={togglePublicRoom}
+          />
 
           <CreatorHubPanel
             hub={creatorHub}
@@ -2365,6 +2301,37 @@ export default function Home({ authUser, onLogout }) {
             currentRoomCode={roomCode}
           />
 
+          <LeaderboardPanel
+            users={leaderboardUsers}
+            loading={leaderboardLoading}
+            onRefresh={loadLeaderboard}
+          />
+        </div>
+      );
+    }
+
+    if (appSection === "profile") {
+      return (
+        <div className="vory-v5-page-grid">
+          <ProfileCard
+            authUser={authUser}
+            roomCode={roomCode}
+            connectionStatus={connectionStatus}
+            stats={displayProfileStats}
+            profileProgress={profileProgress}
+            watchHistory={watchHistory}
+            continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null}
+            onResumeWatch={resumeWatchItem}
+          />
+
+          <DailyMissionsPanel
+            profileProgress={profileProgress}
+            stats={displayProfileStats}
+            loading={missionsLoading}
+            onRefresh={loadProfileProgress}
+            onClaimMission={claimDailyMission}
+          />
+
           <CustomizationStorePanel
             profileProgress={profileProgress}
             stats={displayProfileStats}
@@ -2373,12 +2340,36 @@ export default function Home({ authUser, onLogout }) {
             onUnlockItem={unlockCustomizationItem}
             onEquipItem={equipCustomizationItem}
           />
-          <LeaderboardPanel
-            users={leaderboardUsers}
-            loading={leaderboardLoading}
-            onRefresh={loadLeaderboard}
+        </div>
+      );
+    }
+
+    if (appSection === "settings") {
+      return (
+        <div className="vory-v5-page-grid">
+          <RoomPanel
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
           />
-          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} profileProgress={profileProgress} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
+
+          {renderRoomInviteCard()}
+          <InviteBox roomCode={roomCode} />
+          <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+          <RoomThemePanel
+            roomCode={roomCode}
+            isHost={isHost}
+            activeTheme={roomTheme}
+            onThemeChange={changeRoomTheme}
+          />
+
+          {isAdminUser ? <AdminFeedbackPanel authUser={authUser} /> : null}
         </div>
       );
     }
@@ -2430,13 +2421,24 @@ export default function Home({ authUser, onLogout }) {
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
           onInviteFriend={sendPartyInvite}
           onOpenDM={openDM}
+          activities={activityFeed}
         />
       </div>
     );
   }
 
   function renderMobilePanel() {
-    if (activeMobileTab === "watch") {
+    const mobileSectionMap = {
+      room: "settings",
+      voice: "watch",
+      chat: "watch",
+      dm: "friends",
+      social: "friends",
+      admin: "settings",
+    };
+    const mobileSection = mobileSectionMap[activeMobileTab] || activeMobileTab || "watch";
+
+    if (mobileSection === "watch") {
       return (
         <section className="flex min-w-0 flex-col gap-4 pb-28">
           <VideoPlayer
@@ -2451,31 +2453,50 @@ export default function Home({ authUser, onLogout }) {
             isHost={isHost}
           />
 
-          <ScreenShare roomCode={roomCode} username={currentUserPayload.username} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setMobileQueueOpen(true)}
+              className="rounded-[1.75rem] border border-violet-300/15 bg-violet-500/10 p-4 text-left shadow-[0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl"
+            >
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-violet-200/55">
+                Watch Queue
+              </p>
+              <h2 className="mt-2 truncate text-lg font-black text-white">
+                {currentMedia?.title || "Queue hazır"}
+              </h2>
+              <p className="mt-1 text-sm font-bold text-white/45">
+                {mediaQueue.length ? `${mediaQueue.length} medya sırada` : "Sırada medya yok"}
+              </p>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setMobileQueueOpen(true)}
-            className="rounded-[1.75rem] border border-violet-300/15 bg-violet-500/10 p-4 text-left shadow-[0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl"
-          >
-            <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-white/20" />
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-violet-200/55">
-              Swipe Up Queue
-            </p>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="truncate text-lg font-black text-white">
-                  {currentMedia?.title || "Queue hazır"}
-                </h2>
-                <p className="mt-1 text-sm font-bold text-white/45">
-                  {mediaQueue.length ? `${mediaQueue.length} medya sırada` : "Sırada medya yok"}
-                </p>
-              </div>
-              <span className="shrink-0 rounded-full bg-violet-500/20 px-3 py-2 text-xs font-black text-violet-100">
-                Aç
-              </span>
-            </div>
-          </button>
+            <button
+              type="button"
+              onClick={() => setMobileQueueOpen(false)}
+              className="rounded-[1.75rem] border border-sky-300/15 bg-sky-500/10 p-4 text-left shadow-[0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl"
+            >
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-sky-200/55">
+                Room Status
+              </p>
+              <h2 className="mt-2 truncate text-lg font-black text-white">
+                {roomCode ? `Room ${roomCode}` : "Lobby"}
+              </h2>
+              <p className="mt-1 text-sm font-bold text-white/45">
+                👥 {users.length || onlinePresence.length} kişi • 🎤 {liveVoiceCount} voice
+              </p>
+            </button>
+          </div>
+
+          <ChatPanel
+            messages={messages}
+            message={message}
+            setMessage={setMessage}
+            onSendMessage={sendMessage}
+            typingUser={typingUser}
+            onTyping={handleTyping}
+          />
+
+          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
 
           {mobileQueueOpen && (
             <div className="fixed inset-0 z-[9997] flex items-end bg-black/55 backdrop-blur-sm lg:hidden">
@@ -2528,100 +2549,21 @@ export default function Home({ authUser, onLogout }) {
       );
     }
 
-    if (activeMobileTab === "voice") {
+    if (mobileSection === "friends") {
       return (
-        <section className="flex min-w-0 flex-col gap-4">
-          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
-          <UserList users={users} />
-        </section>
-      );
-    }
-
-    if (activeMobileTab === "chat") {
-      return (
-        <section className="flex min-w-0 flex-col gap-4">
-          <ChatPanel
-            messages={messages}
-            message={message}
-            setMessage={setMessage}
-            onSendMessage={sendMessage}
-            typingUser={typingUser}
-            onTyping={handleTyping}
+        <section className="flex min-w-0 flex-col gap-4 pb-28">
+          <FriendRequestsPanel
+            authUser={authUser}
+            friendState={friendState}
+            searchQuery={friendSearchQuery}
+            setSearchQuery={setFriendSearchQuery}
+            searchResults={friendSearchResults}
+            loading={friendsLoading}
+            onSendRequest={sendFriendRequest}
+            onAcceptRequest={acceptFriendRequest}
+            onRejectRequest={rejectFriendRequest}
+            onRemoveFriend={removeFriend}
           />
-          <InviteBox roomCode={roomCode} />
-        </section>
-      );
-    }
-
-    if (activeMobileTab === "room") {
-      return (
-        <section className="flex min-w-0 flex-col gap-4">
-          <RoomPanel
-            username={username}
-            setUsername={setUsername}
-            roomInput={roomInput}
-            setRoomInput={setRoomInput}
-            roomCode={roomCode}
-            status={status}
-            onCreateRoom={createRoom}
-            onJoinRoom={() => joinRoom()}
-            onLeaveRoom={leaveRoom}
-          />
-
-          <PartyDiscoveryPanel
-            rooms={discoveryRooms}
-            loading={discoveryLoading}
-            currentRoomCode={roomCode}
-            isHost={isHost}
-            currentRoomPublic={!!roomSettings?.publicRoom}
-            onRefresh={refreshDiscoveryRooms}
-            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-            onTogglePublic={togglePublicRoom}
-          />
-
-          <DailyMissionsPanel
-            profileProgress={profileProgress}
-            stats={displayProfileStats}
-            loading={missionsLoading}
-            onRefresh={loadProfileProgress}
-            onClaimMission={claimDailyMission}
-          />
-
-          {renderRoomInviteCard()}
-          <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
-          <RoomThemePanel
-            roomCode={roomCode}
-            isHost={isHost}
-            activeTheme={roomTheme}
-            onThemeChange={changeRoomTheme}
-          />
-        </section>
-      );
-    }
-
-    if (activeMobileTab === "admin") {
-      return (
-        <section className="flex min-w-0 flex-col gap-4">
-          <AdminFeedbackPanel authUser={authUser} />
-        </section>
-      );
-    }
-
-    if (activeMobileTab === "dm") {
-      return (
-        <section className="flex min-w-0 flex-col gap-4">
-          <div className="rounded-[1.75rem] border border-sky-300/10 bg-sky-400/5 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-sky-200/55">
-              Mobile DM
-            </p>
-            <h2 className="mt-1 text-xl font-black text-white">
-              Mesajlar
-            </h2>
-            <p className="mt-1 text-sm font-bold text-white/45">
-              Bir arkadaşına dokun, DM tam ekran açılsın.
-            </p>
-          </div>
-
           <PresenceFriendPanel
             friendState={friendState}
             onlineUsers={onlinePresence}
@@ -2639,34 +2581,84 @@ export default function Home({ authUser, onLogout }) {
       );
     }
 
+    if (mobileSection === "discover") {
+      return (
+        <section className="flex min-w-0 flex-col gap-4 pb-28">
+          <PartyDiscoveryPanel
+            rooms={discoveryRooms}
+            loading={discoveryLoading}
+            currentRoomCode={roomCode}
+            isHost={isHost}
+            currentRoomPublic={!!roomSettings?.publicRoom}
+            onRefresh={refreshDiscoveryRooms}
+            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+            onTogglePublic={togglePublicRoom}
+          />
+          <CreatorHubPanel
+            hub={creatorHub}
+            currentUserId={currentUserId}
+            loading={creatorHubLoading}
+            onRefresh={loadCreatorHub}
+            onFollowCreator={followCreator}
+            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+            onCreateEvent={createCreatorEvent}
+            onRemindEvent={remindCreatorEvent}
+            currentRoomCode={roomCode}
+          />
+          <LeaderboardPanel
+            users={leaderboardUsers}
+            loading={leaderboardLoading}
+            onRefresh={loadLeaderboard}
+          />
+        </section>
+      );
+    }
+
+    if (mobileSection === "profile") {
+      return (
+        <section className="flex min-w-0 flex-col gap-4 pb-28">
+          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} profileProgress={profileProgress} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
+          <DailyMissionsPanel
+            profileProgress={profileProgress}
+            stats={displayProfileStats}
+            loading={missionsLoading}
+            onRefresh={loadProfileProgress}
+            onClaimMission={claimDailyMission}
+          />
+          <CustomizationStorePanel
+            profileProgress={profileProgress}
+            stats={displayProfileStats}
+            loading={storeLoading}
+            onRefresh={refreshCustomizationStore}
+            onUnlockItem={unlockCustomizationItem}
+            onEquipItem={equipCustomizationItem}
+          />
+        </section>
+      );
+    }
+
     return (
-      <section className="flex min-w-0 flex-col gap-4">
-        <FriendRequestsPanel
-          authUser={authUser}
-          friendState={friendState}
-          searchQuery={friendSearchQuery}
-          setSearchQuery={setFriendSearchQuery}
-          searchResults={friendSearchResults}
-          loading={friendsLoading}
-          onSendRequest={sendFriendRequest}
-          onAcceptRequest={acceptFriendRequest}
-          onRejectRequest={rejectFriendRequest}
-          onRemoveFriend={removeFriend}
+      <section className="flex min-w-0 flex-col gap-4 pb-28">
+        <RoomPanel
+          username={username}
+          setUsername={setUsername}
+          roomInput={roomInput}
+          setRoomInput={setRoomInput}
+          roomCode={roomCode}
+          status={status}
+          onCreateRoom={createRoom}
+          onJoinRoom={() => joinRoom()}
+          onLeaveRoom={leaveRoom}
         />
-        <PresenceFriendPanel
-          friendState={friendState}
-          onlineUsers={onlinePresence}
-          currentSocketId={socket.id}
-          currentRoomCode={roomCode}
-          inviteCooldowns={inviteCooldowns}
-          dmUnread={dmUnread}
-          activeDM={activeDM}
-          dmLastMessages={dmLastMessages}
-          onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-          onInviteFriend={sendPartyInvite}
-          onOpenDM={openDM}
+        {renderRoomInviteCard()}
+        <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+        <RoomThemePanel
+          roomCode={roomCode}
+          isHost={isHost}
+          activeTheme={roomTheme}
+          onThemeChange={changeRoomTheme}
         />
-        <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} profileProgress={profileProgress} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
+        {isAdminUser ? <AdminFeedbackPanel authUser={authUser} /> : null}
       </section>
     );
   }
@@ -2775,7 +2767,7 @@ export default function Home({ authUser, onLogout }) {
               <VoryBottomDock
                 roomCode={roomCode}
                 isHost={isHost}
-                onOpenRoom={() => handleSectionChange("room")}
+                onOpenRoom={() => handleSectionChange("settings")}
                 onOpenVoice={() => handleSectionChange("voice")}
                 onOpenChat={() => {
                   setRightPanelTab("chat");
@@ -2834,7 +2826,7 @@ export default function Home({ authUser, onLogout }) {
 
           <MobileBottomNav
             activeTab={activeMobileTab}
-            onChange={setActiveMobileTab}
+            onChange={handleSectionChange}
             unreadMessages={messages.length}
             dmUnreadCount={totalDmUnread}
             onlineCount={onlinePresence.length}

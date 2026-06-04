@@ -8,7 +8,7 @@ import ActivityFeed from "./ActivityFeed";
 const tabs = [
   { id: "queue", label: "Queue", icon: ListVideo },
   { id: "chat", label: "Chat", icon: MessageCircle },
-  { id: "people", label: "People", icon: UsersRound },
+  { id: "people", label: "Room", icon: UsersRound },
   { id: "activity", label: "Activity", icon: Activity },
 ];
 

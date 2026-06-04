@@ -47,7 +47,7 @@ export default function VoryBottomDock({
 
       <button type="button" onClick={onOpenRoom} className="vory-v5-dock-btn">
         <Settings2 size={17} />
-        Room
+        Settings
       </button>
 
       <div className="ml-auto hidden rounded-full bg-emerald-400/10 px-3 py-2 text-xs font-black text-emerald-200 sm:block">

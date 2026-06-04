@@ -1,14 +1,12 @@
-import { Home, MessageCircle, Radio, ShieldCheck, UsersRound, Video } from "lucide-react";
+import { Compass, Settings, UserRound, UsersRound, Video } from "lucide-react";
 
-const baseItems = [
+const navItems = [
   { id: "watch", label: "Watch", icon: Video },
-  { id: "room", label: "Room", icon: Home },
-  { id: "voice", label: "Voice", icon: Radio },
-  { id: "chat", label: "Chat", icon: MessageCircle },
-  { id: "friends", label: "Social", icon: UsersRound },
+  { id: "friends", label: "Friends", icon: UsersRound },
+  { id: "discover", label: "Discover", icon: Compass },
+  { id: "profile", label: "Profile", icon: UserRound },
+  { id: "settings", label: "Settings", icon: Settings },
 ];
-
-const adminItem = { id: "admin", label: "Admin", icon: ShieldCheck };
 
 export default function VorySidebar({
   activeSection,
@@ -18,7 +16,7 @@ export default function VorySidebar({
   userCount = 0,
   isAdmin = false,
 }) {
-  const items = isAdmin ? [...baseItems, adminItem] : baseItems;
+  const activeId = activeSection === "admin" ? "settings" : activeSection;
 
   return (
     <aside className="vory-v5-sidebar">
@@ -32,15 +30,17 @@ export default function VorySidebar({
       </button>
 
       <nav className="flex flex-1 flex-col items-center gap-2">
-        {items.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
-          const active = activeSection === item.id;
+          const active = activeId === item.id;
           const badge =
             item.id === "friends" && onlineCount > 0
               ? onlineCount
-              : item.id === "voice" && userCount > 0
+              : item.id === "watch" && userCount > 0
                 ? userCount
-                : null;
+                : item.id === "settings" && isAdmin
+                  ? "A"
+                  : null;
 
           return (
             <button
@@ -51,7 +51,7 @@ export default function VorySidebar({
               title={item.label}
             >
               <Icon size={21} />
-              {badge ? <span className="vory-v5-nav-badge">{Math.min(99, badge)}</span> : null}
+              {badge ? <span className="vory-v5-nav-badge">{typeof badge === "number" ? Math.min(99, badge) : badge}</span> : null}
             </button>
           );
         })}
