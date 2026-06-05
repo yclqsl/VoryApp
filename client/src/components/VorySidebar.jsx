@@ -19,7 +19,7 @@ export default function VorySidebar({
   const activeId = activeSection === "admin" ? "settings" : activeSection;
 
   return (
-    <aside className="vory-v5-sidebar">
+    <aside className="vory-v5-sidebar !rounded-[2rem] !bg-black/25 !backdrop-blur-2xl">
       <button
         type="button"
         onClick={() => onChange?.("watch")}

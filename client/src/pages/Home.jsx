@@ -208,7 +208,7 @@ export default function Home({ authUser, onLogout }) {
   const [pendingInviteRoom, setPendingInviteRoom] = useState("");
   const [activeMobileTab, setActiveMobileTab] = useState("watch");
   const [appSection, setAppSection] = useState("watch");
-  const [rightPanelTab, setRightPanelTab] = useState("queue");
+  const [rightPanelTab, setRightPanelTab] = useState("chat");
   const [notifications, setNotifications] = useState([]);
   const [currentMedia, setCurrentMedia] = useState(null);
   const [mediaQueue, setMediaQueue] = useState([]);
@@ -2187,7 +2187,7 @@ export default function Home({ authUser, onLogout }) {
     } else if (section === "voice") {
       setRightPanelTab("people");
     } else if (nextSection === "watch") {
-      setRightPanelTab("queue");
+      setRightPanelTab("chat");
     } else if (nextSection === "friends") {
       setRightPanelTab("people");
     }
@@ -2379,19 +2379,35 @@ export default function Home({ authUser, onLogout }) {
     }
 
     return (
-      <div className="vory-v5-watch-layout">
-        <section className="vory-v5-player-card">
-          <VideoPlayer
-            videoUrl={videoUrl}
-            videoInput={videoInput}
-            setVideoInput={setVideoInput}
-            onSetVideo={setRoomVideo}
-            onVideoControl={handleVideoControl}
-            onVideoSeek={handleVideoSeek}
-            playerRef={playerRef}
-            ignoreEventRef={ignoreEventRef}
-            isHost={isHost}
-          />
+      <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_390px]">
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/25 p-3 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/35">Rave Minimal Watch</p>
+              <h2 className="truncate text-lg font-black text-white">{currentMedia?.title || (roomCode ? `Room ${roomCode}` : "Ready to Watch")}</h2>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={copyInviteLink} className="rounded-2xl bg-white/8 px-3 py-2 text-xs font-black text-white/65 transition hover:bg-white/12 hover:text-white">Invite</button>
+              <button type="button" onClick={() => setRightPanelTab("chat")} className="rounded-2xl bg-white/8 px-3 py-2 text-xs font-black text-white/65 transition hover:bg-white/12 hover:text-white">Chat</button>
+              <button type="button" onClick={() => setRightPanelTab("people")} className="rounded-2xl bg-white/8 px-3 py-2 text-xs font-black text-white/65 transition hover:bg-white/12 hover:text-white">People</button>
+              <button type="button" onClick={() => handleSectionChange("settings")} className="rounded-2xl bg-white/8 px-3 py-2 text-xs font-black text-white/65 transition hover:bg-white/12 hover:text-white">Room</button>
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-hidden rounded-[1.7rem]">
+            <VideoPlayer
+              videoUrl={videoUrl}
+              videoInput={videoInput}
+              setVideoInput={setVideoInput}
+              onSetVideo={setRoomVideo}
+              onVideoControl={handleVideoControl}
+              onVideoSeek={handleVideoSeek}
+              playerRef={playerRef}
+              ignoreEventRef={ignoreEventRef}
+              isHost={isHost}
+            />
+          </div>
         </section>
 
         <VoryRightPanel
@@ -2421,7 +2437,6 @@ export default function Home({ authUser, onLogout }) {
           onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
           onInviteFriend={sendPartyInvite}
           onOpenDM={openDM}
-          activities={activityFeed}
         />
       </div>
     );

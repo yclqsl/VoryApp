@@ -1,19 +1,17 @@
-import { Activity, ListVideo, MessageCircle, UsersRound } from "lucide-react";
+import { ListVideo, MessageCircle, UsersRound } from "lucide-react";
 import ChatPanel from "./ChatPanel";
 import MediaQueue from "./MediaQueue";
 import PresenceFriendPanel from "./PresenceFriendPanel";
 import UserList from "./UserList";
-import ActivityFeed from "./ActivityFeed";
 
 const tabs = [
-  { id: "queue", label: "Queue", icon: ListVideo },
   { id: "chat", label: "Chat", icon: MessageCircle },
-  { id: "people", label: "Room", icon: UsersRound },
-  { id: "activity", label: "Activity", icon: Activity },
+  { id: "people", label: "People", icon: UsersRound },
+  { id: "queue", label: "Queue", icon: ListVideo },
 ];
 
 export default function VoryRightPanel({
-  activeTab,
+  activeTab = "chat",
   onChange,
   roomCode,
   isHost,
@@ -23,6 +21,7 @@ export default function VoryRightPanel({
   onPlayNext,
   onRemoveMedia,
   onClearQueue,
+  onVoteMedia,
   messages,
   message,
   setMessage,
@@ -32,23 +31,24 @@ export default function VoryRightPanel({
   currentSocketId,
   onJoinRoom,
   onInviteFriend,
-  activities = [],
 }) {
+  const safeTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : "chat";
+
   return (
-    <aside className="vory-v5-right-panel">
-      <div className="vory-v5-panel-tabs">
+    <aside className="vory-v5-right-panel !rounded-[2rem] !border-white/10 !bg-black/25 !p-3 !shadow-[0_24px_90px_rgba(0,0,0,0.3)]">
+      <div className="mb-3 grid grid-cols-3 gap-2 rounded-[1.5rem] border border-white/8 bg-black/25 p-1.5">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const active = activeTab === tab.id;
+          const active = safeTab === tab.id;
 
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => onChange?.(tab.id)}
-              className={`vory-v5-panel-tab ${active ? "vory-v5-panel-tab-active" : ""}`}
+              className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-xs font-black transition ${active ? "bg-white text-black" : "text-white/45 hover:bg-white/8 hover:text-white"}`}
             >
-              <Icon size={16} />
+              <Icon size={15} />
               {tab.label}
             </button>
           );
@@ -56,20 +56,7 @@ export default function VoryRightPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto pr-1">
-        {activeTab === "queue" && (
-          <MediaQueue
-            roomCode={roomCode}
-            isHost={isHost}
-            currentMedia={currentMedia}
-            queue={mediaQueue}
-            onAdd={onAddMedia}
-            onPlayNext={onPlayNext}
-            onRemove={onRemoveMedia}
-            onClear={onClearQueue}
-          />
-        )}
-
-        {activeTab === "chat" && (
+        {safeTab === "chat" && (
           <ChatPanel
             messages={messages}
             message={message}
@@ -78,7 +65,7 @@ export default function VoryRightPanel({
           />
         )}
 
-        {activeTab === "people" && (
+        {safeTab === "people" && (
           <div className="space-y-3">
             <UserList users={users} />
             <PresenceFriendPanel
@@ -90,8 +77,18 @@ export default function VoryRightPanel({
           </div>
         )}
 
-        {activeTab === "activity" && (
-          <ActivityFeed activities={activities} />
+        {safeTab === "queue" && (
+          <MediaQueue
+            roomCode={roomCode}
+            isHost={isHost}
+            currentMedia={currentMedia}
+            queue={mediaQueue}
+            onAdd={onAddMedia}
+            onPlayNext={onPlayNext}
+            onRemove={onRemoveMedia}
+            onClear={onClearQueue}
+            onVote={onVoteMedia}
+          />
         )}
       </div>
     </aside>
