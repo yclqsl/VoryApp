@@ -35,6 +35,10 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: 90
     },
+    usernameLastChangedAt: {
+      type: Date,
+      default: null
+    },
     favoritePlatforms: {
       type: [String],
       default: []
