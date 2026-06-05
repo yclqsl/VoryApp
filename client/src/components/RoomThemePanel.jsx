@@ -36,13 +36,14 @@ export default function RoomThemePanel({
   isHost,
   activeTheme = "neon",
   onThemeChange,
+  compact = false,
 }) {
   return (
-    <section className="glass-panel p-5">
+    <section className={compact ? "rounded-[1.75rem] border border-white/10 bg-black/20 p-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-2xl" : "glass-panel p-5"}>
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.28em] text-violet-200/55">
-            V13.8 Room Themes
+            Room Settings
           </p>
           <h2 className="mt-1 text-xl font-black text-white">
             Oda Teması
@@ -59,7 +60,7 @@ export default function RoomThemePanel({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className={compact ? "mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4" : "mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"}>
         {themes.map((theme) => {
           const Icon = theme.icon;
           const active = activeTheme === theme.id;
@@ -70,7 +71,7 @@ export default function RoomThemePanel({
               type="button"
               disabled={!roomCode || !isHost}
               onClick={() => onThemeChange?.(theme.id)}
-              className={`group rounded-[1.35rem] border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-55 ${
+              className={`group rounded-[1.35rem] border ${compact ? "p-3" : "p-4"} text-left transition disabled:cursor-not-allowed disabled:opacity-55 ${
                 active
                   ? "border-violet-300/35 bg-violet-500/20 shadow-[0_0_32px_rgba(139,92,246,0.16)]"
                   : "border-white/10 bg-white/[0.04] hover:border-white/18 hover:bg-white/[0.07]"
@@ -78,7 +79,7 @@ export default function RoomThemePanel({
             >
               <div className="flex items-center justify-between gap-3">
                 <span
-                  className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+                  className={`flex ${compact ? "h-9 w-9" : "h-11 w-11"} items-center justify-center rounded-2xl ${
                     active ? "bg-violet-400/20 text-violet-100" : "bg-black/25 text-white/45"
                   }`}
                 >
@@ -90,12 +91,14 @@ export default function RoomThemePanel({
                 </span>
               </div>
 
-              <h3 className="mt-3 text-base font-black text-white">
+              <h3 className={compact ? "mt-2 text-sm font-black text-white" : "mt-3 text-base font-black text-white"}>
                 {theme.name}
               </h3>
-              <p className="mt-1 text-xs font-bold leading-5 text-white/40">
-                {theme.description}
-              </p>
+              {!compact ? (
+                <p className="mt-1 text-xs font-bold leading-5 text-white/40">
+                  {theme.description}
+                </p>
+              ) : null}
 
               {active ? (
                 <p className="mt-3 text-xs font-black text-emerald-200">

@@ -16,7 +16,6 @@ import AnimatedBackground from "../components/AnimatedBackground";
 import InviteBox from "../components/InviteBox";
 import PartyDiscoveryPanel from "../components/PartyDiscoveryPanel";
 import LeaderboardPanel from "../components/LeaderboardPanel";
-import DailyMissionsPanel from "../components/DailyMissionsPanel";
 import CustomizationStorePanel from "../components/CustomizationStorePanel";
 import CreatorHubPanel from "../components/CreatorHubPanel";
 import PresenceFriendPanel from "../components/PresenceFriendPanel";
@@ -2326,9 +2325,6 @@ export default function Home({ authUser, onLogout }) {
             connectionStatus={connectionStatus}
             stats={displayProfileStats}
             profileProgress={profileProgress}
-            watchHistory={watchHistory}
-            continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null}
-            onResumeWatch={resumeWatchItem}
           />
 
           <CustomizationStorePanel
@@ -2349,13 +2345,6 @@ export default function Home({ authUser, onLogout }) {
           {renderRoomInviteCard()}
           <InviteBox roomCode={roomCode} />
           <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
-          <RoomThemePanel
-            roomCode={roomCode}
-            isHost={isHost}
-            activeTheme={roomTheme}
-            onThemeChange={changeRoomTheme}
-          />
-
           {isAdminUser ? <AdminFeedbackPanel authUser={authUser} /> : null}
         </div>
       );
@@ -2394,6 +2383,26 @@ export default function Home({ authUser, onLogout }) {
             onJoinRoom={() => joinRoom()}
             onLeaveRoom={leaveRoom}
           />
+
+          {roomCode ? (
+            <RoomThemePanel
+              roomCode={roomCode}
+              isHost={isHost}
+              activeTheme={roomTheme}
+              onThemeChange={changeRoomTheme}
+              compact
+            />
+          ) : null}
+
+          {roomCode ? (
+            <RoomThemePanel
+              roomCode={roomCode}
+              isHost={isHost}
+              activeTheme={roomTheme}
+              onThemeChange={changeRoomTheme}
+              compact
+            />
+          ) : null}
         </section>
 
         <VoryRightPanel
@@ -2654,13 +2663,12 @@ export default function Home({ authUser, onLogout }) {
     if (mobileSection === "profile") {
       return (
         <section className="flex min-w-0 flex-col gap-4 pb-28">
-          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} profileProgress={profileProgress} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
-          <DailyMissionsPanel
-            profileProgress={profileProgress}
+          <ProfileCard
+            authUser={authUser}
+            roomCode={roomCode}
+            connectionStatus={connectionStatus}
             stats={displayProfileStats}
-            loading={missionsLoading}
-            onRefresh={loadProfileProgress}
-            onClaimMission={claimDailyMission}
+            profileProgress={profileProgress}
           />
           <CustomizationStorePanel
             profileProgress={profileProgress}
