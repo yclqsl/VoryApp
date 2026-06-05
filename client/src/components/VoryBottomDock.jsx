@@ -42,7 +42,7 @@ export default function VoryBottomDock({
         className="vory-v5-dock-btn"
       >
         <MonitorUp size={17} />
-        Share
+        Screen
       </button>
 
       <button type="button" onClick={onOpenRoom} className="vory-v5-dock-btn">

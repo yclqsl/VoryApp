@@ -1,10 +1,10 @@
-import { LogOut, Settings, UserRound, UsersRound, Video } from "lucide-react";
+import { LogOut, MonitorUp, UserRound, UsersRound, Video } from "lucide-react";
 
 const tabs = [
   { id: "watch", label: "Watch", icon: Video },
   { id: "friends", label: "Friends", icon: UsersRound },
   { id: "profile", label: "Profile", icon: UserRound },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "screen", label: "Screen", icon: MonitorUp },
   { id: "logout", label: "Logout", icon: LogOut },
 ];
 
@@ -17,7 +17,7 @@ export default function MobileBottomNav({
   roomCode,
   onLogout,
 }) {
-  const activeId = activeTab === "dm" || activeTab === "social" ? "friends" : activeTab === "room" ? "settings" : activeTab;
+  const activeId = activeTab === "dm" || activeTab === "social" ? "friends" : activeTab === "room" ? "screen" : activeTab;
 
   return (
     <nav className="fixed inset-x-3 bottom-3 z-50 rounded-[1.75rem] border border-white/10 bg-black/85 p-2 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-2xl lg:hidden">
@@ -55,7 +55,7 @@ export default function MobileBottomNav({
 
               <span>{tab.label}</span>
 
-              {tab.id === "settings" && roomCode ? (
+              {tab.id === "screen" && roomCode ? (
                 <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
               ) : null}
             </button>
