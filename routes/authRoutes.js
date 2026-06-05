@@ -5,15 +5,86 @@ const User = require("../models/User");
 
 const router = express.Router();
 
+const ADMIN_EMAIL_FIX_TARGET = "yucelinizbusiness@gmail.com";
+
+function getAdminFixKey(req) {
+  return req.headers["x-admin-key"] || req.body?.adminKey || req.query?.key || "";
+}
+
+function normalizeLoginValue(value = "") {
+  return String(value || "").trim();
+}
+
+
 function createToken(userId) {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
     expiresIn: "7d"
   });
 }
 
+
+// Vory 1.0.5.3 - One-time admin email repair endpoint.
+// Deploy this, call it once with ADMIN_KEY, then remove this endpoint in a later cleanup patch.
+router.patch("/admin/fix-email", async (req, res) => {
+  try {
+    const fixKey = getAdminFixKey(req);
+
+    if (!process.env.ADMIN_KEY) {
+      return res.status(403).json({
+        message: "ADMIN_KEY env yok. Render Environment içine ADMIN_KEY eklemeden bu endpoint çalışmaz.",
+      });
+    }
+
+    if (fixKey !== process.env.ADMIN_KEY) {
+      return res.status(401).json({ message: "Yetkisiz." });
+    }
+
+    const targetEmail = String(req.body?.email || req.query?.email || ADMIN_EMAIL_FIX_TARGET)
+      .trim()
+      .toLowerCase();
+
+    if (!targetEmail || !targetEmail.includes("@")) {
+      return res.status(400).json({ message: "Geçerli bir email gerekli." });
+    }
+
+    const adminUser = await User.findOne({
+      $or: [{ username: "admin" }, { email: "admin" }],
+    });
+
+    if (!adminUser) {
+      return res.status(404).json({ message: "Admin kullanıcısı bulunamadı." });
+    }
+
+    const emailOwner = await User.findOne({ email: targetEmail });
+
+    if (emailOwner && String(emailOwner._id) !== String(adminUser._id)) {
+      return res.status(409).json({
+        message: "Bu email başka kullanıcıda kayıtlı.",
+      });
+    }
+
+    adminUser.email = targetEmail;
+    await adminUser.save();
+
+    res.json({
+      message: "Admin email düzeltildi.",
+      user: {
+        id: adminUser._id,
+        username: adminUser.username,
+        email: adminUser.email,
+      },
+    });
+  } catch (error) {
+    console.error("Admin email fix error:", error);
+    res.status(500).json({ message: "Admin email düzeltilemedi." });
+  }
+});
+
 router.post("/register", async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const username = String(req.body?.username || "").trim();
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const password = req.body?.password;
 
     if (!username || !email || !password) {
       return res.status(400).json({ message: "Tüm alanlar zorunlu." });
@@ -53,16 +124,23 @@ router.post("/register", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
-    const { emailOrUsername, password } = req.body;
+    const emailOrUsername = normalizeLoginValue(
+      req.body?.emailOrUsername || req.body?.email || req.body?.username
+    );
+    const password = req.body?.password;
 
     if (!emailOrUsername || !password) {
       return res.status(400).json({ message: "Tüm alanlar zorunlu." });
     }
 
+    const cleanLogin = emailOrUsername.trim();
+    const lowerLogin = cleanLogin.toLowerCase();
+
     const user = await User.findOne({
       $or: [
-        { email: emailOrUsername.toLowerCase() },
-        { username: emailOrUsername }
+        { email: lowerLogin },
+        { username: cleanLogin },
+        { username: lowerLogin }
       ]
     });
 
