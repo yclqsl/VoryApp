@@ -15,6 +15,22 @@ function normalizeLoginValue(value = "") {
   return String(value || "").trim();
 }
 
+const USERNAME_REGEX = /^[a-z0-9.]{3,20}$/i;
+
+function normalizeUsername(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isValidUsername(value = "") {
+  const cleanUsername = normalizeUsername(value);
+  return USERNAME_REGEX.test(cleanUsername);
+}
+
+function isValidEmail(value = "") {
+  const cleanEmail = String(value || "").trim().toLowerCase();
+  return cleanEmail.includes("@") && cleanEmail.includes(".");
+}
+
 
 function createToken(userId) {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -82,12 +98,22 @@ router.patch("/admin/fix-email", async (req, res) => {
 
 router.post("/register", async (req, res) => {
   try {
-    const username = String(req.body?.username || "").trim();
+    const username = normalizeUsername(req.body?.username);
     const email = String(req.body?.email || "").trim().toLowerCase();
     const password = req.body?.password;
 
     if (!username || !email || !password) {
       return res.status(400).json({ message: "Tüm alanlar zorunlu." });
+    }
+
+    if (!isValidUsername(username)) {
+      return res.status(400).json({
+        message: "Kullanıcı adı 3-20 karakter olmalı; sadece harf, sayı ve nokta kullanılabilir.",
+      });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: "Geçerli bir email gerekli." });
     }
 
     const existingUser = await User.findOne({
@@ -167,6 +193,35 @@ router.post("/login", async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Giriş sırasında hata oluştu." });
+  }
+});
+
+
+// Vory 1.0.8a - Auth polish hazırlığı.
+// Mail kodlu gerçek reset akışı V1.0.8b'de SMTP/Resend bilgileriyle tamamlanacak.
+router.post("/request-password-reset", async (req, res) => {
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: "Geçerli bir email gerekli." });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.json({
+        message: "Bu email kayıtlıysa şifre sıfırlama akışı başlatılacak.",
+        recoveryReady: false,
+      });
+    }
+
+    return res.json({
+      message: "Şifre sıfırlama isteği alındı. Mail kod sistemi V1.0.8b'de aktif edilecek.",
+      recoveryReady: false,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Şifre sıfırlama isteği alınamadı." });
   }
 });
 
