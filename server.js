@@ -1742,6 +1742,13 @@ io.on("connection", (socket) => {
       return;
     }
 
+    socket.emit("screen-share-state", {
+      active: true,
+      broadcaster,
+      username: activeShare?.username || "Kullanıcı",
+      roomCode: targetRoomCode,
+    });
+
     socket.emit("screen-share-started", {
       broadcaster,
       username: activeShare?.username || "Kullanıcı",
@@ -2297,6 +2304,7 @@ io.on("connection", (socket) => {
 
         io.to(roomCode).emit("screen-share-stopped", {
           broadcaster: socket.id,
+          roomCode,
         });
       }
     }
@@ -2308,6 +2316,7 @@ io.on("connection", (socket) => {
     }
 
     emitPresence();
+    emitDiscoveryRooms();
   });
 });
 

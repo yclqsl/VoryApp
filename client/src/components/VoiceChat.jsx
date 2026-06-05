@@ -19,6 +19,7 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
 
   const localStreamRef = useRef(null);
   const peersRef = useRef({});
+  const pendingIceRef = useRef({});
   const audioRefs = useRef({});
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
@@ -90,6 +91,21 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
     analyserRef.current = null;
   }
 
+  async function flushPendingIce(targetSocketId) {
+    const peer = peersRef.current[targetSocketId];
+    const pending = pendingIceRef.current[targetSocketId] || [];
+
+    if (!peer || !peer.remoteDescription || !pending.length) return;
+
+    pendingIceRef.current[targetSocketId] = [];
+
+    for (const candidate of pending) {
+      try {
+        await peer.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch {}
+    }
+  }
+
   async function startVoice() {
     try {
       if (!roomCode) {
@@ -128,6 +144,7 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
     });
 
     peersRef.current = {};
+    pendingIceRef.current = {};
 
     Object.values(audioRefs.current).forEach((audio) => {
       try {
@@ -221,6 +238,7 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
         peer.close();
       } catch {}
       delete peersRef.current[socketId];
+      delete pendingIceRef.current[socketId];
     }
 
     const audio = audioRefs.current[socketId];
@@ -362,6 +380,7 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
       const peer = createPeer(from, false);
 
       await peer.setRemoteDescription(new RTCSessionDescription(offer));
+      await flushPendingIce(from);
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
 
@@ -376,11 +395,19 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
       if (!peer) return;
 
       await peer.setRemoteDescription(new RTCSessionDescription(answer));
+      await flushPendingIce(from);
     });
 
     socket.on("voice-ice-candidate", async ({ from, candidate }) => {
       const peer = peersRef.current[from];
-      if (!peer) return;
+
+      if (!peer || !peer.remoteDescription) {
+        pendingIceRef.current[from] = [
+          ...(pendingIceRef.current[from] || []),
+          candidate,
+        ];
+        return;
+      }
 
       try {
         await peer.addIceCandidate(new RTCIceCandidate(candidate));
@@ -410,6 +437,23 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
       setForceMutedByHost(false);
     });
 
+    function handleVoiceReconnect() {
+      if (!roomCode || !localStreamRef.current) return;
+
+      Object.values(peersRef.current).forEach((peer) => {
+        try { peer.close(); } catch {}
+      });
+      peersRef.current = {};
+      pendingIceRef.current = {};
+
+      socket.emit("voice-join", {
+        roomCode,
+        username,
+      });
+    }
+
+    socket.on("connect", handleVoiceReconnect);
+
     return () => {
       socket.off("voice-users");
       socket.off("voice-level-update");
@@ -421,6 +465,7 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
       socket.off("voice-user-left");
       socket.off("room-mute-all");
       socket.off("room-settings-updated");
+      socket.off("connect");
 
       if (localStreamRef.current) {
         stopVoice();

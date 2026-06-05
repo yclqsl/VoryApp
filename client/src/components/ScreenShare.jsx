@@ -10,6 +10,15 @@ const ICE_SERVERS = {
   ],
 };
 
+function canStartScreenShare() {
+  return typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
+}
+
+function isMobileBrowser() {
+  if (typeof navigator === "undefined") return false;
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+}
+
 export default function ScreenShare({ roomCode, username }) {
   const [isSharing, setIsSharing] = useState(false);
   const [activeBroadcaster, setActiveBroadcaster] = useState(null);
@@ -138,6 +147,7 @@ export default function ScreenShare({ roomCode, username }) {
 
       if (remoteVideoRef.current && remoteStream) {
         remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play?.().catch(() => {});
         setConnectionStatus("Yayın izleniyor");
       }
     };
@@ -189,9 +199,15 @@ export default function ScreenShare({ roomCode, username }) {
         return;
       }
 
+      if (!canStartScreenShare()) {
+        toast.error("Bu cihazda ekran paylaşımı başlatılamıyor. Bilgisayardan paylaşım açabilirsin.");
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           frameRate: 30,
+          cursor: "always",
         },
         audio: true,
       });
@@ -255,6 +271,12 @@ export default function ScreenShare({ roomCode, username }) {
         roomCode,
         broadcaster,
       });
+
+      setTimeout(() => {
+        if (!remoteVideoRef.current?.srcObject) {
+          socket.emit("request-screen-stream", { roomCode, broadcaster, retry: true });
+        }
+      }, 1800);
     }
 
     function handleShareStopped() {
@@ -334,6 +356,7 @@ export default function ScreenShare({ roomCode, username }) {
     socket.on("screen-ice-candidate", handleIceCandidate);
     socket.on("screen-share-state", handleShareState);
     socket.on("screen-share-error", handleShareError);
+    socket.on("connect", requestActiveScreenShare);
 
     requestActiveScreenShare();
 
@@ -352,6 +375,7 @@ export default function ScreenShare({ roomCode, username }) {
       socket.off("screen-ice-candidate", handleIceCandidate);
       socket.off("screen-share-state", handleShareState);
       socket.off("screen-share-error", handleShareError);
+      socket.off("connect", requestActiveScreenShare);
       socket.off("connect", handleSocketReconnect);
 
       if (isMeBroadcaster() && roomCode) {
@@ -442,14 +466,22 @@ export default function ScreenShare({ roomCode, username }) {
       )}
 
       {!isSharing ? (
-        <button
-          className="btn mt-4 flex items-center justify-center gap-2"
-          onClick={startScreenShare}
-          disabled={!!activeBroadcaster && activeBroadcaster !== socket.id}
-        >
-          <Monitor size={18} />
-          Ekran Paylaş
-        </button>
+        <div className="mt-4">
+          {isMobileBrowser() && !canStartScreenShare() ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-xs font-bold text-white/45">
+              📱 Mobilde ekran paylaşımı başlatma desteklenmiyor. Bilgisayardan paylaşım açabilir, mobilde yayını izleyebilirsin.
+            </div>
+          ) : (
+            <button
+              className="btn mt-0 flex items-center justify-center gap-2"
+              onClick={startScreenShare}
+              disabled={!!activeBroadcaster && activeBroadcaster !== socket.id}
+            >
+              <Monitor size={18} />
+              Ekran Paylaş
+            </button>
+          )}
+        </div>
       ) : (
         <button
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500/15 px-4 py-3 font-bold text-red-300 transition hover:bg-red-500/25"
