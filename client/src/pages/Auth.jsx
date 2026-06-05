@@ -293,7 +293,7 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
                   <input
                     value={username}
                     onChange={(event) => setUsername(cleanUsername(event.target.value))}
-                    placeholder="kullanici.adi"
+                    placeholder="Kullanıcı Adı"
                     autoComplete="username"
                     maxLength={20}
                   />
