@@ -1,8 +1,7 @@
-import { Camera, Clock3, Loader2, Save, Sparkles, Trophy, UserRound } from "lucide-react";
+import { Camera, Loader2, Save, Trophy } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
-import WatchHistory from "./WatchHistory";
 
 const USERNAME_COOLDOWN_DAYS = 7;
 
@@ -48,7 +47,7 @@ export default function ProfileCard({
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ username: "", bio: "", statusMessage: "", favoritePlatforms: "" });
+  const [form, setForm] = useState({ username: "", bio: "" });
 
   const user = profileProgress || authUser || {};
   const mergedStats = { ...(user.profileStats || {}), ...(stats || {}) };
@@ -64,10 +63,8 @@ export default function ProfileCard({
     setForm({
       username: user.username || authUser?.username || "",
       bio: user.bio || authUser?.bio || "",
-      statusMessage: user.statusMessage || authUser?.statusMessage || "",
-      favoritePlatforms: (user.favoritePlatforms || authUser?.favoritePlatforms || []).join(", "),
     });
-  }, [user.username, user.bio, user.statusMessage, authUser?.username]);
+  }, [user.username, user.bio, authUser?.username]);
 
   const statCards = useMemo(() => [
     ["Rooms", mergedStats.roomsJoined || 0],
@@ -75,6 +72,13 @@ export default function ProfileCard({
     ["Media", mergedStats.mediaPlayed || 0],
     ["Friends", mergedStats.friends || 0],
   ], [mergedStats]);
+
+  function sanitizeUsername(value = "") {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9.]/g, "")
+      .slice(0, 20);
+  }
 
   async function uploadAvatar(file) {
     try {
@@ -99,17 +103,9 @@ export default function ProfileCard({
   async function saveProfile() {
     try {
       setSaving(true);
-      const platforms = form.favoritePlatforms
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .slice(0, 4);
-
       const { data } = await api.patch("/users/profile/settings", {
-        username: form.username,
+        username: sanitizeUsername(form.username),
         bio: form.bio,
-        statusMessage: form.statusMessage,
-        favoritePlatforms: platforms,
       });
 
       const nextUser = data.user || data;
@@ -156,8 +152,8 @@ export default function ProfileCard({
         </div>
       </div>
 
-      <div className="grid gap-4 p-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-4">
+      <div className="p-5">
+        <div className="mx-auto max-w-4xl space-y-4">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {statCards.map(([label, value]) => (
               <div key={label} className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4">
@@ -178,7 +174,7 @@ export default function ProfileCard({
               </span>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="mt-5 grid gap-4">
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Kullanıcı adı</span>
                 <input
@@ -186,42 +182,22 @@ export default function ProfileCard({
                   value={form.username}
                   disabled={usernameLocked}
                   maxLength={20}
-                  onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
+                  placeholder="ornek.kullanici"
+                  onChange={(e) => setForm((prev) => ({ ...prev, username: sanitizeUsername(e.target.value) }))}
                 />
-                <p className="mt-2 text-xs font-bold text-white/30">3-20 karakter. Harf, rakam ve _ kullanılabilir. 7 günde 1 değişir.</p>
+                <p className="mt-2 text-xs font-bold text-white/30">3-20 karakter. Sadece harf, rakam ve nokta kullanılır. 7 günde 1 değişir.</p>
               </label>
 
               <label className="block">
-                <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Durum mesajı</span>
-                <input
-                  className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-black/25 px-4 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-violet-300/40"
-                  value={form.statusMessage}
-                  maxLength={90}
-                  placeholder="Film gecesine hazırım 🎬"
-                  onChange={(e) => setForm((prev) => ({ ...prev, statusMessage: e.target.value }))}
-                />
-              </label>
-
-              <label className="block lg:col-span-2">
                 <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Biyografi</span>
                 <textarea
-                  className="mt-2 min-h-[110px] w-full resize-none rounded-[1.35rem] border border-white/10 bg-black/25 p-4 text-sm font-bold leading-6 text-white outline-none placeholder:text-white/25 focus:border-violet-300/40"
+                  className="mt-2 min-h-[120px] w-full resize-none rounded-[1.35rem] border border-white/10 bg-black/25 p-4 text-sm font-bold leading-6 text-white outline-none placeholder:text-white/25 focus:border-violet-300/40"
                   value={form.bio}
                   maxLength={180}
-                  placeholder="Watch party, voice chat ve arkadaşlarla film gecesi..."
+                  placeholder="Kendini kısaca anlat..."
                   onChange={(e) => setForm((prev) => ({ ...prev, bio: e.target.value }))}
                 />
                 <p className="mt-2 text-right text-xs font-bold text-white/30">{form.bio.length}/180</p>
-              </label>
-
-              <label className="block lg:col-span-2">
-                <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Favori platformlar</span>
-                <input
-                  className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-black/25 px-4 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-violet-300/40"
-                  value={form.favoritePlatforms}
-                  placeholder="YouTube, Netflix, Anime, Gaming"
-                  onChange={(e) => setForm((prev) => ({ ...prev, favoritePlatforms: e.target.value }))}
-                />
               </label>
             </div>
 
@@ -235,40 +211,7 @@ export default function ProfileCard({
             </button>
           </div>
         </div>
-
-        <aside className="space-y-4">
-          <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-5">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-fuchsia-200/55">XP Progress</p>
-            <div className="mt-4 flex items-center justify-between text-sm font-black text-white/70">
-              <span>{xp} XP</span>
-              <span>Level {level + 1}</span>
-            </div>
-            <div className="mt-3 h-3 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-gradient-to-r from-yellow-300 via-fuchsia-300 to-violet-300" style={{ width: `${xpProgress}%` }} />
-            </div>
-          </div>
-
-          <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-sky-200/55">Continue</p>
-                <h3 className="mt-1 text-lg font-black text-white">Devam Et</h3>
-              </div>
-              <Clock3 className="text-white/35" size={20} />
-            </div>
-            <p className="mt-3 line-clamp-2 text-sm font-bold text-white/45">{continueWatching?.title || "Henüz devam edilecek medya yok."}</p>
-            {continueWatching?.url ? (
-              <button className="mt-4 w-full rounded-2xl bg-white/10 px-4 py-3 text-sm font-black text-white/75 hover:bg-white/15" onClick={() => onResumeWatch?.(continueWatching)}>Devam Et</button>
-            ) : null}
-          </div>
-        </aside>
       </div>
-
-      {watchHistory?.length ? (
-        <div className="border-t border-white/10 p-5">
-          <WatchHistory items={watchHistory.slice(0, 6)} onResume={onResumeWatch} />
-        </div>
-      ) : null}
     </section>
   );
 }

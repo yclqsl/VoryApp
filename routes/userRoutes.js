@@ -536,18 +536,13 @@ router.patch("/profile/settings", protect, async (req, res) => {
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
 
-    const nextUsername = String(req.body?.username || user.username || "").trim();
+    const nextUsername = String(req.body?.username || user.username || "").trim().toLowerCase();
     const nextBio = String(req.body?.bio || "").trim().slice(0, 180);
-    const nextStatusMessage = String(req.body?.statusMessage || "").trim().slice(0, 90);
-    const nextPlatforms = Array.isArray(req.body?.favoritePlatforms)
-      ? req.body.favoritePlatforms.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 4)
-      : [];
-
     const usernameChanged = nextUsername && nextUsername !== user.username;
 
     if (usernameChanged) {
-      if (!/^[a-zA-Z0-9_]{3,20}$/.test(nextUsername)) {
-        return res.status(400).json({ message: "Kullanıcı adı 3-20 karakter olmalı. Harf, rakam ve _ kullan." });
+      if (!/^[a-z0-9.]{3,20}$/.test(nextUsername)) {
+        return res.status(400).json({ message: "Kullanıcı adı 3-20 karakter olmalı. Sadece harf, rakam ve nokta kullan." });
       }
 
       const lastChange = user.lastUsernameChangedAt ? new Date(user.lastUsernameChangedAt).getTime() : 0;
@@ -569,8 +564,6 @@ router.patch("/profile/settings", protect, async (req, res) => {
     }
 
     user.bio = nextBio;
-    user.statusMessage = nextStatusMessage;
-    user.favoritePlatforms = nextPlatforms;
 
     await user.save();
 

@@ -65,18 +65,12 @@ export default function RoomPanel({
             </h2>
           </div>
 
-          <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] xl:w-[720px]">
+          <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] xl:w-[620px]">
             <input
               className="h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-violet-300/35"
               placeholder="Oda kodu"
               value={roomInput}
               onChange={(e) => setRoomInput(e.target.value.toUpperCase())}
-            />
-            <input
-              className="h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-violet-300/35"
-              placeholder="Görünen ad"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
             />
             <button className="h-11 rounded-2xl bg-white px-4 text-sm font-black text-black transition hover:scale-[1.02]" onClick={roomCode ? copyInviteLink : onCreateRoom}>
               {roomCode ? <span className="inline-flex items-center gap-2"><Link size={16} /> Invite</span> : <span className="inline-flex items-center gap-2"><PlusCircle size={16} /> Oluştur</span>}
@@ -109,8 +103,7 @@ export default function RoomPanel({
         <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-white/45">{roomCode || "Lobby"}</span>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <input className="input mt-0" placeholder="Görünen ad" value={username} onChange={(e) => setUsername(e.target.value)} />
+      <div className="mt-5">
         <input className="input mt-0" placeholder="Oda kodu" value={roomInput} onChange={(e) => setRoomInput(e.target.value.toUpperCase())} />
       </div>
 
