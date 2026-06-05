@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: 90
     },
-    usernameLastChangedAt: {
+    lastUsernameChangedAt: {
       type: Date,
       default: null
     },

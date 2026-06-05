@@ -6,30 +6,6 @@ const User = require("../models/User");
 
 const router = express.Router();
 
-const USERNAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
-
-function normalizeUsername(value = "") {
-  return String(value || "").trim().replace(/\s+/g, "_");
-}
-
-function isValidUsername(value = "") {
-  return /^[a-zA-Z0-9_]{3,20}$/.test(String(value || ""));
-}
-
-function getUsernameCooldown(user) {
-  const lastChangedAt = user?.usernameLastChangedAt ? new Date(user.usernameLastChangedAt).getTime() : 0;
-  const now = Date.now();
-  const nextChangeAt = lastChangedAt ? lastChangedAt + USERNAME_CHANGE_COOLDOWN_MS : 0;
-
-  return {
-    lastChangedAt: lastChangedAt || null,
-    nextChangeAt: nextChangeAt || null,
-    canChangeUsername: !lastChangedAt || now >= nextChangeAt,
-    remainingMs: lastChangedAt ? Math.max(0, nextChangeAt - now) : 0,
-  };
-}
-
-
 function calculateProfileXp(stats = {}) {
   return Math.max(0, Math.floor(
     Number(stats?.roomsJoined || 0) * 10 +
@@ -392,8 +368,7 @@ function serializeProfileUser(user) {
     avatar: user.avatar,
     bio: user.bio,
     statusMessage: user.statusMessage,
-    usernameLastChangedAt: user.usernameLastChangedAt || null,
-    usernameCooldown: getUsernameCooldown(user),
+    lastUsernameChangedAt: user.lastUsernameChangedAt || null,
     favoritePlatforms: user.favoritePlatforms,
     profileBadges: user.profileBadges || [],
     profileXp,
@@ -552,10 +527,6 @@ router.post("/avatar", protect, upload.single("avatar"), async (req, res) => {
   }
 });
 
-router.get("/profile-summary", protect, async (req, res) => {
-  const user = await User.findById(req.user._id).select("-password");
-  res.json({ user: serializeProfileUser(user) });
-});
 
 router.patch("/profile/settings", protect, async (req, res) => {
   try {
@@ -565,41 +536,36 @@ router.patch("/profile/settings", protect, async (req, res) => {
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
 
-    const nextUsername = normalizeUsername(req.body?.username || user.username);
-    const nextBio = String(req.body?.bio ?? user.bio ?? "").trim().slice(0, 180);
-    const nextStatusMessage = String(req.body?.statusMessage ?? user.statusMessage ?? "").trim().slice(0, 90);
+    const nextUsername = String(req.body?.username || user.username || "").trim();
+    const nextBio = String(req.body?.bio || "").trim().slice(0, 180);
+    const nextStatusMessage = String(req.body?.statusMessage || "").trim().slice(0, 90);
     const nextPlatforms = Array.isArray(req.body?.favoritePlatforms)
       ? req.body.favoritePlatforms.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 4)
-      : user.favoritePlatforms || [];
+      : [];
 
-    if (!isValidUsername(nextUsername)) {
-      return res.status(400).json({
-        message: "Kullanıcı adı 3-20 karakter olmalı. Sadece harf, rakam ve _ kullan.",
-      });
-    }
+    const usernameChanged = nextUsername && nextUsername !== user.username;
 
-    if (nextUsername !== user.username) {
-      const cooldown = getUsernameCooldown(user);
-
-      if (!cooldown.canChangeUsername) {
-        const remainingDays = Math.ceil(cooldown.remainingMs / (24 * 60 * 60 * 1000));
-        return res.status(429).json({
-          message: `Kullanıcı adını tekrar değiştirmek için ${remainingDays} gün beklemelisin.`,
-          cooldown,
-        });
+    if (usernameChanged) {
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(nextUsername)) {
+        return res.status(400).json({ message: "Kullanıcı adı 3-20 karakter olmalı. Harf, rakam ve _ kullan." });
       }
 
-      const existing = await User.findOne({
-        username: nextUsername,
-        _id: { $ne: user._id },
-      });
+      const lastChange = user.lastUsernameChangedAt ? new Date(user.lastUsernameChangedAt).getTime() : 0;
+      const cooldownMs = 7 * 24 * 60 * 60 * 1000;
+      const remainingMs = lastChange + cooldownMs - Date.now();
 
-      if (existing) {
-        return res.status(400).json({ message: "Bu kullanıcı adı alınmış." });
+      if (lastChange && remainingMs > 0) {
+        const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+        return res.status(429).json({ message: `Kullanıcı adını ${remainingDays} gün sonra tekrar değiştirebilirsin.` });
+      }
+
+      const exists = await User.findOne({ username: nextUsername, _id: { $ne: user._id } });
+      if (exists) {
+        return res.status(400).json({ message: "Bu kullanıcı adı zaten alınmış." });
       }
 
       user.username = nextUsername;
-      user.usernameLastChangedAt = new Date();
+      user.lastUsernameChangedAt = new Date();
     }
 
     user.bio = nextBio;
@@ -608,17 +574,21 @@ router.patch("/profile/settings", protect, async (req, res) => {
 
     await user.save();
 
-    const safeUser = await User.findById(user._id).select("-password");
+    const cleanUser = await User.findById(user._id).select("-password");
 
     res.json({
-      message: "Profil güncellendi.",
-      user: serializeProfileUser(safeUser),
-      rawUser: safeUser,
+      message: usernameChanged ? "Profil güncellendi. Kullanıcı adını tekrar değiştirmek için 7 gün bekle." : "Profil güncellendi.",
+      user: serializeProfileUser(cleanUser),
     });
   } catch (error) {
     console.error("Profile settings update error:", error);
     res.status(500).json({ message: "Profil güncellenemedi." });
   }
+});
+
+router.get("/profile-summary", protect, async (req, res) => {
+  const user = await User.findById(req.user._id).select("-password");
+  res.json({ user: serializeProfileUser(user) });
 });
 
 router.patch("/profile/progress", protect, async (req, res) => {

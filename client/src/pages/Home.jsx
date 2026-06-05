@@ -2219,21 +2219,6 @@ export default function Home({ authUser, onLogout }) {
     });
   }
 
-  function handleLocalUserUpdate(nextUser) {
-    if (!nextUser) return;
-
-    try {
-      const current = JSON.parse(localStorage.getItem("vory_user") || "{}");
-      localStorage.setItem("vory_user", JSON.stringify({ ...current, ...nextUser }));
-    } catch {}
-
-    if (nextUser.username) {
-      setUsername(nextUser.username);
-    }
-
-    loadProfileProgress();
-  }
-
   function renderRoomInviteCard() {
     if (!roomCode) return null;
 
@@ -2344,15 +2329,6 @@ export default function Home({ authUser, onLogout }) {
             watchHistory={watchHistory}
             continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null}
             onResumeWatch={resumeWatchItem}
-            onUserUpdate={handleLocalUserUpdate}
-          />
-
-          <DailyMissionsPanel
-            profileProgress={profileProgress}
-            stats={displayProfileStats}
-            loading={missionsLoading}
-            onRefresh={loadProfileProgress}
-            onClaimMission={claimDailyMission}
           />
 
           <CustomizationStorePanel
@@ -2370,14 +2346,15 @@ export default function Home({ authUser, onLogout }) {
     if (appSection === "settings") {
       return (
         <div className="vory-v5-page-grid">
-          <section className="glass-panel p-5">
-            <p className="text-xs font-black uppercase tracking-[0.28em] text-white/35">Settings</p>
-            <h2 className="mt-1 text-xl font-black text-white">Uygulama ayarları</h2>
-            <p className="mt-2 text-sm font-bold text-white/45">Oda kontrolü artık Watch ekranındaki premium Room Control kartında.</p>
-          </section>
-
+          {renderRoomInviteCard()}
           <InviteBox roomCode={roomCode} />
           <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+          <RoomThemePanel
+            roomCode={roomCode}
+            isHost={isHost}
+            activeTheme={roomTheme}
+            onThemeChange={changeRoomTheme}
+          />
 
           {isAdminUser ? <AdminFeedbackPanel authUser={authUser} /> : null}
         </div>
@@ -2405,22 +2382,18 @@ export default function Home({ authUser, onLogout }) {
             />
           </div>
 
-          <div className="mt-3">
-            <RoomPanel
-              username={username}
-              setUsername={setUsername}
-              roomInput={roomInput}
-              setRoomInput={setRoomInput}
-              roomCode={roomCode}
-              status={status}
-              onCreateRoom={createRoom}
-              onJoinRoom={() => joinRoom()}
-              onLeaveRoom={leaveRoom}
-              isHost={isHost}
-              activeTheme={roomTheme}
-              onThemeChange={changeRoomTheme}
-            />
-          </div>
+          <RoomPanel
+            compact
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
+          />
         </section>
 
         <VoryRightPanel
@@ -2481,6 +2454,19 @@ export default function Home({ authUser, onLogout }) {
             isHost={isHost}
           />
 
+          <RoomPanel
+            compact
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
+          />
+
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
@@ -2514,21 +2500,6 @@ export default function Home({ authUser, onLogout }) {
               </p>
             </button>
           </div>
-
-          <RoomPanel
-            username={username}
-            setUsername={setUsername}
-            roomInput={roomInput}
-            setRoomInput={setRoomInput}
-            roomCode={roomCode}
-            status={status}
-            onCreateRoom={createRoom}
-            onJoinRoom={() => joinRoom()}
-            onLeaveRoom={leaveRoom}
-            isHost={isHost}
-            activeTheme={roomTheme}
-            onThemeChange={changeRoomTheme}
-          />
 
           <ChatPanel
             messages={messages}
@@ -2660,7 +2631,7 @@ export default function Home({ authUser, onLogout }) {
     if (mobileSection === "profile") {
       return (
         <section className="flex min-w-0 flex-col gap-4 pb-28">
-          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} profileProgress={profileProgress} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} onUserUpdate={handleLocalUserUpdate} />
+          <ProfileCard authUser={authUser} roomCode={roomCode} connectionStatus={connectionStatus} stats={displayProfileStats} profileProgress={profileProgress} watchHistory={watchHistory} continueWatching={watchHistory?.find((item) => Number(item?.currentTime || 0) > 5) || watchHistory?.[0] || null} onResumeWatch={resumeWatchItem} />
           <DailyMissionsPanel
             profileProgress={profileProgress}
             stats={displayProfileStats}
@@ -2682,13 +2653,25 @@ export default function Home({ authUser, onLogout }) {
 
     return (
       <section className="flex min-w-0 flex-col gap-4 pb-28">
-        <section className="glass-panel p-5">
-          <p className="text-xs font-black uppercase tracking-[0.28em] text-white/35">Settings</p>
-          <h2 className="mt-1 text-xl font-black text-white">Uygulama ayarları</h2>
-          <p className="mt-2 text-sm font-bold text-white/45">Oda kontrolü Watch sekmesine taşındı.</p>
-        </section>
+        <RoomPanel
+          username={username}
+          setUsername={setUsername}
+          roomInput={roomInput}
+          setRoomInput={setRoomInput}
+          roomCode={roomCode}
+          status={status}
+          onCreateRoom={createRoom}
+          onJoinRoom={() => joinRoom()}
+          onLeaveRoom={leaveRoom}
+        />
         {renderRoomInviteCard()}
         <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+        <RoomThemePanel
+          roomCode={roomCode}
+          isHost={isHost}
+          activeTheme={roomTheme}
+          onThemeChange={changeRoomTheme}
+        />
         {isAdminUser ? <AdminFeedbackPanel authUser={authUser} /> : null}
       </section>
     );
@@ -2797,7 +2780,7 @@ export default function Home({ authUser, onLogout }) {
               <VoryBottomDock
                 roomCode={roomCode}
                 isHost={isHost}
-                onOpenRoom={() => handleSectionChange("watch")}
+                onOpenRoom={() => handleSectionChange("settings")}
                 onOpenVoice={() => handleSectionChange("voice")}
                 onOpenChat={() => {
                   setRightPanelTab("chat");
