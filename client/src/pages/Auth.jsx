@@ -41,7 +41,7 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
       const endpoint = isRegister ? "/auth/register" : "/auth/login";
       const payload = isRegister
         ? { username: username.trim(), email: email.trim(), password }
-        : { email: email.trim(), password };
+        : { emailOrUsername: email.trim(), password };
 
       const response = await api.post(endpoint, payload);
       const { user, token } = normalizeAuthResponse(response.data || {});
@@ -90,10 +90,10 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
             )}
 
             <label>
-              <span>Email</span>
+              <span>{isRegister ? "Email" : "Email or username"}</span>
               <div className="vory-auth-input-wrap">
                 <Mail size={18} />
-                <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@vory.app" type="email" autoComplete="email" />
+                <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder={isRegister ? "you@vory.app" : "email veya username"} type={isRegister ? "email" : "text"} autoComplete={isRegister ? "email" : "username"} />
               </div>
             </label>
 
