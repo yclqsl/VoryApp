@@ -1,4 +1,4 @@
-import { MonitorUp, Radio, UsersRound } from "lucide-react";
+import { LogOut, MonitorUp, Radio, UsersRound } from "lucide-react";
 import ConnectionBanner from "./ConnectionBanner";
 import NotificationCenter from "./NotificationCenter";
 
@@ -14,7 +14,6 @@ export default function VoryTopBar({
   connectionStatus,
   lastRestoreMessage,
   onRestore,
-  onForceSync,
   notifications,
   onMarkNotificationsRead,
   onClearNotifications,
@@ -56,7 +55,6 @@ export default function VoryTopBar({
           roomCode={roomCode}
           message={lastRestoreMessage}
           onRestore={onRestore}
-          onForceSync={onForceSync}
         />
 
         <NotificationCenter
@@ -69,7 +67,17 @@ export default function VoryTopBar({
         <button
           type="button"
           onClick={onLogout}
-          className="vory-v5-logout"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white/65 transition hover:bg-red-500/15 hover:text-red-100 lg:hidden"
+          title="Çıkış"
+          aria-label="Çıkış yap"
+        >
+          <LogOut size={17} />
+        </button>
+
+        <button
+          type="button"
+          onClick={onLogout}
+          className="vory-v5-logout hidden lg:inline-flex"
           title="Çıkış"
         >
           Çıkış

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { PlayCircle, RefreshCw, ShieldCheck } from "lucide-react";
+import { PlayCircle, ShieldCheck } from "lucide-react";
 import YouTube from "react-youtube";
 import toast from "react-hot-toast";
 import { socket } from "../services/socket";
@@ -78,19 +78,18 @@ export default function VideoPlayer({
   function handleReady(event) {
     playerRef.current = event.target;
 
-    // Yeni giren viewer sadece ilk açılışta host durumuna çekilir.
+    // Yeni giren viewer host state'ini otomatik alır.
+    // Manuel "herkesi senkronla" yerine Rave tarzı otomatik recovery.
     if (!isHost) {
-      setTimeout(() => {
-        requestForceSync();
-      }, 900);
+      setTimeout(requestForceSync, 450);
+      setTimeout(requestForceSync, 1600);
     }
   }
 
   function handleStateChange(event) {
     if (!playerRef.current || ignoreEventRef.current) return;
 
-    // Viewer'ın local play/pause yapması hostu etkilemez.
-    // Sürekli geri çekmeyiz; 30 sn drift kontrolü bunu gerekirse düzeltir.
+    // Viewer local play/pause yaparsa hostu etkilemez; sync otomatik düzelir.
     if (!isHost) return;
 
     const currentTime = playerRef.current.getCurrentTime();
@@ -116,27 +115,12 @@ export default function VideoPlayer({
     toast.error("Video yüklenemedi. Farklı bir YouTube linki dene.");
   }
 
-  function syncTime() {
-    if (!isHost) {
-      toast.error("Sadece host senkron yapabilir.");
-      return;
-    }
-
-    if (!playerRef.current || ignoreEventRef.current) return;
-
-    const currentTime = playerRef.current.getCurrentTime();
-    onVideoSeek(currentTime);
-
-    toast.success("Herkes senkronlandı ⚡");
-  }
-
   useEffect(() => {
     clearInterval(heartbeatRef.current);
 
     if (!isHost) return;
 
-    // Host state'i serverda güncel kalsın diye seyrek heartbeat.
-    // Bu emit viewer'a seek yaptırmaz, sadece state saklar.
+    // Host state serverda canlı kalsın; viewerlar otomatik drift correction yapar.
     heartbeatRef.current = setInterval(() => {
       if (!playerRef.current) return;
 
@@ -148,7 +132,7 @@ export default function VideoPlayer({
         currentTime: playerRef.current.getCurrentTime(),
         isPlaying: playerRef.current.getPlayerState() === 1,
       });
-    }, 10000);
+    }, 2000);
 
     return () => clearInterval(heartbeatRef.current);
   }, [isHost, playerRef]);
@@ -158,12 +142,10 @@ export default function VideoPlayer({
 
     if (!videoId || isHost) return;
 
-    // Rave tarzı: sürekli çekme yok.
-    // Viewer sadece 30 saniyede bir host durumunu sorar.
-    // Home.jsx drift küçükse seek yapmaz.
+    // Rave tarzı otomatik recovery: viewer host state'ini arka planda ister.
     driftCheckRef.current = setInterval(() => {
       requestForceSync();
-    }, 30000);
+    }, 5000);
 
     return () => clearInterval(driftCheckRef.current);
   }, [videoId, isHost]);
@@ -229,16 +211,6 @@ export default function VideoPlayer({
         )}
       </div>
 
-      <div className="mt-4 flex gap-3">
-        <button
-          className="btn-secondary flex items-center justify-center gap-2"
-          onClick={syncTime}
-          disabled={!isHost}
-        >
-          <RefreshCw size={17} />
-          Herkesi Senkronla
-        </button>
-      </div>
     </section>
   );
 }

@@ -952,31 +952,38 @@ export default function Home({ authUser, onLogout }) {
       const localTime = playerRef.current.getCurrentTime?.() || 0;
       const localState = playerRef.current.getPlayerState?.();
       const drift = Math.abs(localTime - targetTime);
+      const now = Date.now();
 
-      ignoreEventRef.current = true;
+      const shouldSoftSeek =
+        soft &&
+        drift > 1.75 &&
+        now - lastSoftSyncRef.current > 2600;
 
-      if (soft) {
-        const now = Date.now();
+      const shouldHardSeek = !soft && drift > 0.9;
 
-        if (now - lastSoftSyncRef.current > 1200 && drift > 1.2) {
-          lastSoftSyncRef.current = now;
-          playerRef.current.seekTo(targetTime, true);
-        }
-      } else if (drift > 0.75) {
+      if (shouldSoftSeek || shouldHardSeek) {
+        lastSoftSyncRef.current = now;
+        ignoreEventRef.current = true;
         playerRef.current.seekTo(targetTime, true);
+
+        setTimeout(() => {
+          ignoreEventRef.current = false;
+        }, soft ? 900 : 650);
       }
 
-      if (isPlaying && localState !== 1) {
-        playerRef.current.playVideo();
-      }
+      const shouldPlay = isPlaying && localState !== 1;
+      const shouldPause = !isPlaying && localState === 1;
 
-      if (!isPlaying && localState === 1) {
-        playerRef.current.pauseVideo();
-      }
+      if (shouldPlay || shouldPause) {
+        ignoreEventRef.current = true;
 
-      setTimeout(() => {
-        ignoreEventRef.current = false;
-      }, 650);
+        if (shouldPlay) playerRef.current.playVideo();
+        if (shouldPause) playerRef.current.pauseVideo();
+
+        setTimeout(() => {
+          ignoreEventRef.current = false;
+        }, 650);
+      }
     }
 
     socket.on("video-sync", (state) => {
@@ -995,7 +1002,7 @@ export default function Home({ authUser, onLogout }) {
 
       setTimeout(() => {
         pulseLockRef.current = false;
-      }, 900);
+      }, 1800);
     });
 
     socket.on("receive-message", (data) => {
@@ -2697,7 +2704,6 @@ export default function Home({ authUser, onLogout }) {
             lastRestoreMessage={lastRestoreMessage}
             hostTransferMessage={hostTransferMessage}
             onRestore={() => restorePreviousSession("manual-click")}
-            onForceSync={requestHardSync}
             notifications={notifications}
             onMarkNotificationsRead={markNotificationsRead}
             onClearNotifications={clearNotifications}
@@ -2832,6 +2838,7 @@ export default function Home({ authUser, onLogout }) {
             dmUnreadCount={totalDmUnread}
             onlineCount={onlinePresence.length}
             roomCode={roomCode}
+            onLogout={onLogout}
           />
         </div>
       </div>

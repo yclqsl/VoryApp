@@ -1,11 +1,11 @@
-import { Compass, Settings, UserRound, UsersRound, Video } from "lucide-react";
+import { LogOut, Settings, UserRound, UsersRound, Video } from "lucide-react";
 
 const tabs = [
   { id: "watch", label: "Watch", icon: Video },
   { id: "friends", label: "Friends", icon: UsersRound },
-  { id: "discover", label: "Discover", icon: Compass },
   { id: "profile", label: "Profile", icon: UserRound },
   { id: "settings", label: "Settings", icon: Settings },
+  { id: "logout", label: "Logout", icon: LogOut },
 ];
 
 export default function MobileBottomNav({
@@ -15,6 +15,7 @@ export default function MobileBottomNav({
   dmUnreadCount = 0,
   onlineCount = 0,
   roomCode,
+  onLogout,
 }) {
   const activeId = activeTab === "dm" || activeTab === "social" ? "friends" : activeTab === "room" ? "settings" : activeTab;
 
@@ -23,7 +24,7 @@ export default function MobileBottomNav({
       <div className="grid grid-cols-5 gap-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const active = activeId === tab.id;
+          const active = tab.id !== "logout" && activeId === tab.id;
 
           const badge =
             tab.id === "friends" && (dmUnreadCount > 0 || onlineCount > 0)
@@ -36,7 +37,7 @@ export default function MobileBottomNav({
             <button
               key={tab.id}
               type="button"
-              onClick={() => onChange?.(tab.id)}
+              onClick={() => tab.id === "logout" ? onLogout?.() : onChange?.(tab.id)}
               className={`relative flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[10px] font-black transition ${
                 active
                   ? "bg-violet-500/25 text-white shadow-[0_0_24px_rgba(139,92,246,0.22)]"
