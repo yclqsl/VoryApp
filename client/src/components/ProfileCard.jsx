@@ -353,7 +353,7 @@ export default function ProfileCard({
                   value={form.username}
                   disabled={usernameLocked}
                   maxLength={20}
-                  placeholder="kullanici.adi"
+                  placeholder="Kullanıcı Adı"
                   onChange={(event) => setForm((prev) => ({ ...prev, username: sanitizeUsername(event.target.value) }))}
                 />
                 <p className="mt-2 text-xs font-bold text-white/30">
