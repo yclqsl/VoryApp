@@ -13,6 +13,7 @@ function App() {
   const [screen, setScreen] = useState(() => {
     return authUser ? "home" : "landing";
   });
+  const [authMode, setAuthMode] = useState("login");
 
   useEffect(() => {
     if (!authUser) return;
@@ -40,15 +41,24 @@ function App() {
   if (!authUser && screen === "landing") {
     return (
       <LandingPage
-        onEnterApp={() => setScreen("auth")}
-        onLogin={() => setScreen("auth")}
-        onRegister={() => setScreen("auth")}
+        onEnterApp={() => {
+          setAuthMode("register");
+          setScreen("auth");
+        }}
+        onLogin={() => {
+          setAuthMode("login");
+          setScreen("auth");
+        }}
+        onRegister={() => {
+          setAuthMode("register");
+          setScreen("auth");
+        }}
       />
     );
   }
 
   if (!authUser) {
-    return <Auth onLogin={handleLogin} onBack={() => setScreen("landing")} />;
+    return <Auth initialMode={authMode} onLogin={handleLogin} onBack={() => setScreen("landing")} />;
   }
 
   return <Home authUser={authUser} onLogout={handleLogout} />;
