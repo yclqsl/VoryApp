@@ -34,10 +34,10 @@ export default function CustomizationStorePanel({
         <div>
           <div className="flex items-center gap-2">
             <Gem size={18} className="text-fuchsia-200" />
-            <h2 className="text-lg font-black">Customization Store</h2>
+            <h2 className="text-lg font-black">Cosmetics</h2>
           </div>
           <p className="mt-1 text-xs text-white/40">
-            XP ile frame, profile theme ve glow aç. Achievement kilitli cosmetics de burada.
+            XP ile avatar frame, profile theme ve glow aç. Profil kozmetikleri artık burada ayrı duruyor.
           </p>
         </div>
         <button

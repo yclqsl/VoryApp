@@ -2326,7 +2326,13 @@ export default function Home({ authUser, onLogout }) {
             stats={displayProfileStats}
             profileProgress={profileProgress}
           />
+        </div>
+      );
+    }
 
+    if (appSection === "cosmetics") {
+      return (
+        <div className="vory-v5-page-grid">
           <CustomizationStorePanel
             profileProgress={profileProgress}
             stats={displayProfileStats}
@@ -2383,16 +2389,6 @@ export default function Home({ authUser, onLogout }) {
             onJoinRoom={() => joinRoom()}
             onLeaveRoom={leaveRoom}
           />
-
-          {roomCode ? (
-            <RoomThemePanel
-              roomCode={roomCode}
-              isHost={isHost}
-              activeTheme={roomTheme}
-              onThemeChange={changeRoomTheme}
-              compact
-            />
-          ) : null}
 
           {roomCode ? (
             <RoomThemePanel
@@ -2670,6 +2666,13 @@ export default function Home({ authUser, onLogout }) {
             stats={displayProfileStats}
             profileProgress={profileProgress}
           />
+        </section>
+      );
+    }
+
+    if (mobileSection === "cosmetics") {
+      return (
+        <section className="flex min-w-0 flex-col gap-4 pb-28">
           <CustomizationStorePanel
             profileProgress={profileProgress}
             stats={displayProfileStats}

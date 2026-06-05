@@ -1,10 +1,10 @@
-import { Compass, Settings, UserRound, UsersRound, Video } from "lucide-react";
+import { Gem, Settings, UserRound, UsersRound, Video } from "lucide-react";
 
 const navItems = [
   { id: "watch", label: "Watch", icon: Video },
   { id: "friends", label: "Friends", icon: UsersRound },
-  { id: "discover", label: "Discover", icon: Compass },
   { id: "profile", label: "Profile", icon: UserRound },
+  { id: "cosmetics", label: "Cosmetics", icon: Gem },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 

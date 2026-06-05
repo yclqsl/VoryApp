@@ -179,7 +179,7 @@ export default function ProfileCard({
     ? profileProgress.bio.trim()
     : authUser?.bio?.trim()
       ? authUser.bio.trim()
-      : "VoryApp beta kullanıcısı. Watch party, voice chat ve arkadaş sistemiyle takılıyor.";
+      : "";
   const cooldownDays = daysUntilUsernameChange(profileProgress?.lastUsernameChangedAt || authUser?.lastUsernameChangedAt);
   const usernameLocked = cooldownDays > 0;
 
@@ -223,7 +223,7 @@ export default function ProfileCard({
     <section className={`glass overflow-hidden p-0 profile-theme-${activeTheme} ${activeGlow !== "none" ? "shadow-[0_0_70px_rgba(217,70,239,0.16)]" : ""}`}>
       <div className="relative h-24 bg-gradient-to-r from-violet-600/80 via-fuchsia-600/60 to-indigo-600/70 sm:h-24">
         <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-black/25 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/70 backdrop-blur-xl sm:text-xs">
-          <Gem size={13} /> V14.3 Cosmetic Profile
+          <Gem size={13} /> Vory Profile
         </div>
         <div className="absolute bottom-4 right-4 rounded-full bg-yellow-400/15 px-3 py-1 text-xs font-black text-yellow-100">
           {getFrameLabel(frame)}
@@ -275,6 +275,56 @@ export default function ProfileCard({
             <div className="mt-3 h-3 overflow-hidden rounded-full bg-black/35">
               <div className="h-full rounded-full bg-gradient-to-r from-yellow-300 via-fuchsia-300 to-violet-300 transition-all" style={{ width: `${xpProgress}%` }} />
             </div>
+          </div>
+
+          <div className="mt-4 rounded-[1.75rem] border border-violet-300/10 bg-black/20 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-violet-200/55">Profile Editor</p>
+                <h3 className="mt-1 text-lg font-black text-white">Profilini düzenle</h3>
+              </div>
+              <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-black text-white/45">
+                {usernameLocked ? `${cooldownDays} gün kaldı` : "Username hazır"}
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-4">
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Kullanıcı adı</span>
+                <input
+                  className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-black/25 px-4 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-violet-300/40 disabled:opacity-50"
+                  value={form.username}
+                  disabled={usernameLocked}
+                  maxLength={20}
+                  placeholder="Kullanıcı Adı"
+                  onChange={(event) => setForm((prev) => ({ ...prev, username: sanitizeUsername(event.target.value) }))}
+                />
+                <p className="mt-2 text-xs font-bold text-white/30">
+                  Sadece harf, rakam ve nokta. Alt çizgi yok. Kullanıcı adı 7 günde 1 değiştirilebilir.
+                </p>
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Biyografi</span>
+                <textarea
+                  className="mt-2 min-h-[110px] w-full resize-none rounded-[1.35rem] border border-white/10 bg-black/25 p-4 text-sm font-bold leading-6 text-white outline-none placeholder:text-white/25 focus:border-violet-300/40"
+                  value={form.bio}
+                  maxLength={180}
+                  placeholder="Kendini kısaca anlat..."
+                  onChange={(event) => setForm((prev) => ({ ...prev, bio: event.target.value }))}
+                />
+                <p className="mt-2 text-right text-xs font-bold text-white/30">{String(form.bio || "").length}/180</p>
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={saveProfile}
+              disabled={saving}
+              className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:scale-[1.02] disabled:opacity-60"
+            >
+              {saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />} Kaydet
+            </button>
           </div>
 
           <div className="mt-4 rounded-[1.75rem] border border-yellow-300/15 bg-gradient-to-br from-yellow-400/12 via-fuchsia-400/8 to-violet-500/10 p-4">
@@ -329,60 +379,13 @@ export default function ProfileCard({
             <div className="rounded-3xl border border-white/8 bg-white/5 p-4 text-center sm:rounded-2xl sm:p-3"><p className="text-xl font-black text-white sm:text-lg">{compactNumber(mergedStats?.messagesSent)}</p><p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/35">Msgs</p></div>
           </div>
 
-          <div className="mt-4 rounded-3xl border border-white/8 bg-white/[0.04] p-3">
-            <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-white/35"><UserRound size={13} /> Bio</div>
-            <p className="text-sm font-bold leading-5 text-white/70">{bio}</p>
-          </div>
-
-          <div className="mt-4 rounded-[1.75rem] border border-violet-300/10 bg-black/20 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.18)] backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-violet-200/55">Profile Editor</p>
-                <h3 className="mt-1 text-lg font-black text-white">Profilini düzenle</h3>
-              </div>
-              <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-black text-white/45">
-                {usernameLocked ? `${cooldownDays} gün kaldı` : "Username hazır"}
-              </span>
+          {bio ? (
+            <div className="mt-4 rounded-3xl border border-white/8 bg-white/[0.04] p-3">
+              <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-white/35"><UserRound size={13} /> Bio</div>
+              <p className="text-sm font-bold leading-5 text-white/70">{bio}</p>
             </div>
+          ) : null}
 
-            <div className="mt-4 grid gap-4">
-              <label className="block">
-                <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Kullanıcı adı</span>
-                <input
-                  className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-black/25 px-4 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-violet-300/40 disabled:opacity-50"
-                  value={form.username}
-                  disabled={usernameLocked}
-                  maxLength={20}
-                  placeholder="Kullanıcı Adı"
-                  onChange={(event) => setForm((prev) => ({ ...prev, username: sanitizeUsername(event.target.value) }))}
-                />
-                <p className="mt-2 text-xs font-bold text-white/30">
-                  Sadece harf, rakam ve nokta. Alt çizgi yok. Kullanıcı adı 7 günde 1 değiştirilebilir.
-                </p>
-              </label>
-
-              <label className="block">
-                <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Biyografi</span>
-                <textarea
-                  className="mt-2 min-h-[110px] w-full resize-none rounded-[1.35rem] border border-white/10 bg-black/25 p-4 text-sm font-bold leading-6 text-white outline-none placeholder:text-white/25 focus:border-violet-300/40"
-                  value={form.bio}
-                  maxLength={180}
-                  placeholder="Kendini kısaca anlat..."
-                  onChange={(event) => setForm((prev) => ({ ...prev, bio: event.target.value }))}
-                />
-                <p className="mt-2 text-right text-xs font-bold text-white/30">{String(form.bio || "").length}/180</p>
-              </label>
-            </div>
-
-            <button
-              type="button"
-              onClick={saveProfile}
-              disabled={saving}
-              className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:scale-[1.02] disabled:opacity-60"
-            >
-              {saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />} Kaydet
-            </button>
-          </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
             {badges.map((badge) => (
