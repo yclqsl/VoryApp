@@ -17,7 +17,6 @@ import InviteBox from "../components/InviteBox";
 import PartyDiscoveryPanel from "../components/PartyDiscoveryPanel";
 import LeaderboardPanel from "../components/LeaderboardPanel";
 import CustomizationStorePanel from "../components/CustomizationStorePanel";
-import CreatorHubPanel from "../components/CreatorHubPanel";
 import PresenceFriendPanel from "../components/PresenceFriendPanel";
 import UserList from "../components/UserList";
 import ChatPanel from "../components/ChatPanel";
@@ -237,8 +236,6 @@ export default function Home({ authUser, onLogout }) {
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [missionsLoading, setMissionsLoading] = useState(false);
   const [storeLoading, setStoreLoading] = useState(false);
-  const [creatorHub, setCreatorHub] = useState(null);
-  const [creatorHubLoading, setCreatorHubLoading] = useState(false);
   const [friendState, setFriendState] = useState({ friends: [], sent: [], received: [] });
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
   const [friendSearchResults, setFriendSearchResults] = useState([]);
@@ -311,75 +308,6 @@ export default function Home({ authUser, onLogout }) {
       }
     } finally {
       setLeaderboardLoading(false);
-    }
-  }
-
-  async function loadCreatorHub() {
-    if (!hasVoryAuthSession(currentUserId)) return;
-
-    try {
-      setCreatorHubLoading(true);
-      const response = await api.get("/users/creators/hub");
-      const socketRooms = (discoveryRooms || []).slice(0, 6);
-      setCreatorHub({
-        ...(response.data || {}),
-        featuredRooms: socketRooms,
-      });
-    } catch (error) {
-      if (!isUnauthorizedError(error)) {
-        console.error("Creator hub alınamadı:", error);
-      }
-    } finally {
-      setCreatorHubLoading(false);
-    }
-  }
-
-  async function followCreator(creator) {
-    const creatorId = creator?._id || creator?.id;
-    if (!creatorId) return;
-
-    try {
-      const response = await api.patch(`/users/creators/follow/${creatorId}`);
-      toast.success(response.data?.message || "Creator follow güncellendi 👑");
-      loadCreatorHub();
-      loadLeaderboard();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Creator takip edilemedi.");
-    }
-  }
-
-  async function createCreatorEvent(eventPayload) {
-    if (!hasVoryAuthSession(currentUserId)) return;
-
-    try {
-      setCreatorHubLoading(true);
-      const response = await api.post("/users/creator/events", {
-        ...eventPayload,
-        roomCode: eventPayload?.roomCode || roomCode || "",
-      });
-
-      toast.success(response.data?.message || "Creator event oluşturuldu 📅");
-      await loadCreatorHub();
-      await loadProfileProgress();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Creator event oluşturulamadı.");
-    } finally {
-      setCreatorHubLoading(false);
-    }
-  }
-
-  async function remindCreatorEvent(event) {
-    if (!hasVoryAuthSession(currentUserId) || !event?.id) return;
-
-    try {
-      const response = await api.patch(`/users/creator/events/${event.id}/remind`, {
-        creatorId: event.creatorId,
-      });
-
-      toast.success(response.data?.message || "Event reminder güncellendi 🔔");
-      loadCreatorHub();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Event reminder güncellenemedi.");
     }
   }
 
@@ -527,7 +455,6 @@ export default function Home({ authUser, onLogout }) {
     loadProfileProgress();
     loadLeaderboard();
     refreshCustomizationStore();
-    loadCreatorHub();
   }, [currentUserId]);
 
   useEffect(() => {
@@ -1060,7 +987,6 @@ export default function Home({ authUser, onLogout }) {
     socket.on("discovery-rooms-updated", ({ rooms }) => {
       const nextRooms = Array.isArray(rooms) ? rooms : [];
       setDiscoveryRooms(nextRooms);
-      setCreatorHub((prev) => prev ? { ...prev, featuredRooms: nextRooms.slice(0, 6) } : prev);
       setDiscoveryLoading(false);
     });
 
@@ -2295,18 +2221,6 @@ export default function Home({ authUser, onLogout }) {
             onTogglePublic={togglePublicRoom}
           />
 
-          <CreatorHubPanel
-            hub={creatorHub}
-            currentUserId={currentUserId}
-            loading={creatorHubLoading}
-            onRefresh={loadCreatorHub}
-            onFollowCreator={followCreator}
-            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-            onCreateEvent={createCreatorEvent}
-            onRemindEvent={remindCreatorEvent}
-            currentRoomCode={roomCode}
-          />
-
           <LeaderboardPanel
             users={leaderboardUsers}
             loading={leaderboardLoading}
@@ -2612,17 +2526,6 @@ export default function Home({ authUser, onLogout }) {
             onRefresh={refreshDiscoveryRooms}
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onTogglePublic={togglePublicRoom}
-          />
-          <CreatorHubPanel
-            hub={creatorHub}
-            currentUserId={currentUserId}
-            loading={creatorHubLoading}
-            onRefresh={loadCreatorHub}
-            onFollowCreator={followCreator}
-            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-            onCreateEvent={createCreatorEvent}
-            onRemindEvent={remindCreatorEvent}
-            currentRoomCode={roomCode}
           />
           <LeaderboardPanel
             users={leaderboardUsers}
