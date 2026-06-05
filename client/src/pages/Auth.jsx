@@ -39,9 +39,18 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
     try {
       setLoading(true);
       const endpoint = isRegister ? "/auth/register" : "/auth/login";
+      const cleanIdentifier = email.trim();
+      const loginPayload = {
+        emailOrUsername: cleanIdentifier,
+        identifier: cleanIdentifier,
+        login: cleanIdentifier,
+        username: cleanIdentifier,
+        email: cleanIdentifier.toLowerCase(),
+        password,
+      };
       const payload = isRegister
-        ? { username: username.trim(), email: email.trim(), password }
-        : { emailOrUsername: email.trim(), password };
+        ? { username: username.trim(), email: email.trim().toLowerCase(), password }
+        : loginPayload;
 
       const response = await api.post(endpoint, payload);
       const { user, token } = normalizeAuthResponse(response.data || {});
