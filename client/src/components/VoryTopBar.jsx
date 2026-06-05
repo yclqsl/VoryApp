@@ -21,13 +21,13 @@ export default function VoryTopBar({
   onNotificationClick,
 }) {
   return (
-    <header className="vory-v5-topbar !rounded-[2rem] !border-white/10 !bg-black/25 !px-4 !py-3 !backdrop-blur-2xl">
+    <header className="vory-v5-topbar !rounded-[1.75rem] !border-white/10 !bg-black/25 !px-3.5 !py-2.5 !backdrop-blur-2xl">
       <div className="flex min-w-0 items-center gap-3">
-        <div className="vory-top-logo">V</div>
+        <div className="vory-top-logo !h-9 !w-9">V</div>
 
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate text-base font-black text-white">
+            <h1 className="truncate text-sm font-black text-white">
               {roomCode ? `Room ${roomCode}` : "Vory Lobby"}
             </h1>
             {isHost ? <span className="vory-top-host-badge">HOST</span> : null}
@@ -39,13 +39,13 @@ export default function VoryTopBar({
       </div>
 
       <div className="hidden items-center gap-2 xl:flex">
-        <div className="rounded-2xl bg-white/8 px-3 py-2 text-xs font-black text-white/55">
+        <div className="rounded-2xl bg-white/8 px-2.5 py-2 text-xs font-black text-white/55">
           <span className="inline-flex items-center gap-2"><UsersRound size={14} />{watchingCount || 0}</span>
         </div>
-        <div className="rounded-2xl bg-white/8 px-3 py-2 text-xs font-black text-white/55">
+        <div className="rounded-2xl bg-white/8 px-2.5 py-2 text-xs font-black text-white/55">
           <span className="inline-flex items-center gap-2"><Radio size={14} />{voiceCount || 0}</span>
         </div>
-        <div className={`rounded-2xl px-3 py-2 text-xs font-black ${screenCount > 0 ? "bg-emerald-400/12 text-emerald-200" : "bg-white/8 text-white/55"}`}>
+        <div className={`rounded-2xl px-2.5 py-2 text-xs font-black ${screenCount > 0 ? "bg-emerald-400/12 text-emerald-200" : "bg-white/8 text-white/55"}`}>
           <span className="inline-flex items-center gap-2"><MonitorUp size={14} />{screenCount || 0}</span>
         </div>
       </div>

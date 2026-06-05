@@ -67,7 +67,7 @@ export default function ChatPanel({
         </div>
       )}
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-2 flex gap-2">
         <input
           className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-violet-300/40"
           placeholder="Mesaj yaz..."

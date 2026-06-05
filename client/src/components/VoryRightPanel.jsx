@@ -35,8 +35,8 @@ export default function VoryRightPanel({
   const safeTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : "chat";
 
   return (
-    <aside className="vory-v5-right-panel !rounded-[2rem] !border-white/10 !bg-black/25 !p-3 !shadow-[0_24px_90px_rgba(0,0,0,0.3)]">
-      <div className="mb-3 grid grid-cols-3 gap-2 rounded-[1.5rem] border border-white/8 bg-black/25 p-1.5">
+    <aside className="vory-v5-right-panel !min-w-0 !rounded-[1.75rem] !border-white/10 !bg-black/25 !p-2.5 !shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+      <div className="mb-2 grid grid-cols-3 gap-1.5 rounded-[1.35rem] border border-white/8 bg-black/25 p-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = safeTab === tab.id;
@@ -46,7 +46,7 @@ export default function VoryRightPanel({
               key={tab.id}
               type="button"
               onClick={() => onChange?.(tab.id)}
-              className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-xs font-black transition ${active ? "bg-white text-black" : "text-white/45 hover:bg-white/8 hover:text-white"}`}
+              className={`flex items-center justify-center gap-1.5 rounded-2xl px-2 py-2 text-[11px] font-black transition ${active ? "bg-white text-black" : "text-white/45 hover:bg-white/8 hover:text-white"}`}
             >
               <Icon size={15} />
               {tab.label}
