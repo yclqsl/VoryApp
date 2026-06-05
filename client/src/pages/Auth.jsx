@@ -1,10 +1,11 @@
-import { ArrowLeft, Loader2, LockKeyhole, Mail, UserRound } from "lucide-react";
+import { ArrowLeft, Loader2, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import AnimatedBackground from "../components/AnimatedBackground";
 import { api } from "../services/api";
 
 const USERNAME_REGEX = /^[a-z0-9.]{3,20}$/i;
+const CODE_REGEX = /^[0-9]{6}$/;
 
 function normalizeAuthResponse(data = {}) {
   const user = data.user || data.data?.user || data;
@@ -21,11 +22,21 @@ function cleanUsername(value = "") {
     .slice(0, 20);
 }
 
+function cleanResetCode(value = "") {
+  return String(value || "").replace(/\D/g, "").slice(0, 6);
+}
+
 export default function Auth({ initialMode = "login", onLogin, onBack }) {
   const [mode, setMode] = useState(initialMode || "login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [resetCode, setResetCode] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,6 +45,9 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
 
   const isRegister = mode === "register";
   const isForgot = mode === "forgot";
+  const isVerifyCode = mode === "verify-reset-code";
+  const isResetPassword = mode === "reset-password";
+  const isRecovery = isForgot || isVerifyCode || isResetPassword;
 
   const usernameValid = useMemo(() => {
     if (!isRegister) return true;
@@ -43,11 +57,16 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
   function resetFormForMode(nextMode) {
     setMode(nextMode);
     setPassword("");
+
+    if (nextMode === "login" || nextMode === "register") {
+      setResetCode("");
+      setResetToken("");
+      setNewPassword("");
+      setRecoveryEmail("");
+    }
   }
 
-  async function submitForgotPassword(event) {
-    event.preventDefault();
-
+  async function submitForgotPassword() {
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail || !cleanEmail.includes("@")) {
@@ -61,10 +80,83 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
         email: cleanEmail,
       });
 
-      toast.success(response.data?.message || "Şifre sıfırlama isteği alındı.");
-      resetFormForMode("login");
+      setRecoveryEmail(cleanEmail);
+      setResetCode("");
+      setResetToken("");
+      setNewPassword("");
+      toast.success(response.data?.message || "Kod mail adresine gönderildi 📧");
+      setMode("verify-reset-code");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Şifre sıfırlama isteği gönderilemedi.");
+      toast.error(error?.response?.data?.message || "Şifre sıfırlama kodu gönderilemedi.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submitVerifyResetCode() {
+    const cleanEmail = (recoveryEmail || email).trim().toLowerCase();
+    const cleanCode = cleanResetCode(resetCode);
+
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      toast.error("Email eksik. Tekrar kod iste.");
+      setMode("forgot");
+      return;
+    }
+
+    if (!CODE_REGEX.test(cleanCode)) {
+      toast.error("6 haneli kodu yaz.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await api.post("/auth/verify-reset-code", {
+        email: cleanEmail,
+        code: cleanCode,
+      });
+
+      setResetToken(response.data?.resetToken || "");
+      toast.success(response.data?.message || "Kod doğrulandı ✅");
+      setMode("reset-password");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Kod doğrulanamadı.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submitResetPassword() {
+    const cleanEmail = (recoveryEmail || email).trim().toLowerCase();
+
+    if (!resetToken) {
+      toast.error("Kod doğrulaması eksik. Tekrar kod gir.");
+      setMode("verify-reset-code");
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("Yeni şifre en az 6 karakter olmalı.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await api.post("/auth/reset-password", {
+        email: cleanEmail,
+        resetToken,
+        newPassword,
+      });
+
+      toast.success(response.data?.message || "Şifre güncellendi 🔐");
+      setEmail(cleanEmail);
+      setPassword("");
+      setNewPassword("");
+      setResetCode("");
+      setResetToken("");
+      setRecoveryEmail("");
+      setMode("login");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Şifre güncellenemedi.");
     } finally {
       setLoading(false);
     }
@@ -74,7 +166,17 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
     event.preventDefault();
 
     if (isForgot) {
-      await submitForgotPassword(event);
+      await submitForgotPassword();
+      return;
+    }
+
+    if (isVerifyCode) {
+      await submitVerifyResetCode();
+      return;
+    }
+
+    if (isResetPassword) {
+      await submitResetPassword();
       return;
     }
 
@@ -129,17 +231,27 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
     }
   }
 
-  const title = isForgot
-    ? "Şifreni sıfırla"
-    : isRegister
-      ? "Create your Vory account"
-      : "Welcome back";
+  const title =
+    isForgot
+      ? "Şifreni sıfırla"
+      : isVerifyCode
+        ? "Mail kodunu gir"
+        : isResetPassword
+          ? "Yeni şifre oluştur"
+          : isRegister
+            ? "Create your Vory account"
+            : "Welcome back";
 
-  const subtitle = isForgot
-    ? "Email adresini yaz. Bir sonraki sprintte bu akış mail kodu ile tamamlanacak."
-    : isRegister
-      ? "Watch party odalarını oluşturmak ve arkadaşlarını davet etmek için hesabını aç."
-      : "Odanı geri yükle, arkadaşlarını gör ve watch party'ye devam et.";
+  const subtitle =
+    isForgot
+      ? "Email adresini yaz. Sana 15 dakika geçerli 6 haneli kod göndereceğiz."
+      : isVerifyCode
+        ? `${recoveryEmail || email} adresine gelen 6 haneli kodu gir.`
+        : isResetPassword
+          ? "Kod doğrulandı. Şimdi yeni şifreni belirle."
+          : isRegister
+            ? "Watch party odalarını oluşturmak ve arkadaşlarını davet etmek için hesabını aç."
+            : "Odanı geri yükle, arkadaşlarını gör ve watch party'ye devam et.";
 
   return (
     <main className="vory-auth-shell">
@@ -152,9 +264,25 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
       <section className="vory-auth-grid">
         <div className="vory-auth-card">
           <div className="vory-auth-logo">V</div>
-          <p className="vory-premium-kicker vory-auth-kicker">Closed beta access</p>
+          <p className="vory-premium-kicker vory-auth-kicker">
+            {isRecovery ? "Account recovery" : "Closed beta access"}
+          </p>
           <h1>{title}</h1>
           <p className="vory-auth-subtitle">{subtitle}</p>
+
+          {isRecovery && (
+            <div className="mb-4 grid grid-cols-3 gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-white/35">
+              <span className={`rounded-full px-3 py-2 text-center ${isForgot ? "bg-violet-500/20 text-violet-100" : "bg-white/[0.04]"}`}>
+                Email
+              </span>
+              <span className={`rounded-full px-3 py-2 text-center ${isVerifyCode ? "bg-violet-500/20 text-violet-100" : "bg-white/[0.04]"}`}>
+                Kod
+              </span>
+              <span className={`rounded-full px-3 py-2 text-center ${isResetPassword ? "bg-violet-500/20 text-violet-100" : "bg-white/[0.04]"}`}>
+                Şifre
+              </span>
+            </div>
+          )}
 
           <form className="vory-auth-form" onSubmit={submitAuth}>
             {isRegister && (
@@ -176,31 +304,54 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
               </label>
             )}
 
-            <label>
-              <span>{isRegister || isForgot ? "Email" : "Email or username"}</span>
-              <div className="vory-auth-input-wrap">
-                <Mail size={18} />
-                <input
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder={isRegister || isForgot ? "you@vory.app" : "email veya username"}
-                  type={isRegister || isForgot ? "email" : "text"}
-                  autoComplete={isRegister || isForgot ? "email" : "username"}
-                />
-              </div>
-            </label>
-
-            {!isForgot && (
+            {!isVerifyCode && !isResetPassword && (
               <label>
-                <span>Password</span>
+                <span>{isRegister || isForgot ? "Email" : "Email or username"}</span>
+                <div className="vory-auth-input-wrap">
+                  <Mail size={18} />
+                  <input
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder={isRegister || isForgot ? "you@vory.app" : "email veya username"}
+                    type={isRegister || isForgot ? "email" : "text"}
+                    autoComplete={isRegister || isForgot ? "email" : "username"}
+                  />
+                </div>
+              </label>
+            )}
+
+            {isVerifyCode && (
+              <label>
+                <span>6 haneli kod</span>
+                <div className="vory-auth-input-wrap">
+                  <ShieldCheck size={18} />
+                  <input
+                    value={resetCode}
+                    onChange={(event) => setResetCode(cleanResetCode(event.target.value))}
+                    placeholder="123456"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                  />
+                </div>
+              </label>
+            )}
+
+            {!isForgot && !isVerifyCode && (
+              <label>
+                <span>{isResetPassword ? "Yeni şifre" : "Password"}</span>
                 <div className="vory-auth-input-wrap">
                   <LockKeyhole size={18} />
                   <input
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    value={isResetPassword ? newPassword : password}
+                    onChange={(event) =>
+                      isResetPassword
+                        ? setNewPassword(event.target.value)
+                        : setPassword(event.target.value)
+                    }
                     placeholder="••••••••"
                     type="password"
-                    autoComplete={isRegister ? "new-password" : "current-password"}
+                    autoComplete={isRegister || isResetPassword ? "new-password" : "current-password"}
                   />
                 </div>
               </label>
@@ -212,24 +363,44 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
               </p>
             )}
 
+            {isForgot && (
+              <p className="rounded-2xl border border-white/8 bg-white/[0.04] px-3 py-2 text-xs font-bold text-white/38">
+                Kod gelmezse spam klasörünü kontrol et. 60 saniye içinde tekrar kod isteyemezsin.
+              </p>
+            )}
+
             <button type="submit" className="vory-glow-btn vory-auth-submit" disabled={loading}>
               {loading ? <Loader2 size={18} className="animate-spin" /> : null}
-              {isForgot ? "Sıfırlama isteği gönder" : isRegister ? "Create account" : "Sign in"}
+              {isForgot
+                ? "Kod gönder"
+                : isVerifyCode
+                  ? "Kodu doğrula"
+                  : isResetPassword
+                    ? "Şifreyi güncelle"
+                    : isRegister
+                      ? "Create account"
+                      : "Sign in"}
             </button>
           </form>
 
-          {!isRegister && !isForgot && (
+          {!isRegister && !isRecovery && (
             <button type="button" className="vory-auth-switch" onClick={() => resetFormForMode("forgot")}>
               Şifremi unuttum?
+            </button>
+          )}
+
+          {isVerifyCode && (
+            <button type="button" className="vory-auth-switch" onClick={() => resetFormForMode("forgot")}>
+              Kodu tekrar gönder
             </button>
           )}
 
           <button
             type="button"
             className="vory-auth-switch"
-            onClick={() => resetFormForMode(isRegister || isForgot ? "login" : "register")}
+            onClick={() => resetFormForMode(isRegister || isRecovery ? "login" : "register")}
           >
-            {isRegister || isForgot ? "Zaten hesabın var mı? Sign in" : "Hesabın yok mu? Create account"}
+            {isRegister || isRecovery ? "Zaten hesabın var mı? Sign in" : "Hesabın yok mu? Create account"}
           </button>
         </div>
 

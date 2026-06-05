@@ -39,6 +39,30 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    passwordResetCodeHash: {
+      type: String,
+      default: ""
+    },
+    passwordResetExpiresAt: {
+      type: Date,
+      default: null
+    },
+    passwordResetAttempts: {
+      type: Number,
+      default: 0
+    },
+    passwordResetLastSentAt: {
+      type: Date,
+      default: null
+    },
+    passwordResetTokenHash: {
+      type: String,
+      default: ""
+    },
+    passwordResetVerifiedAt: {
+      type: Date,
+      default: null
+    },
     favoritePlatforms: {
       type: [String],
       default: []
