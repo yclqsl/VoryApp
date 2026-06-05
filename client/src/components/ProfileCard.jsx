@@ -1,18 +1,35 @@
 import {
   Camera,
   Crown,
-  Flame,
   Gem,
   Loader2,
   ShieldCheck,
-  Sparkles,
-  Star,
   Trophy,
   UserRound,
+  Save,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
+
+const USERNAME_COOLDOWN_DAYS = 7;
+
+function sanitizeUsername(value = "") {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9.]/g, "")
+    .replace(/\.{2,}/g, ".")
+    .slice(0, 20);
+}
+
+function daysUntilUsernameChange(dateValue) {
+  if (!dateValue) return 0;
+  const lastChange = new Date(dateValue).getTime();
+  if (!lastChange) return 0;
+  const nextChange = lastChange + USERNAME_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+  return Math.max(0, Math.ceil((nextChange - Date.now()) / (24 * 60 * 60 * 1000)));
+}
 
 function Avatar({ user, frame = "rookie" }) {
   const frameClass =
@@ -116,6 +133,8 @@ export default function ProfileCard({
 }) {
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ username: "", bio: "" });
 
   async function uploadAvatar(file) {
     try {
@@ -156,8 +175,49 @@ export default function ProfileCard({
   const followersCount = Number(profileProgress?.followersCount || authUser?.followers?.length || 0);
   const followingCount = Number(profileProgress?.followingCount || authUser?.following?.length || 0);
   const creatorBadges = profileProgress?.creatorBadges || creatorProfile?.creatorBadges || [];
-  const profileStatus = authUser?.statusMessage ? authUser.statusMessage : roomCode ? `Room ${roomCode} içinde aktif.` : online ? "Lobby'de online. Oda oluştur veya arkadaşına katıl." : "Bağlantı bekleniyor.";
-  const bio = authUser?.bio?.trim() ? authUser.bio.trim() : "VoryApp beta kullanıcısı. Watch party, voice chat ve arkadaş sistemiyle takılıyor.";
+  const bio = profileProgress?.bio?.trim()
+    ? profileProgress.bio.trim()
+    : authUser?.bio?.trim()
+      ? authUser.bio.trim()
+      : "VoryApp beta kullanıcısı. Watch party, voice chat ve arkadaş sistemiyle takılıyor.";
+  const cooldownDays = daysUntilUsernameChange(profileProgress?.lastUsernameChangedAt || authUser?.lastUsernameChangedAt);
+  const usernameLocked = cooldownDays > 0;
+
+  useEffect(() => {
+    setForm({
+      username: sanitizeUsername(username || authUser?.username || ""),
+      bio: profileProgress?.bio ?? authUser?.bio ?? "",
+    });
+  }, [username, profileProgress?.bio, authUser?.username, authUser?.bio]);
+
+  async function saveProfile() {
+    try {
+      const cleanUsername = sanitizeUsername(form.username);
+
+      if (!cleanUsername || cleanUsername.length < 3) {
+        toast.error("Kullanıcı adı en az 3 karakter olmalı.");
+        return;
+      }
+
+      setSaving(true);
+      const { data } = await api.patch("/users/profile/settings", {
+        username: cleanUsername,
+        bio: String(form.bio || "").slice(0, 180),
+      });
+
+      const nextUser = data?.user || data;
+      if (nextUser) {
+        localStorage.setItem("vory_user", JSON.stringify(nextUser));
+        onUserUpdate?.(nextUser);
+      }
+
+      toast.success(data?.message || "Profil güncellendi ✨");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Profil güncellenemedi.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <section className={`glass overflow-hidden p-0 profile-theme-${activeTheme} ${activeGlow !== "none" ? "shadow-[0_0_70px_rgba(217,70,239,0.16)]" : ""}`}>
@@ -274,6 +334,56 @@ export default function ProfileCard({
             <p className="text-sm font-bold leading-5 text-white/70">{bio}</p>
           </div>
 
+          <div className="mt-4 rounded-[1.75rem] border border-violet-300/10 bg-black/20 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-violet-200/55">Profile Editor</p>
+                <h3 className="mt-1 text-lg font-black text-white">Profilini düzenle</h3>
+              </div>
+              <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-black text-white/45">
+                {usernameLocked ? `${cooldownDays} gün kaldı` : "Username hazır"}
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-4">
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Kullanıcı adı</span>
+                <input
+                  className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-black/25 px-4 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-violet-300/40 disabled:opacity-50"
+                  value={form.username}
+                  disabled={usernameLocked}
+                  maxLength={20}
+                  placeholder="kullanici.adi"
+                  onChange={(event) => setForm((prev) => ({ ...prev, username: sanitizeUsername(event.target.value) }))}
+                />
+                <p className="mt-2 text-xs font-bold text-white/30">
+                  Sadece harf, rakam ve nokta. Alt çizgi yok. Kullanıcı adı 7 günde 1 değiştirilebilir.
+                </p>
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Biyografi</span>
+                <textarea
+                  className="mt-2 min-h-[110px] w-full resize-none rounded-[1.35rem] border border-white/10 bg-black/25 p-4 text-sm font-bold leading-6 text-white outline-none placeholder:text-white/25 focus:border-violet-300/40"
+                  value={form.bio}
+                  maxLength={180}
+                  placeholder="Kendini kısaca anlat..."
+                  onChange={(event) => setForm((prev) => ({ ...prev, bio: event.target.value }))}
+                />
+                <p className="mt-2 text-right text-xs font-bold text-white/30">{String(form.bio || "").length}/180</p>
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={saveProfile}
+              disabled={saving}
+              className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:scale-[1.02] disabled:opacity-60"
+            >
+              {saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />} Kaydet
+            </button>
+          </div>
+
           <div className="mt-3 flex flex-wrap gap-2">
             {badges.map((badge) => (
               <span key={badge} className="rounded-full bg-fuchsia-500/15 px-3 py-1 text-xs font-black text-fuchsia-200">{badgeIcon(badge)} {badge}</span>
@@ -295,10 +405,6 @@ export default function ProfileCard({
             </div>
           ) : null}
 
-          <div className="mt-4 rounded-3xl border border-violet-400/10 bg-violet-500/10 p-3">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-200/55">Profile Status</p>
-            <p className="mt-1 text-sm font-bold text-white/70">{profileStatus}</p>
-          </div>
         </div>
       </div>
     </section>
