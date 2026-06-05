@@ -239,8 +239,8 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
         : isResetPassword
           ? "Yeni şifre oluştur"
           : isRegister
-            ? "Create your Vory account"
-            : "Welcome back";
+            ? "Join Vory"
+            : "Welcome back 👋";
 
   const subtitle =
     isForgot
@@ -293,7 +293,7 @@ export default function Auth({ initialMode = "login", onLogin, onBack }) {
                   <input
                     value={username}
                     onChange={(event) => setUsername(cleanUsername(event.target.value))}
-                    placeholder="yucel.aslan"
+                    placeholder="kullanici.adi"
                     autoComplete="username"
                     maxLength={20}
                   />
