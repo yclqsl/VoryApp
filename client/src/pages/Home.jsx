@@ -130,12 +130,24 @@ function normalizeHistoryTitle(value = "") {
   }
 }
 
+function getThemeShellClass() {
+  return "from-[#05030d] via-[#10071f] to-[#020716]";
+}
+
+function getThemeGlowClass(slot = 1) {
+  if (slot === 1) return "bg-violet-600/18";
+  if (slot === 2) return "bg-fuchsia-600/14";
+  return "bg-sky-500/10";
+}
 
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
   const [roomInput, setRoomInput] = useState("");
   const [roomCode, setRoomCode] = useState("");
+  const [roomTheme, setRoomTheme] = useState("voryapp");
   const [roomSettings, setRoomSettings] = useState({ publicRoom: false });
+  const [discoveryRooms, setDiscoveryRooms] = useState([]);
+  const [discoveryLoading, setDiscoveryLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [users, setUsers] = useState([]);
   const [voiceRoster, setVoiceRoster] = useState([]);
@@ -172,6 +184,10 @@ export default function Home({ authUser, onLogout }) {
     readLocalJson("vory-profile-stats", createEmptyVoryStats())
   );
   const [profileProgress, setProfileProgress] = useState(null);
+  const [leaderboardUsers, setLeaderboardUsers] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [missionsLoading, setMissionsLoading] = useState(false);
+  const [storeLoading, setStoreLoading] = useState(false);
   const [friendState, setFriendState] = useState({ friends: [], sent: [], received: [] });
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
   const [friendSearchResults, setFriendSearchResults] = useState([]);
@@ -334,6 +350,7 @@ export default function Home({ authUser, onLogout }) {
       });
 
       socket.emit("get-online-users");
+      socket.emit("get-discovery-rooms");
     };
 
     announcePresence();
@@ -518,6 +535,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomUrl(data.roomCode);
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
+      setRoomTheme("voryapp");
       setRoomSettings(data.settings || { publicRoom: false });
       setPendingInviteRoom("");
 	  setLastRestoreMessage("");
@@ -530,6 +548,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomUrl(data.roomCode);
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
+      setRoomTheme("voryapp");
       setRoomSettings(data.settings || { publicRoom: false });
       setPendingInviteRoom("");
 	  setLastRestoreMessage("");
@@ -549,6 +568,7 @@ export default function Home({ authUser, onLogout }) {
       setMediaQueue([]);
       setStatus("");
       setIsHost(false);
+      setRoomTheme("voryapp");
       setRoomSettings({ publicRoom: false });
       setLastRestoreMessage("");
       if (syncIntervalRef.current) {
@@ -563,6 +583,10 @@ export default function Home({ authUser, onLogout }) {
       setUsers(roomUsers);
       const me = roomUsers.find((user) => user.id === socket.id);
       setIsHost(!!me?.isHost);
+    });
+
+    socket.on("room-theme-updated", () => {
+      setRoomTheme("voryapp");
     });
 
     socket.on("room-host-changed", (payload) => {
@@ -777,6 +801,12 @@ export default function Home({ authUser, onLogout }) {
       setOnlinePresence(presenceUsers || []);
     });
 
+    socket.on("discovery-rooms-updated", ({ rooms }) => {
+      const nextRooms = Array.isArray(rooms) ? rooms : [];
+      setDiscoveryRooms(nextRooms);
+      setDiscoveryLoading(false);
+    });
+
     socket.on("room-settings-updated", ({ settings }) => {
       setRoomSettings(settings || { publicRoom: false });
     });
@@ -928,6 +958,7 @@ export default function Home({ authUser, onLogout }) {
       socket.off("room-joined");
       socket.off("room-left");
       socket.off("room-users");
+      socket.off("room-theme-updated");
       socket.off("room-host-changed");
       socket.off("video-updated");
       socket.off("video-control");
@@ -947,6 +978,7 @@ export default function Home({ authUser, onLogout }) {
       socket.off("room-error");
       socket.off("online-users");
       socket.off("presence-changed");
+      socket.off("discovery-rooms-updated");
       socket.off("room-settings-updated");
       socket.off("dm:received");
       socket.off("dm:sent");
@@ -1047,6 +1079,7 @@ export default function Home({ authUser, onLogout }) {
     refreshDiscoveryRooms();
 
     const discoveryTimer = setInterval(() => {
+      socket.emit("get-discovery-rooms");
     }, 20000);
 
     return () => clearInterval(discoveryTimer);
@@ -1179,6 +1212,11 @@ export default function Home({ authUser, onLogout }) {
     });
 
     toast.success(resumeTime > 5 ? `Devam Et hazırlanıyor: ${formatPlaybackTime(resumeTime)} 🎬` : "Geçmişten medya başlatıldı 🎬");
+  }
+
+  function refreshDiscoveryRooms() {
+    setDiscoveryLoading(true);
+    socket.emit("get-discovery-rooms");
   }
 
   function togglePublicRoom(nextPublic) {
@@ -1914,6 +1952,11 @@ export default function Home({ authUser, onLogout }) {
     setActiveMobileTab(nextSection);
   }
 
+  function changeRoomTheme() {
+    setRoomTheme("voryapp");
+    toast("VoryApp teması sabit aktif 💜");
+  }
+
 
   function handleCreateRoomFlow() {
     setAppSection("watch");
@@ -2000,10 +2043,11 @@ export default function Home({ authUser, onLogout }) {
   }
 
   function renderRaveHomeFeed() {
-    const demoRooms = [
+    const publicRooms = (discoveryRooms || []).filter((room) => room?.isPublic).slice(0, 8);
+    const privatePreview = (discoveryRooms || []).filter((room) => !room?.isPublic).slice(0, 4);
+    const demoRooms = publicRooms.length ? publicRooms : [
       { roomCode: "DEMO1", mediaTitle: "YouTube watch party başlat", hostUsername: currentUserPayload.username || "Vory", userCount: Math.max(onlinePresence.length, 1), videoActive: true, demo: true },
-      { roomCode: "DEMO2", mediaTitle: "Arkadaşlarınla film gecesi", hostUsername: "Vory", userCount: Math.max(friendState.friends?.length || 0, 1), demo: true },
-      { roomCode: "DEMO3", mediaTitle: "Müzik gecesi başlat", hostUsername: "Vory", userCount: 1, demo: true },
+      { roomCode: "DEMO2", mediaTitle: "Arkadaşlarınla film gecesi", hostUsername: "Vory", userCount: friendState.friends?.length || 0, demo: true },
     ];
 
     const RoomCard = ({ room, privateRoom = false }) => (
@@ -2055,7 +2099,7 @@ export default function Home({ authUser, onLogout }) {
             <input
               placeholder="Oda ara"
               className="min-w-0 flex-1 bg-transparent text-xl font-black text-white outline-none placeholder:text-white/45"
-              
+              onFocus={() => refreshDiscoveryRooms()}
             />
           </div>
 
@@ -2063,7 +2107,7 @@ export default function Home({ authUser, onLogout }) {
             <div>
               <h2 className="mb-3 flex items-center gap-3 text-3xl font-black text-white"><span>🔒</span> Davetli</h2>
               <div className="space-y-3">
-                {demoRooms.slice(0, 2).map((room, index) => <RoomCard key={`private-${room.roomCode || index}`} room={room} privateRoom />)}
+                {(privatePreview.length ? privatePreview : demoRooms.slice(0, 2)).map((room, index) => <RoomCard key={`private-${room.roomCode || index}`} room={room} privateRoom />)}
               </div>
             </div>
 
