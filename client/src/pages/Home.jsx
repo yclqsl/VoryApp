@@ -2593,9 +2593,10 @@ export default function Home({ authUser, onLogout }) {
   }
 
   return (
-    <div className={`app-shell theme-voryapp min-h-screen overflow-x-hidden bg-gradient-to-br ${getThemeShellClass()} text-white`}>
+    <>
       <AnimatedBackground theme="voryapp" />
 
+      <div className={`app-shell theme-voryapp min-h-screen overflow-x-hidden bg-gradient-to-br ${getThemeShellClass()} text-white`}>
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className={`absolute -left-32 top-0 h-96 w-96 rounded-full ${getThemeGlowClass(1)} blur-3xl`} />
         <div className={`absolute right-10 top-20 h-96 w-96 rounded-full ${getThemeGlowClass(2)} blur-3xl`} />
@@ -2785,5 +2786,6 @@ export default function Home({ authUser, onLogout }) {
         </div>
       </div>
     </div>
+    </>
   );
 }
