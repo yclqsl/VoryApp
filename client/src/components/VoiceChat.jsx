@@ -10,7 +10,7 @@ const ICE_SERVERS = {
   ],
 };
 
-export default function VoiceChat({ roomCode, username, onReaction }) {
+export default function VoiceChat({ roomCode, username, onReaction, onVoiceUsersChange }) {
   const [isVoiceOn, setIsVoiceOn] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [voiceUsers, setVoiceUsers] = useState([]);
@@ -27,8 +27,39 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
   const isMutedRef = useRef(false);
   const forceMutedByHostRef = useRef(false);
 
+  function normalizedVoiceUsers(list = voiceUsers) {
+    const seen = new Set();
+    const safeList = (list || [])
+      .filter((user) => user?.socketId)
+      .filter((user) => {
+        if (seen.has(user.socketId)) return false;
+        seen.add(user.socketId);
+        return true;
+      });
+
+    if (isVoiceOn && socket.id && !safeList.some((user) => user.socketId === socket.id)) {
+      safeList.unshift({
+        socketId: socket.id,
+        username: username || "Sen",
+        muted: isMutedRef.current,
+        level: voiceLevels[socket.id] || 0,
+      });
+    }
+
+    return safeList.map((user) => ({
+      ...user,
+      username: user.username || (user.socketId === socket.id ? username : "Kullanıcı"),
+      muted: user.socketId === socket.id ? isMutedRef.current : !!user.muted,
+      level: voiceLevels[user.socketId] || user.level || 0,
+    }));
+  }
+
+  function publishVoiceUsers(nextUsers = voiceUsers) {
+    onVoiceUsersChange?.(isVoiceOn ? normalizedVoiceUsers(nextUsers) : []);
+  }
+
   function participantCount() {
-    return isVoiceOn ? Math.max(voiceUsers.length, 1) : 0;
+    return isVoiceOn ? normalizedVoiceUsers().length : 0;
   }
 
   function updateLocalLevel(level) {
@@ -130,6 +161,13 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
         username,
       });
 
+      onVoiceUsersChange?.([{
+        socketId: socket.id,
+        username: username || "Sen",
+        muted: false,
+        level: 0,
+      }]);
+
       toast.success("Mikrofon açıldı 🎙️");
     } catch (error) {
       toast.error("Mikrofon izni alınamadı.");
@@ -159,8 +197,11 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
 
     stopLevelMeter();
 
-    socket.emit("voice-leave", { roomCode });
+    if (roomCode) {
+      socket.emit("voice-leave", { roomCode });
+    }
 
+    onVoiceUsersChange?.([]);
     setVoiceUsers([]);
     setVoiceLevels({});
     setIsVoiceOn(false);
@@ -341,9 +382,25 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
 
 
   useEffect(() => {
+    if (!roomCode) {
+      onVoiceUsersChange?.([]);
+      setVoiceUsers([]);
+      setVoiceLevels({});
+    }
+  }, [roomCode]);
+
+  useEffect(() => {
+    publishVoiceUsers();
+  }, [isVoiceOn, isMuted, voiceUsers, voiceLevels, username]);
+
+
+  useEffect(() => {
     socket.on("voice-users", ({ users }) => {
-      const safeUsers = users || [];
+      const safeUsers = (users || []).filter((user) => user?.socketId);
       setVoiceUsers(safeUsers);
+      if (isVoiceOn || localStreamRef.current) {
+        onVoiceUsersChange?.(normalizedVoiceUsers(safeUsers));
+      }
 
       setVoiceLevels((prev) => {
         const next = { ...prev };
@@ -417,6 +474,13 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
 
     socket.on("voice-user-left", ({ socketId }) => {
       removePeer(socketId);
+      setVoiceUsers((prev) => {
+        const next = (prev || []).filter((user) => user.socketId !== socketId);
+        if (isVoiceOn || localStreamRef.current) {
+          onVoiceUsersChange?.(normalizedVoiceUsers(next));
+        }
+        return next;
+      });
     });
 
     socket.on("room-mute-all", ({ roomCode: targetRoom }) => {
@@ -478,10 +542,8 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
     <section className="glass">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-black">Sesli Sohbet</h2>
-          <p className="mt-1 text-xs text-white/40">
-            Konuşan kişi canlı glow ve ses barıyla görünür.
-          </p>
+          <h2 className="text-lg font-black">Voice</h2>
+          <p className="mt-1 text-xs text-white/40">Rave tarzı hızlı ses kontrolü.</p>
         </div>
 
         <div
@@ -514,12 +576,12 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
             Voice Channel
           </p>
 
-          {voiceUsers.length === 0 ? (
+          {normalizedVoiceUsers().length === 0 ? (
             <div className="rounded-2xl bg-black/25 p-3 text-sm text-white/35">
               Katılımcılar yükleniyor...
             </div>
           ) : (
-            voiceUsers.map((user) => {
+            normalizedVoiceUsers().map((user) => {
               const level = voiceLevels[user.socketId] || 0;
               const speaking = !user.muted && level > 14;
               const isMe = user.socketId === socket.id;

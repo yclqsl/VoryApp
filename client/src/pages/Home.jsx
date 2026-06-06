@@ -153,6 +153,7 @@ export default function Home({ authUser, onLogout }) {
   const [discoveryLoading, setDiscoveryLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [users, setUsers] = useState([]);
+  const [voiceRoster, setVoiceRoster] = useState([]);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [videoUrl, setVideoUrl] = useState("");
@@ -218,9 +219,7 @@ export default function Home({ authUser, onLogout }) {
 
   const currentRoomPresence = onlinePresence.filter((user) => user.roomCode === roomCode);
   const liveWatchingCount = roomCode ? Math.max(users.length, currentRoomPresence.length) : 0;
-  const activeVoiceUsers = roomCode
-    ? users.filter((user) => user?.voiceActive === true || user?.inVoice === true || user?.micActive === true)
-    : [];
+  const activeVoiceUsers = roomCode ? voiceRoster : [];
   const liveVoiceCount = activeVoiceUsers.length;
   const liveScreenCount = roomCode
     ? currentRoomPresence.filter((user) => user.screenSharing || user.activity === "sharing-screen").length
@@ -569,6 +568,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomUrl("");
       setRoomCode("");
       setUsers([]);
+      setVoiceRoster([]);
       setMessages([]);
       setVideoUrl("");
       setCurrentMedia(null);
@@ -1308,6 +1308,7 @@ export default function Home({ authUser, onLogout }) {
     setRoomUrl("");
     setRoomCode("");
     setUsers([]);
+    setVoiceRoster([]);
     setMessages([]);
     setVideoUrl("");
     setCurrentMedia(null);
@@ -1481,20 +1482,11 @@ export default function Home({ authUser, onLogout }) {
 
 
 
-  function restorePreviousSession(reason = "manual") {
-    const savedRoom = localStorage.getItem("vory-last-room");
-    const savedUsername = localStorage.getItem("vory-last-username") || currentUserPayload.username;
-
-    if (!savedRoom || roomCode) return;
-
-    setLastRestoreMessage("Önceki oda geri yükleniyor...");
-
-    socket.emit("rejoin-session", {
-      roomCode: savedRoom,
-      username: savedUsername,
-      avatar: authUser?.avatar || "",
-      reason,
-    });
+  function restorePreviousSession() {
+    // Vory 3.2 Rave flow: otomatik oda restore kapalı.
+    localStorage.removeItem("vory-last-room");
+    sessionStorage.removeItem("vory-last-room");
+    setLastRestoreMessage("");
   }
 
   function requestHardSync(reason = "manual") {
@@ -2271,7 +2263,7 @@ export default function Home({ authUser, onLogout }) {
     }
 
     return (
-      <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
         <section className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/25 p-2.5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
           <div className="min-h-0 flex-1 overflow-hidden rounded-[1.7rem]">
             <VideoPlayer
@@ -2288,52 +2280,88 @@ export default function Home({ authUser, onLogout }) {
           </div>
         </section>
 
-        {activeVoiceUsers.length > 0 ? (
-          <div className="mb-3 rounded-[1.5rem] border border-emerald-300/15 bg-emerald-500/8 px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/60">Seste olanlar</p>
-            <div className="flex flex-wrap gap-2">
-              {activeVoiceUsers.map((user, index) => (
-                <span key={user.id || user.userId || user.username || index} className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-2 text-xs font-black text-white/80 ring-1 ring-white/10">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-100">{String(user.username || user.name || "V").charAt(0).toUpperCase()}</span>
-                  {user.username || user.name || "Kullanıcı"}
-                  <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        <aside className="flex min-h-0 flex-col gap-3">
+          {renderVoiceAvatarRow(true)}
 
-        <VoryRightPanel
-          activeTab={rightPanelTab}
-          onChange={setRightPanelTab}
-          roomCode={roomCode}
-          isHost={isHost}
-          currentMedia={currentMedia}
-          mediaQueue={mediaQueue}
-          onAddMedia={addToQueue}
-          onPlayNext={playNextMedia}
-          onRemoveMedia={removeFromQueue}
-          onClearQueue={clearMediaQueue}
-          onVoteMedia={voteMedia}
-          messages={messages}
-          message={message}
-          setMessage={setMessage}
-          onSendMessage={sendMessage}
-          users={users}
-          onlinePresence={onlinePresence}
-          currentSocketId={socket.id}
-          currentRoomCode={roomCode}
-          inviteCooldowns={inviteCooldowns}
-          dmUnread={dmUnread}
-          activeDM={activeDM}
-          dmLastMessages={dmLastMessages}
-          onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-          onInviteFriend={sendPartyInvite}
-          onOpenDM={openDM}
-        />
+          <VoryRightPanel
+            activeTab={rightPanelTab}
+            onChange={setRightPanelTab}
+            roomCode={roomCode}
+            isHost={isHost}
+            currentMedia={currentMedia}
+            mediaQueue={mediaQueue}
+            onAddMedia={addToQueue}
+            onPlayNext={playNextMedia}
+            onRemoveMedia={removeFromQueue}
+            onClearQueue={clearMediaQueue}
+            onVoteMedia={voteMedia}
+            messages={messages}
+            message={message}
+            setMessage={setMessage}
+            onSendMessage={sendMessage}
+            users={users}
+            onlinePresence={onlinePresence}
+            currentSocketId={socket.id}
+            currentRoomCode={roomCode}
+            inviteCooldowns={inviteCooldowns}
+            dmUnread={dmUnread}
+            activeDM={activeDM}
+            dmLastMessages={dmLastMessages}
+            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+            onInviteFriend={sendPartyInvite}
+            onOpenDM={openDM}
+          />
 
-        <div className="xl:col-span-2">
-          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
+          <VoiceChat
+            roomCode={roomCode}
+            username={currentUserPayload.username}
+            onReaction={sendReaction}
+            onVoiceUsersChange={setVoiceRoster}
+          />
+        </aside>
+      </div>
+    );
+  }
+
+  function renderVoiceAvatarRow(compact = false) {
+    if (!roomCode || activeVoiceUsers.length === 0) return null;
+
+    return (
+      <div className={`rounded-[1.45rem] border border-emerald-300/15 bg-black/28 px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl ${compact ? "" : "mb-3"}`}>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/60">Voice</p>
+          <span className="rounded-full bg-emerald-400/12 px-2.5 py-1 text-[10px] font-black text-emerald-100">
+            {activeVoiceUsers.length} kişi
+          </span>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {activeVoiceUsers.map((user, index) => {
+            const speaking = Number(user.level || 0) > 14 && !user.muted;
+            const muted = !!user.muted;
+            const label = user.username || user.name || "Kullanıcı";
+
+            return (
+              <div
+                key={user.socketId || user.id || user.userId || label || index}
+                className={`flex min-w-[72px] flex-col items-center gap-1 rounded-2xl px-2.5 py-2 text-center ring-1 transition ${
+                  speaking
+                    ? "bg-emerald-400/14 text-emerald-50 ring-emerald-300/30 shadow-[0_0_28px_rgba(52,211,153,0.18)]"
+                    : "bg-white/[0.045] text-white/65 ring-white/8"
+                }`}
+              >
+                <div className={`relative flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${
+                  speaking ? "bg-emerald-300 text-black" : "bg-white/10 text-white"
+                }`}>
+                  {String(label).charAt(0).toUpperCase()}
+                  <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#10071f] ${
+                    muted ? "bg-amber-300" : speaking ? "bg-emerald-300" : "bg-white/35"
+                  }`} />
+                </div>
+                <p className="max-w-[68px] truncate text-[11px] font-black">{label}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -2407,20 +2435,7 @@ export default function Home({ authUser, onLogout }) {
             </button>
           </div>
 
-          {activeVoiceUsers.length > 0 ? (
-          <div className="mb-3 rounded-[1.5rem] border border-emerald-300/15 bg-emerald-500/8 px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/60">Seste olanlar</p>
-            <div className="flex flex-wrap gap-2">
-                {activeVoiceUsers.map((user, index) => (
-                <span key={user.id || user.userId || user.username || index} className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-2 text-xs font-black text-white/80 ring-1 ring-white/10">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-100">{String(user.username || user.name || "V").charAt(0).toUpperCase()}</span>
-                    {user.username || user.name || "Kullanıcı"}
-                  <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : null}
+          {renderVoiceAvatarRow()}
 
           <ChatPanel
             messages={messages}
@@ -2431,7 +2446,7 @@ export default function Home({ authUser, onLogout }) {
             onTyping={handleTyping}
           />
 
-          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
+          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} onVoiceUsersChange={setVoiceRoster} />
 
           {mobileQueueOpen && (
             <div className="fixed inset-0 z-[9997] flex items-end bg-black/55 backdrop-blur-sm lg:hidden">
