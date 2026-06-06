@@ -241,6 +241,7 @@ export default function Home({ authUser, onLogout }) {
   const [friendSearchResults, setFriendSearchResults] = useState([]);
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
+  const [createSheetOpen, setCreateSheetOpen] = useState(false);
 
   const currentUserId = authUser?._id || authUser?.id || "";
 
@@ -2144,6 +2145,182 @@ export default function Home({ authUser, onLogout }) {
     });
   }
 
+
+  function handleCreateRoomFlow() {
+    if (!roomCode) {
+      createRoom();
+    }
+
+    setAppSection("watch");
+    setActiveMobileTab("watch");
+    setCreateSheetOpen(true);
+    toast.success(roomCode ? "Platform seç ve izlemeye başla 🎬" : "Oda oluşturuluyor, platform seçebilirsin 🎬");
+  }
+
+  function selectPlatform(platform) {
+    setCreateSheetOpen(false);
+    setAppSection("watch");
+    setActiveMobileTab("watch");
+
+    if (platform.id === "youtube") {
+      toast("YouTube linkini yapıştırıp başlat knks ▶️", { icon: "🎬" });
+      return;
+    }
+
+    toast(`${platform.name} yakında. Şimdilik YouTube/Web akışı aktif.`, { icon: "✨" });
+  }
+
+  function renderPlatformSheet() {
+    if (!createSheetOpen) return null;
+
+    const platforms = [
+      { id: "youtube", name: "YouTube", label: "Aktif", logo: "YouTube" },
+      { id: "web", name: "WEB", label: "Yakında", logo: "WEB" },
+      { id: "drive", name: "Drive", label: "Yakında", logo: "Drive" },
+      { id: "playlist", name: "Playlist", label: "Yakında", logo: "Playlist" },
+      { id: "twitch", name: "Twitch", label: "Yakında", logo: "Twitch" },
+      { id: "netflix", name: "Netflix", label: "Yakında", logo: "NETFLIX" },
+      { id: "prime", name: "Prime", label: "Yakında", logo: "prime" },
+      { id: "karaoke", name: "Karaoke", label: "Yakında", logo: "Karaoke" },
+    ];
+
+    return (
+      <div className="fixed inset-0 z-[9999] overflow-auto bg-[#08000f]/92 px-5 py-6 text-white backdrop-blur-2xl">
+        <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col">
+          <div className="sticky top-0 z-10 -mx-5 mb-5 border-b border-white/8 bg-[#08000f]/80 px-5 py-4 backdrop-blur-2xl">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h1 className="text-5xl font-black tracking-[-0.08em] text-white drop-shadow-xl">vory</h1>
+                <p className="mt-1 text-sm font-bold text-white/45">Platform seç, oda zaten hazır.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCreateSheetOpen(false)}
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-3xl font-light text-black shadow-[0_18px_60px_rgba(255,255,255,0.18)]"
+                aria-label="Platform ekranını kapat"
+              >
+                ‹
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-7 flex items-center gap-3 rounded-[1.8rem] bg-black/35 px-5 py-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
+            <span className="text-4xl leading-none">⌕</span>
+            <input
+              readOnly
+              value="video, dizi veya film ara"
+              className="min-w-0 flex-1 bg-transparent text-lg font-black text-white/45 outline-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-8 gap-y-8 pb-28 sm:grid-cols-3">
+            {platforms.map((platform) => (
+              <button
+                key={platform.id}
+                type="button"
+                onClick={() => selectPlatform(platform)}
+                className="group relative min-h-[110px] rounded-[2rem] border border-white/8 bg-white/[0.035] p-5 text-left shadow-[0_22px_90px_rgba(0,0,0,0.28)] transition hover:scale-[1.02] hover:bg-white/[0.07]"
+              >
+                <p className="text-3xl font-black tracking-[-0.04em] text-white drop-shadow-xl sm:text-4xl">{platform.logo}</p>
+                <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-white/35">{platform.label}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderRaveHomeFeed() {
+    const publicRooms = (discoveryRooms || []).filter((room) => room?.isPublic).slice(0, 8);
+    const privatePreview = (discoveryRooms || []).filter((room) => !room?.isPublic).slice(0, 4);
+    const demoRooms = publicRooms.length ? publicRooms : [
+      { roomCode: "DEMO1", mediaTitle: "YouTube watch party başlat", hostUsername: currentUserPayload.username || "Vory", userCount: Math.max(onlinePresence.length, 1), videoActive: true, demo: true },
+      { roomCode: "DEMO2", mediaTitle: "Arkadaşlarınla film gecesi", hostUsername: "Vory", userCount: friendState.friends?.length || 0, demo: true },
+    ];
+
+    const RoomCard = ({ room, privateRoom = false }) => (
+      <button
+        type="button"
+        onClick={() => room.demo ? handleCreateRoomFlow() : joinRoom(room.roomCode)}
+        className="group grid min-h-[118px] grid-cols-[42%_1fr] overflow-hidden rounded-[1.9rem] bg-black/28 text-left shadow-[0_24px_90px_rgba(0,0,0,0.28)] ring-1 ring-white/8 transition hover:scale-[1.01] hover:ring-white/16"
+      >
+        <div className="relative overflow-hidden bg-gradient-to-br from-violet-500/35 via-fuchsia-500/20 to-sky-500/25">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.24),transparent_34%),radial-gradient(circle_at_70%_80%,rgba(59,130,246,0.25),transparent_36%)]" />
+          <div className="absolute right-3 top-3 rounded-lg bg-white/75 px-2 py-1 text-xs font-black text-black">▶</div>
+          <div className="absolute bottom-3 left-3 rounded-full bg-black/45 px-3 py-1 text-xs font-black text-white/80">
+            {room.videoActive ? "LIVE" : privateRoom ? "PRIVATE" : "ROOM"}
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-col justify-between p-4">
+          <div>
+            <h3 className="line-clamp-2 text-lg font-black leading-tight text-white sm:text-xl">
+              {room.mediaTitle || room.currentMedia?.title || "Vory Watch Party"}
+            </h3>
+            <p className="mt-1 truncate text-sm font-bold text-white/42">@{room.hostUsername || "host"}</p>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex -space-x-2">
+              {Array.from({ length: Math.min(5, Math.max(1, Number(room.userCount || 1))) }).map((_, index) => (
+                <span key={index} className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#17051f] bg-white/12 text-xs font-black text-white">
+                  {index + 1}
+                </span>
+              ))}
+            </div>
+            {Number(room.userCount || 0) > 5 ? <span className="rounded-full bg-red-500 px-2 py-1 text-xs font-black text-white">+{Number(room.userCount) - 5}</span> : null}
+          </div>
+        </div>
+      </button>
+    );
+
+    return (
+      <section className="relative min-h-[calc(100vh-2rem)] overflow-hidden rounded-[2.3rem] border border-white/8 bg-black/18 p-5 pb-28 shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-2xl lg:p-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(236,72,153,0.20),transparent_28%),radial-gradient(circle_at_84%_20%,rgba(79,70,229,0.22),transparent_32%),radial-gradient(circle_at_72%_92%,rgba(14,165,233,0.18),transparent_28%)]" />
+        <div className="relative z-10 mx-auto max-w-5xl">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <button type="button" onClick={() => handleSectionChange("settings")} className="text-5xl font-black leading-none text-white/90">☰</button>
+            <h1 className="text-6xl font-black tracking-[-0.1em] text-white drop-shadow-xl sm:text-7xl">vory</h1>
+            <button type="button" onClick={() => handleSectionChange("friends")} className="text-5xl leading-none text-white/90">👥</button>
+          </div>
+
+          <div className="mb-6 flex items-center gap-3 rounded-[1.9rem] bg-black/40 px-5 py-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
+            <span className="text-4xl leading-none text-white">⌕</span>
+            <input
+              placeholder="Oda ara"
+              className="min-w-0 flex-1 bg-transparent text-xl font-black text-white outline-none placeholder:text-white/45"
+              onFocus={() => refreshDiscoveryRooms()}
+            />
+          </div>
+
+          <div className="space-y-7">
+            <div>
+              <h2 className="mb-3 flex items-center gap-3 text-3xl font-black text-white"><span>🔒</span> Davetli</h2>
+              <div className="space-y-3">
+                {(privatePreview.length ? privatePreview : demoRooms.slice(0, 2)).map((room, index) => <RoomCard key={`private-${room.roomCode || index}`} room={room} privateRoom />)}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="mb-3 flex items-center gap-3 text-3xl font-black text-white"><span>🌐</span> Herkese Açık</h2>
+              <div className="space-y-3">
+                {demoRooms.map((room, index) => <RoomCard key={`public-${room.roomCode || index}`} room={room} />)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleCreateRoomFlow}
+          className="fixed bottom-7 right-7 z-20 flex h-24 w-24 items-center justify-center rounded-full bg-white text-6xl font-light text-black shadow-[0_28px_90px_rgba(0,0,0,0.42)] transition hover:scale-105"
+          aria-label="Oda oluştur"
+        >
+          +
+        </button>
+      </section>
+    );
+  }
+
   function renderRoomInviteCard() {
     if (!roomCode) return null;
 
@@ -2274,6 +2451,10 @@ export default function Home({ authUser, onLogout }) {
       return <AdminFeedbackPanel authUser={authUser} />;
     }
 
+    if (!roomCode) {
+      return renderRaveHomeFeed();
+    }
+
     return (
       <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
         <section className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/25 p-2.5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
@@ -2359,6 +2540,14 @@ export default function Home({ authUser, onLogout }) {
     const mobileSection = mobileSectionMap[activeMobileTab] || activeMobileTab || "watch";
 
     if (mobileSection === "watch") {
+      if (!roomCode) {
+        return (
+          <section className="pb-28">
+            {renderRaveHomeFeed()}
+          </section>
+        );
+      }
+
       return (
         <section className="flex min-w-0 flex-col gap-4 pb-28">
           <VideoPlayer
@@ -2631,6 +2820,8 @@ export default function Home({ authUser, onLogout }) {
           onlineCount={onlinePresence.length}
           userCount={users.length}
           isAdmin={isAdminUser}
+          authUser={authUser}
+          onLogout={onLogout}
         />
 
         <div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -2758,6 +2949,7 @@ export default function Home({ authUser, onLogout }) {
           </main>
 
           {renderDMPanel()}
+          {renderPlatformSheet()}
 
           <FeedbackWidget
             authUser={authUser}

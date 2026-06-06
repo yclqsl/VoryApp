@@ -252,14 +252,7 @@ export default function ProfileCard({
 
         <div className="mt-4 min-w-0">
           <h2 className="truncate text-2xl font-black sm:text-xl">@{username}</h2>
-          <p className="truncate text-sm text-white/40">{email}</p>
 
-          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-white/45">
-            <span className="rounded-full bg-white/8 px-3 py-1">Active Cosmetics</span>
-            <span className="rounded-full bg-fuchsia-400/10 px-3 py-1 text-fuchsia-100">{getFrameLabel(frame)}</span>
-            <span className="rounded-full bg-sky-400/10 px-3 py-1 text-sky-100">{activeTheme} theme</span>
-            {activeGlow !== "none" ? <span className="rounded-full bg-yellow-400/10 px-3 py-1 text-yellow-100">{activeGlow} glow</span> : null}
-          </div>
 
           <div className="mt-4 rounded-[1.75rem] border border-yellow-300/15 bg-gradient-to-br from-yellow-400/12 via-fuchsia-400/10 to-violet-500/10 p-4">
             <div className="flex items-center justify-between gap-3">
