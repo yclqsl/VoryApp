@@ -551,7 +551,15 @@ router.patch("/profile/settings", protect, async (req, res) => {
 
       if (lastChange && remainingMs > 0) {
         const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
-        return res.status(429).json({ message: `Kullanıcı adını ${remainingDays} gün sonra tekrar değiştirebilirsin.` });
+        return res.status(429).json({
+          message: `Kullanıcı adını ${remainingDays} gün sonra tekrar değiştirebilirsin.`,
+          usernameCooldown: {
+            active: true,
+            remainingMs,
+            remainingDays,
+            lastUsernameChangedAt: user.lastUsernameChangedAt,
+          },
+        });
       }
 
       const exists = await User.findOne({ username: nextUsername, _id: { $ne: user._id } });
