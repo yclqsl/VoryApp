@@ -252,138 +252,31 @@ export default function Home({ authUser, onLogout }) {
   }
 
   async function loadLeaderboard() {
-    if (!hasVoryAuthSession(currentUserId)) return;
-
-    try {
-      setLeaderboardLoading(true);
-      const response = await api.get("/users/leaderboard");
-      setLeaderboardUsers(response.data?.users || []);
-    } catch (error) {
-      if (!isUnauthorizedError(error)) {
-        console.error("Leaderboard alınamadı:", error);
-      }
-    } finally {
-      setLeaderboardLoading(false);
-    }
+    // Vory 3.1 Pure Rave: leaderboard kaldırıldı.
   }
 
   function syncProfileProgress(nextStats) {
-    if (!hasVoryAuthSession(currentUserId)) return;
-
-    api
-      .patch("/users/profile/progress", {
-        stats: {
-          ...(nextStats || profileStats || {}),
-          friends: friendState.friends?.length || nextStats?.friends || profileStats?.friends || 0,
-        },
-      })
-      .then((response) => {
-        if (response.data?.user) {
-          setProfileProgress(response.data.user);
-        }
-      })
-      .catch((error) => {
-        console.error("Profile progress sync hatası:", error);
-      });
+    // Vory 3.1 Pure Rave: XP/progress sync kapalı.
   }
 
 
   async function claimDailyMission(mission) {
-    if (!hasVoryAuthSession(currentUserId) || !mission?.id) return;
-
-    try {
-      setMissionsLoading(true);
-      const response = await api.patch("/users/missions/claim", {
-        missionId: mission.id,
-        stats: {
-          ...(profileStats || {}),
-          friends: friendState.friends?.length || profileStats?.friends || 0,
-        },
-      });
-
-      if (response.data?.user) {
-        setProfileProgress(response.data.user);
-      }
-
-      toast.success(response.data?.message || `+${mission.xpReward || 0} XP alındı 🏆`);
-      loadLeaderboard();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Görev ödülü alınamadı.");
-    } finally {
-      setMissionsLoading(false);
-    }
+    // Vory 3.1 Pure Rave: mission/XP kaldırıldı.
   }
 
 
 
 
   async function refreshCustomizationStore() {
-    if (!hasVoryAuthSession(currentUserId)) return;
-
-    try {
-      setStoreLoading(true);
-      const response = await api.get("/users/customization/catalog");
-      if (response.data?.user) {
-        setProfileProgress(response.data.user);
-      }
-    } catch (error) {
-      if (!isUnauthorizedError(error)) {
-        toast.error(error?.response?.data?.message || "Store alınamadı.");
-      }
-    } finally {
-      setStoreLoading(false);
-    }
+    // Vory 3.1 Pure Rave: cosmetics/store kaldırıldı.
   }
 
   async function unlockCustomizationItem(item) {
-    if (!hasVoryAuthSession(currentUserId) || !item?.id) return;
-
-    try {
-      setStoreLoading(true);
-      const response = await api.patch("/users/customization/unlock", {
-        itemId: item.id,
-        stats: {
-          ...(profileStats || {}),
-          friends: friendState.friends?.length || profileStats?.friends || 0,
-        },
-      });
-
-      if (response.data?.user) {
-        setProfileProgress(response.data.user);
-      }
-
-      toast.success(response.data?.message || `${item.title} açıldı ✨`);
-      loadLeaderboard();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Cosmetic açılamadı.");
-    } finally {
-      setStoreLoading(false);
-    }
+    // Vory 3.1 Pure Rave: cosmetics kaldırıldı.
   }
 
   async function equipCustomizationItem(item) {
-    if (!hasVoryAuthSession(currentUserId) || !item?.id) return;
-
-    try {
-      setStoreLoading(true);
-      const response = await api.patch("/users/customization/equip", {
-        itemId: item.id,
-        stats: {
-          ...(profileStats || {}),
-          friends: friendState.friends?.length || profileStats?.friends || 0,
-        },
-      });
-
-      if (response.data?.user) {
-        setProfileProgress(response.data.user);
-      }
-
-      toast.success(response.data?.message || `${item.title} aktif edildi 💎`);
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Cosmetic aktif edilemedi.");
-    } finally {
-      setStoreLoading(false);
-    }
+    // Vory 3.1 Pure Rave: cosmetics kaldırıldı.
   }
 
   async function loadFriendState() {
