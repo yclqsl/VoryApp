@@ -263,9 +263,10 @@ export default function Home({ authUser, onLogout }) {
 
   const currentRoomPresence = onlinePresence.filter((user) => user.roomCode === roomCode);
   const liveWatchingCount = roomCode ? Math.max(users.length, currentRoomPresence.length) : 0;
-  const liveVoiceCount = roomCode
-    ? currentRoomPresence.filter((user) => user.voiceActive || user.activity === "voice").length
-    : 0;
+  const activeVoiceUsers = roomCode
+    ? users.filter((user) => user?.voiceActive === true || user?.inVoice === true || user?.micActive === true)
+    : [];
+  const liveVoiceCount = activeVoiceUsers.length;
   const liveScreenCount = roomCode
     ? currentRoomPresence.filter((user) => user.screenSharing || user.activity === "sharing-screen").length
     : 0;
@@ -2147,14 +2148,10 @@ export default function Home({ authUser, onLogout }) {
 
 
   function handleCreateRoomFlow() {
-    if (!roomCode) {
-      createRoom();
-    }
-
     setAppSection("watch");
     setActiveMobileTab("watch");
     setCreateSheetOpen(true);
-    toast.success(roomCode ? "Platform seç ve izlemeye başla 🎬" : "Oda oluşturuluyor, platform seçebilirsin 🎬");
+    toast("Önce platform seç knks. Oda, YouTube seçilince kurulacak 🎬", { icon: "➕" });
   }
 
   function selectPlatform(platform) {
@@ -2163,116 +2160,14 @@ export default function Home({ authUser, onLogout }) {
     setActiveMobileTab("watch");
 
     if (platform.id === "youtube") {
-      toast("YouTube linkini yapıştırıp başlat knks ▶️", { icon: "🎬" });
+      if (!roomCode) {
+        createRoom();
+      }
+      toast("YouTube seçildi. Linki yapıştırıp başlat knks ▶️", { icon: "🎬" });
       return;
     }
 
     toast(`${platform.name} yakında. Şimdilik YouTube/Web akışı aktif.`, { icon: "✨" });
-  }
-
-
-  function getVoiceParticipants() {
-    const byId = new Map();
-
-    (users || []).forEach((user, index) => {
-      const id = String(user?.userId || user?._id || user?.id || user?.socketId || user?.username || index);
-      byId.set(id, {
-        ...user,
-        id,
-        username: user?.username || user?.name || `Guest ${index + 1}`,
-        voiceActive: !!user?.voiceActive || user?.activity === "voice" || user?.inVoice === true,
-      });
-    });
-
-    (currentRoomPresence || []).forEach((user, index) => {
-      const id = String(user?.userId || user?._id || user?.id || user?.socketId || user?.username || `presence-${index}`);
-      const existing = byId.get(id) || {};
-      byId.set(id, {
-        ...existing,
-        ...user,
-        id,
-        username: user?.username || existing.username || `Guest ${index + 1}`,
-        voiceActive: !!user?.voiceActive || user?.activity === "voice" || user?.inVoice === true || !!existing.voiceActive,
-      });
-    });
-
-    const activeVoiceUsers = Array.from(byId.values()).filter((user) => user.voiceActive);
-    const fallbackUsers = Array.from(byId.values()).slice(0, 5);
-
-    return activeVoiceUsers.length ? activeVoiceUsers : fallbackUsers;
-  }
-
-  function renderRoomActionBar() {
-    if (!roomCode) return null;
-
-    return (
-      <div className="mt-3 flex flex-col gap-3 rounded-[1.6rem] border border-white/10 bg-black/28 p-3 shadow-[0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-violet-200/55">Aktif oda</p>
-          <h2 className="mt-1 truncate text-base font-black text-white">Room {roomCode}</h2>
-          <p className="mt-0.5 text-xs font-bold text-white/42">👥 {users.length || currentRoomPresence.length || 1} kişi • 🎤 {liveVoiceCount} voice</p>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setRightPanelTab("chat");
-              setAppSection("watch");
-              setActiveMobileTab("watch");
-            }}
-            className="flex-1 rounded-2xl bg-white/10 px-4 py-3 text-xs font-black text-white/70 transition hover:bg-white/15 hover:text-white sm:flex-none"
-          >
-            Sohbet
-          </button>
-          <button
-            type="button"
-            onClick={leaveRoom}
-            className="flex-1 rounded-2xl bg-red-500/15 px-4 py-3 text-xs font-black text-red-100 ring-1 ring-red-300/15 transition hover:bg-red-500/25 sm:flex-none"
-          >
-            Odadan ayrıl
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  function renderRaveVoiceStack(compact = false) {
-    if (!roomCode) return null;
-
-    const voiceParticipants = getVoiceParticipants();
-
-    return (
-      <div className={`rounded-[1.7rem] border border-sky-300/15 bg-sky-400/[0.055] p-3 shadow-[0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl ${compact ? "" : "mb-3"}`}>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-200/55">Rave Voice</p>
-            <h2 className="text-sm font-black text-white">Sesteki kişiler</h2>
-          </div>
-          <span className="rounded-full bg-sky-300/12 px-3 py-1 text-xs font-black text-sky-100">🎤 {liveVoiceCount || voiceParticipants.length}</span>
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {voiceParticipants.length ? voiceParticipants.map((user, index) => {
-            const initial = String(user?.username || "V").charAt(0).toUpperCase();
-            const isSpeaking = user?.voiceActive || user?.activity === "voice" || user?.speaking;
-
-            return (
-              <div key={user?.id || user?.userId || user?.username || index} className="flex min-w-[76px] flex-col items-center gap-1 rounded-[1.2rem] bg-black/24 px-3 py-2 ring-1 ring-white/8">
-                {user?.avatar ? (
-                  <img src={user.avatar} alt="avatar" className={`h-11 w-11 rounded-full object-cover ring-2 ${isSpeaking ? "ring-emerald-300/70" : "ring-white/15"}`} />
-                ) : (
-                  <span className={`flex h-11 w-11 items-center justify-center rounded-full bg-white/12 text-sm font-black text-white ring-2 ${isSpeaking ? "ring-emerald-300/70" : "ring-white/15"}`}>{initial}</span>
-                )}
-                <span className="max-w-[64px] truncate text-[10px] font-black text-white/70">{user?.username || "Vory"}</span>
-              </div>
-            );
-          }) : (
-            <p className="rounded-2xl bg-black/20 px-3 py-2 text-xs font-bold text-white/42">Sese çıkanlar burada profil olarak görünecek.</p>
-          )}
-        </div>
-      </div>
-    );
   }
 
   function renderPlatformSheet() {
@@ -2577,41 +2472,73 @@ export default function Home({ authUser, onLogout }) {
             />
           </div>
 
-          {renderRoomActionBar()}
+          <RoomPanel
+            compact
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
+          />
+
+          {roomCode ? (
+            <RoomThemePanel
+              roomCode={roomCode}
+              isHost={isHost}
+              activeTheme={roomTheme}
+              onThemeChange={changeRoomTheme}
+              compact
+            />
+          ) : null}
         </section>
 
-        <aside className="flex min-h-0 flex-col">
-          {renderRaveVoiceStack()}
-          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
-          <VoryRightPanel
-            activeTab={rightPanelTab}
-            onChange={setRightPanelTab}
-            roomCode={roomCode}
-            isHost={isHost}
-            currentMedia={currentMedia}
-            mediaQueue={mediaQueue}
-            onAddMedia={addToQueue}
-            onPlayNext={playNextMedia}
-            onRemoveMedia={removeFromQueue}
-            onClearQueue={clearMediaQueue}
-            onVoteMedia={voteMedia}
-            messages={messages}
-            message={message}
-            setMessage={setMessage}
-            onSendMessage={sendMessage}
-            users={users}
-            onlinePresence={onlinePresence}
-            currentSocketId={socket.id}
-            currentRoomCode={roomCode}
-            inviteCooldowns={inviteCooldowns}
-            dmUnread={dmUnread}
-            activeDM={activeDM}
-            dmLastMessages={dmLastMessages}
-            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-            onInviteFriend={sendPartyInvite}
-            onOpenDM={openDM}
-          />
-        </aside>
+        {activeVoiceUsers.length > 0 ? (
+          <div className="mb-3 rounded-[1.5rem] border border-emerald-300/15 bg-emerald-500/8 px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/60">Seste olanlar</p>
+            <div className="flex flex-wrap gap-2">
+              {activeVoiceUsers.map((user, index) => (
+                <span key={user.id || user.userId || user.username || index} className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-2 text-xs font-black text-white/80 ring-1 ring-white/10">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-100">{String(user.username || user.name || "V").charAt(0).toUpperCase()}</span>
+                  {user.username || user.name || "Kullanıcı"}
+                  <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <VoryRightPanel
+          activeTab={rightPanelTab}
+          onChange={setRightPanelTab}
+          roomCode={roomCode}
+          isHost={isHost}
+          currentMedia={currentMedia}
+          mediaQueue={mediaQueue}
+          onAddMedia={addToQueue}
+          onPlayNext={playNextMedia}
+          onRemoveMedia={removeFromQueue}
+          onClearQueue={clearMediaQueue}
+          onVoteMedia={voteMedia}
+          messages={messages}
+          message={message}
+          setMessage={setMessage}
+          onSendMessage={sendMessage}
+          users={users}
+          onlinePresence={onlinePresence}
+          currentSocketId={socket.id}
+          currentRoomCode={roomCode}
+          inviteCooldowns={inviteCooldowns}
+          dmUnread={dmUnread}
+          activeDM={activeDM}
+          dmLastMessages={dmLastMessages}
+          onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+          onInviteFriend={sendPartyInvite}
+          onOpenDM={openDM}
+        />
       </div>
     );
   }
@@ -2697,7 +2624,20 @@ export default function Home({ authUser, onLogout }) {
             </button>
           </div>
 
-          {renderRaveVoiceStack(true)}
+          {activeVoiceUsers.length > 0 ? (
+          <div className="mb-3 rounded-[1.5rem] border border-emerald-300/15 bg-emerald-500/8 px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/60">Seste olanlar</p>
+            <div className="flex flex-wrap gap-2">
+                {activeVoiceUsers.map((user, index) => (
+                <span key={user.id || user.userId || user.username || index} className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-2 text-xs font-black text-white/80 ring-1 ring-white/10">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-100">{String(user.username || user.name || "V").charAt(0).toUpperCase()}</span>
+                    {user.username || user.name || "Kullanıcı"}
+                  <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
           <ChatPanel
             messages={messages}
