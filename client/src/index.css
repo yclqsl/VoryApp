@@ -487,3 +487,9 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Vory 3.0 Back To Rave Cleanup */
+.theme-voryapp::before{opacity:.55;background:radial-gradient(circle at 18% 12%,rgba(124,58,237,.34),transparent 28%),radial-gradient(circle at 82% 20%,rgba(14,165,233,.20),transparent 30%),linear-gradient(145deg,#05030d,#10071f 48%,#020716);animation:none!important}
+.theme-voryapp::after{opacity:.18;background-image:radial-gradient(circle,rgba(255,255,255,.55) 1px,transparent 1.5px);background-size:110px 110px;animation:none!important}
+.theme-neon::before,.theme-neon::after,.theme-galaxy::before,.theme-galaxy::after,.theme-cinema::before,.theme-cinema::after,.theme-gaming::before,.theme-gaming::after{animation:none!important}
+.vory-feedback-widget,[data-vory-feedback],.feedback-widget{display:none!important}
