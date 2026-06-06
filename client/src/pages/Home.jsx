@@ -475,28 +475,18 @@ export default function Home({ authUser, onLogout }) {
       return () => clearTimeout(joinTimer);
     }
 
-    const restoreTimer = setTimeout(() => {
-      restorePreviousSession("initial-load");
-    }, 500);
-
-    return () => clearTimeout(restoreTimer);
+    // Vory 3.1.4: Rave davranışı - login/reload sonrası eski odaya otomatik dönme kapalı.
+    // Kullanıcı sadece davet linki veya oda kodu ile odaya girer.
+    localStorage.removeItem("vory-last-room");
+    return undefined;
   }, []);
 
   useEffect(() => {
     socket.on("connect", () => {
       setConnectionStatus("connected");
 
-      const savedRoom = localStorage.getItem("vory-last-room");
-      const savedUsername = localStorage.getItem("vory-last-username") || currentUserPayload.username;
-
-      if (savedRoom && !roomCode) {
-        socket.emit("rejoin-session", {
-          roomCode: savedRoom,
-          username: savedUsername,
-          avatar: authUser?.avatar || "",
-          reason: "socket-connect",
-        });
-      }
+      // Vory 3.1.4: otomatik rejoin kapalı. Logout sonrası tekrar girişte lobby açılır.
+      localStorage.removeItem("vory-last-room");
 
       if (roomCode) {
         socket.emit("request-sync", {

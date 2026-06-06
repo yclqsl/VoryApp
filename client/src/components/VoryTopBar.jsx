@@ -62,10 +62,10 @@ export default function VoryTopBar({
           <button
             type="button"
             onClick={onLeaveRoom}
-            className="hidden rounded-2xl bg-red-600/85 px-4 py-2.5 text-xs font-black text-white shadow-[0_16px_50px_rgba(220,38,38,0.22)] transition hover:bg-red-500 lg:inline-flex"
+            className="inline-flex rounded-2xl bg-red-600/85 px-3 py-2.5 text-[11px] font-black text-white shadow-[0_16px_50px_rgba(220,38,38,0.22)] transition hover:bg-red-500 sm:px-4 sm:text-xs"
             title="Odadan ayrıl"
           >
-            Odadan Ayrıl
+            Ayrıl
           </button>
         ) : null}
 

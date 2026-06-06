@@ -18,6 +18,23 @@ function compactNumber(value = 0) {
   return String(safeValue);
 }
 
+function getUsernameCooldown(lastChangedAt) {
+  if (!lastChangedAt) return { active: false, remainingDays: 0 };
+
+  const lastChangeMs = new Date(lastChangedAt).getTime();
+  if (!lastChangeMs) return { active: false, remainingDays: 0 };
+
+  const cooldownMs = 7 * 24 * 60 * 60 * 1000;
+  const remainingMs = lastChangeMs + cooldownMs - Date.now();
+
+  if (remainingMs <= 0) return { active: false, remainingDays: 0 };
+
+  return {
+    active: true,
+    remainingDays: Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000))),
+  };
+}
+
 function Avatar({ user }) {
   if (user?.avatar) {
     return (
@@ -57,6 +74,8 @@ export default function ProfileCard({
   const friendsCount = Number(stats?.friends || 0);
   const roomsJoined = Number(stats?.roomsJoined || 0);
   const watchTime = stats?.watchTime || "0h";
+  const usernameCooldown = getUsernameCooldown(user.lastUsernameChangedAt || authUser?.lastUsernameChangedAt);
+  const usernameLocked = usernameCooldown.active;
 
   useEffect(() => {
     setForm({
@@ -178,12 +197,18 @@ export default function ProfileCard({
           <label className="block">
             <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Kullanıcı adı</span>
             <input
-              className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-violet-300/40"
+              className={`mt-2 h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-violet-300/40 ${usernameLocked ? "cursor-not-allowed opacity-55" : ""}`}
               value={form.username}
               maxLength={20}
               placeholder="kullaniciadi"
+              disabled={usernameLocked}
               onChange={(event) => setForm((prev) => ({ ...prev, username: sanitizeUsername(event.target.value) }))}
             />
+            <p className={`mt-2 rounded-2xl border px-3 py-2 text-xs font-bold ${usernameLocked ? "border-amber-300/15 bg-amber-400/10 text-amber-100/80" : "border-white/8 bg-white/[0.03] text-white/35"}`}>
+              {usernameLocked
+                ? `Kullanıcı adını tekrar değiştirmek için ${usernameCooldown.remainingDays} gün kaldı.`
+                : "Kullanıcı adını 7 günde 1 kez değiştirebilirsin."}
+            </p>
           </label>
 
           <label className="block">

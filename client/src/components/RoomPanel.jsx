@@ -1,8 +1,8 @@
-import { DoorOpen, Link, Plus } from "lucide-react";
+import { DoorOpen, Link } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
 
-export default function RoomPanel({ roomInput, setRoomInput, roomCode, onCreateRoom, onJoinRoom }) {
+export default function RoomPanel({ roomInput, setRoomInput, roomCode, onJoinRoom }) {
   async function copyInviteLink() {
     if (!roomCode) return;
     try {
@@ -24,26 +24,17 @@ export default function RoomPanel({ roomInput, setRoomInput, roomCode, onCreateR
           <p className="text-xs font-black uppercase tracking-[0.26em] text-violet-200/55">Vory Party</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-white">Watch together</h2>
           <p className="mt-1 max-w-xl text-sm font-bold text-white/40">
-            Rave akışı: oda oluştur, YouTube ekle, arkadaşlarını davet et.
+            Rave akışı: sağ alttaki + ile oda oluştur, kodla katıl, arkadaşlarını davet et.
           </p>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-[minmax(180px,1fr)_auto_auto] lg:min-w-[620px]">
+        <div className="grid gap-2 sm:grid-cols-[minmax(180px,1fr)_auto] lg:min-w-[500px]">
           <input
             className="h-14 rounded-full border border-white/10 bg-white/[0.04] px-5 text-sm font-black uppercase tracking-[0.12em] text-white outline-none placeholder:text-white/25 focus:border-violet-300/40"
             placeholder="Oda kodu"
             value={roomInput}
             onChange={(event) => setRoomInput(event.target.value.toUpperCase())}
           />
-
-          <button
-            type="button"
-            onClick={onCreateRoom}
-            className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-black text-black shadow-[0_18px_55px_rgba(255,255,255,0.16)] transition hover:scale-[1.02]"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white"><Plus size={18} /></span>
-            Create Room
-          </button>
 
           <button
             type="button"

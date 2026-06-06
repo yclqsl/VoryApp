@@ -546,8 +546,8 @@ body {
   }
 }
 
-/* Vory 3.1.2 Rave FAB order hotfix
-   Feedback stays bottom-right, create + stays above it. */
+
+/* Vory 3.1.4 Stability & Rave Fix: FAB order + Feedback bottom */
 .vory-rave-create-fab {
   position: fixed;
   right: max(1rem, env(safe-area-inset-right));
@@ -573,16 +573,7 @@ body {
     inset 0 1px 0 rgba(255,255,255,0.22);
   transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
 }
-
-.vory-rave-create-fab:hover {
-  transform: translateY(-2px) scale(1.03);
-  filter: brightness(1.08);
-  box-shadow:
-    0 28px 90px rgba(126,34,206,0.55),
-    0 0 0 10px rgba(168,85,247,0.1),
-    inset 0 1px 0 rgba(255,255,255,0.26);
-}
-
+.vory-rave-create-fab:hover { transform: translateY(-2px) scale(1.03); filter: brightness(1.08); }
 .vory-feedback-fab {
   position: fixed;
   right: max(1.35rem, calc(env(safe-area-inset-right) + 0.35rem));
@@ -601,18 +592,11 @@ body {
   color: #fff;
   font-size: 0.78rem;
   font-weight: 900;
-  box-shadow:
-    0 18px 60px rgba(0,0,0,0.45),
-    0 0 0 6px rgba(217,70,239,0.08);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.45), 0 0 0 6px rgba(217,70,239,0.08);
   backdrop-filter: blur(18px);
   transition: transform .18s ease, background .18s ease;
 }
-
-.vory-feedback-fab:hover {
-  transform: translateY(-2px);
-  background: rgba(147,51,234,0.58);
-}
-
+.vory-feedback-fab:hover { transform: translateY(-2px); background: rgba(147,51,234,0.58); }
 @media (max-width: 640px) {
   .vory-feedback-fab {
     right: calc(1.55rem + env(safe-area-inset-right));
@@ -624,12 +608,7 @@ body {
     border-radius: 999px;
     font-size: 0;
   }
-
-  .vory-feedback-fab svg {
-    width: 1.25rem;
-    height: 1.25rem;
-  }
-
+  .vory-feedback-fab svg { width: 1.25rem; height: 1.25rem; }
   .vory-rave-create-fab {
     width: 4.75rem;
     height: 4.75rem;
