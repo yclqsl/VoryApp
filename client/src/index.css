@@ -712,3 +712,62 @@ body {
     display: none;
   }
 }
+
+
+/* Vory 3.1.5.4 - Video Theme Visibility Real Fix */
+.theme-voryapp::before,
+.theme-voryapp::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+}
+
+.app-shell {
+  position: relative !important;
+  isolation: isolate !important;
+  background: #05030d !important;
+}
+
+.app-shell > .vory-video-theme-bg {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.app-shell > *:not(.vory-video-theme-bg) {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.vory-video-theme-media {
+  display: block !important;
+  opacity: 0.82 !important;
+  visibility: visible !important;
+  z-index: 0 !important;
+  filter: saturate(1.18) contrast(1.08) brightness(1.02) blur(0px) !important;
+}
+
+.vory-video-theme-tint {
+  z-index: 1 !important;
+  background: linear-gradient(135deg, rgba(5,3,13,0.18), rgba(10,4,24,0.12), rgba(2,7,22,0.22)) !important;
+}
+
+.vory-video-theme-vignette {
+  z-index: 2 !important;
+  background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.16) 68%, rgba(0,0,0,0.44) 100%) !important;
+}
+
+.vory-video-theme-noise {
+  z-index: 3 !important;
+  opacity: 0.025 !important;
+}
+
+@media (max-width: 768px) {
+  .vory-video-theme-media {
+    opacity: 0.64 !important;
+    filter: saturate(1.12) contrast(1.04) brightness(0.96) blur(0.5px) !important;
+  }
+}

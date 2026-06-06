@@ -2108,8 +2108,8 @@ export default function Home({ authUser, onLogout }) {
     );
 
     return (
-      <section className="relative min-h-[calc(100vh-2rem)] overflow-hidden rounded-[2.3rem] border border-white/8 bg-black/18 p-5 pb-28 shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-2xl lg:p-8">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(236,72,153,0.20),transparent_28%),radial-gradient(circle_at_84%_20%,rgba(79,70,229,0.22),transparent_32%),radial-gradient(circle_at_72%_92%,rgba(14,165,233,0.18),transparent_28%)]" />
+      <section className="relative min-h-[calc(100vh-2rem)] overflow-hidden rounded-[2.3rem] border border-white/8 bg-black/[0.08] p-5 pb-28 shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-sm lg:p-8">
+        <div className="pointer-events-none absolute inset-0 bg-black/[0.06]" />
         <div className="relative z-10 mx-auto max-w-5xl">
           <div className="mb-6 flex items-center justify-between gap-4">
             <button type="button" onClick={() => handleSectionChange("settings")} className="text-5xl font-black leading-none text-white/90">☰</button>
@@ -2593,15 +2593,8 @@ export default function Home({ authUser, onLogout }) {
   }
 
   return (
-    <>
+    <div className="app-shell theme-voryapp min-h-screen overflow-x-hidden text-white">
       <AnimatedBackground theme="voryapp" />
-
-      <div className={`app-shell theme-voryapp min-h-screen overflow-x-hidden bg-gradient-to-br ${getThemeShellClass()} text-white`}>
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className={`absolute -left-32 top-0 h-96 w-96 rounded-full ${getThemeGlowClass(1)} blur-3xl`} />
-        <div className={`absolute right-10 top-20 h-96 w-96 rounded-full ${getThemeGlowClass(2)} blur-3xl`} />
-        <div className={`absolute bottom-0 left-1/2 h-96 w-96 rounded-full ${getThemeGlowClass(3)} blur-3xl`} />
-      </div>
 
       <div className="relative flex min-h-screen gap-3 p-3 pb-24 sm:p-4 sm:pb-24 lg:gap-3 lg:p-3 xl:gap-4 xl:p-4">
         <VorySidebar
@@ -2786,6 +2779,5 @@ export default function Home({ authUser, onLogout }) {
         </div>
       </div>
     </div>
-    </>
   );
 }
