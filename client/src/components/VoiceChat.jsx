@@ -27,23 +27,8 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
   const isMutedRef = useRef(false);
   const forceMutedByHostRef = useRef(false);
 
-  function getVisibleVoiceUsers() {
-    if (!isVoiceOn) return [];
-
-    const selfUser = {
-      socketId: socket.id,
-      username,
-      muted: isMuted,
-      level: voiceLevels?.[socket.id] || 0,
-      isSelf: true,
-    };
-
-    const remoteUsers = (voiceUsers || []).filter((user) => user?.socketId !== socket.id);
-    return [selfUser, ...remoteUsers];
-  }
-
   function participantCount() {
-    return getVisibleVoiceUsers().length;
+    return isVoiceOn ? Math.max(voiceUsers.length, 1) : 0;
   }
 
   function updateLocalLevel(level) {
@@ -356,16 +341,6 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
 
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("vory:voice-state", {
-      detail: {
-        roomCode,
-        isOn: isVoiceOn,
-        users: getVisibleVoiceUsers(),
-      },
-    }));
-  }, [roomCode, isVoiceOn, isMuted, username, voiceUsers, voiceLevels]);
-
-  useEffect(() => {
     socket.on("voice-users", ({ users }) => {
       const safeUsers = users || [];
       setVoiceUsers(safeUsers);
@@ -539,12 +514,12 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
             Voice Channel
           </p>
 
-          {getVisibleVoiceUsers().length === 0 ? (
+          {voiceUsers.length === 0 ? (
             <div className="rounded-2xl bg-black/25 p-3 text-sm text-white/35">
               Katılımcılar yükleniyor...
             </div>
           ) : (
-            getVisibleVoiceUsers().map((user) => {
+            voiceUsers.map((user) => {
               const level = voiceLevels[user.socketId] || 0;
               const speaking = !user.muted && level > 14;
               const isMe = user.socketId === socket.id;

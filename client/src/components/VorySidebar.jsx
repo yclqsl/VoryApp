@@ -1,4 +1,4 @@
-import { Gem, Home, LogOut, Menu, Settings, UserRound, UsersRound } from "lucide-react";
+import { Home, LogOut, Menu, Settings, UserRound, UsersRound } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
@@ -11,7 +11,6 @@ const drawerItems = [
   { id: "watch", label: "Ana Sayfa", icon: Home },
   { id: "friends", label: "Arkadaşlar", icon: UsersRound },
   { id: "settings", label: "Ayarlar", icon: Settings },
-  { id: "cosmetics", label: "Dükkan", icon: Gem },
 ];
 
 export default function VorySidebar({

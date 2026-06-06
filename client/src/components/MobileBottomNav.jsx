@@ -1,10 +1,9 @@
-import { Gem, Home, MonitorUp, UserRound, UsersRound } from "lucide-react";
+import { Home, MonitorUp, UserRound, UsersRound } from "lucide-react";
 
 const tabs = [
   { id: "watch", label: "Home", icon: Home },
   { id: "friends", label: "Friends", icon: UsersRound },
   { id: "profile", label: "Profile", icon: UserRound },
-  { id: "cosmetics", label: "Shop", icon: Gem },
   { id: "screen", label: "Screen", icon: MonitorUp },
 ];
 
@@ -20,7 +19,7 @@ export default function MobileBottomNav({
 
   return (
     <nav className="fixed inset-x-4 bottom-4 z-50 rounded-[2rem] border border-white/10 bg-black/82 p-2 shadow-[0_24px_90px_rgba(0,0,0,0.6)] backdrop-blur-2xl lg:hidden">
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-4 gap-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeId === tab.id;

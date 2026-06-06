@@ -8,15 +8,11 @@ import VoryBottomDock from "../components/VoryBottomDock";
 import ReactionBurst from "../components/ReactionBurst";
 import MediaQueue from "../components/MediaQueue";
 import DevHealthOverlay from "../components/DevHealthOverlay";
-import FeedbackWidget from "../components/FeedbackWidget";
 import QuickActions from "../components/QuickActions";
 import RoomPanel from "../components/RoomPanel";
-import RoomThemePanel from "../components/RoomThemePanel";
 import AnimatedBackground from "../components/AnimatedBackground";
 import InviteBox from "../components/InviteBox";
 import PartyDiscoveryPanel from "../components/PartyDiscoveryPanel";
-import LeaderboardPanel from "../components/LeaderboardPanel";
-import CustomizationStorePanel from "../components/CustomizationStorePanel";
 import PresenceFriendPanel from "../components/PresenceFriendPanel";
 import UserList from "../components/UserList";
 import ChatPanel from "../components/ChatPanel";
@@ -136,63 +132,21 @@ function normalizeHistoryTitle(value = "") {
   }
 }
 
-function getThemeShellClass(theme = "neon") {
-  const cleanTheme = String(theme || "neon").toLowerCase();
-
-  if (cleanTheme === "cinema") {
-    return "from-black via-[#180707] to-[#050004]";
-  }
-
-  if (cleanTheme === "galaxy") {
-    return "from-[#040014] via-[#100a35] to-[#020617]";
-  }
-
-  if (cleanTheme === "gaming") {
-    return "from-black via-[#03140b] to-[#020617]";
-  }
-
-  return "from-[#090014] via-[#15032d] to-[#050010]";
+function getThemeShellClass() {
+  return "from-[#05030d] via-[#10071f] to-[#020716]";
 }
 
-function getThemeGlowClass(theme = "neon", slot = 1) {
-  const cleanTheme = String(theme || "neon").toLowerCase();
-
-  if (cleanTheme === "cinema") {
-    return slot === 1
-      ? "bg-red-700/20"
-      : slot === 2
-        ? "bg-amber-600/15"
-        : "bg-rose-700/10";
-  }
-
-  if (cleanTheme === "galaxy") {
-    return slot === 1
-      ? "bg-indigo-600/25"
-      : slot === 2
-        ? "bg-sky-500/15"
-        : "bg-fuchsia-600/12";
-  }
-
-  if (cleanTheme === "gaming") {
-    return slot === 1
-      ? "bg-emerald-500/18"
-      : slot === 2
-        ? "bg-lime-500/12"
-        : "bg-cyan-500/10";
-  }
-
-  return slot === 1
-    ? "bg-violet-700/25"
-    : slot === 2
-      ? "bg-fuchsia-700/20"
-      : "bg-indigo-700/15";
+function getThemeGlowClass(slot = 1) {
+  if (slot === 1) return "bg-violet-600/18";
+  if (slot === 2) return "bg-fuchsia-600/14";
+  return "bg-sky-500/10";
 }
 
 export default function Home({ authUser, onLogout }) {
   const [username, setUsername] = useState(authUser?.username || "");
   const [roomInput, setRoomInput] = useState("");
   const [roomCode, setRoomCode] = useState("");
-  const [roomTheme, setRoomTheme] = useState("neon");
+  const [roomTheme, setRoomTheme] = useState("voryapp");
   const [roomSettings, setRoomSettings] = useState({ publicRoom: false });
   const [discoveryRooms, setDiscoveryRooms] = useState([]);
   const [discoveryLoading, setDiscoveryLoading] = useState(false);
@@ -242,7 +196,6 @@ export default function Home({ authUser, onLogout }) {
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
-  const [voiceChannelState, setVoiceChannelState] = useState({ users: [], isOn: false });
 
   const currentUserId = authUser?._id || authUser?.id || "";
 
@@ -264,7 +217,9 @@ export default function Home({ authUser, onLogout }) {
 
   const currentRoomPresence = onlinePresence.filter((user) => user.roomCode === roomCode);
   const liveWatchingCount = roomCode ? Math.max(users.length, currentRoomPresence.length) : 0;
-  const activeVoiceUsers = roomCode ? (voiceChannelState.users || []) : [];
+  const activeVoiceUsers = roomCode
+    ? users.filter((user) => user?.voiceActive === true || user?.inVoice === true || user?.micActive === true)
+    : [];
   const liveVoiceCount = activeVoiceUsers.length;
   const liveScreenCount = roomCode
     ? currentRoomPresence.filter((user) => user.screenSharing || user.activity === "sharing-screen").length
@@ -454,8 +409,7 @@ export default function Home({ authUser, onLogout }) {
 
   useEffect(() => {
     loadProfileProgress();
-    loadLeaderboard();
-    refreshCustomizationStore();
+    // VoryApp Rave sade mod: XP/leaderboard/store yükleri kapalı.
   }, [currentUserId]);
 
   useEffect(() => {
@@ -601,25 +555,6 @@ export default function Home({ authUser, onLogout }) {
   const pendingResumeRef = useRef(null);
 
   useEffect(() => {
-    function handleVoiceChannelState(event) {
-      const detail = event?.detail || {};
-
-      if (detail.roomCode && roomCode && detail.roomCode !== roomCode) return;
-
-      setVoiceChannelState({
-        users: Array.isArray(detail.users) ? detail.users : [],
-        isOn: !!detail.isOn,
-      });
-    }
-
-    window.addEventListener("vory:voice-state", handleVoiceChannelState);
-
-    return () => {
-      window.removeEventListener("vory:voice-state", handleVoiceChannelState);
-    };
-  }, [roomCode]);
-
-  useEffect(() => {
     activeDMRef.current = activeDM;
   }, [activeDM]);
 
@@ -709,9 +644,7 @@ export default function Home({ authUser, onLogout }) {
         setVideoUrl(snapshot.videoUrl);
       }
 
-      if (snapshot.theme) {
-        setRoomTheme(snapshot.theme);
-      }
+      // VoryApp artık tek sabit temada çalışıyor.
 
       if (snapshot.settings) {
         setRoomSettings(snapshot.settings);
@@ -726,7 +659,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomUrl(data.roomCode);
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
-      setRoomTheme(data.theme || "neon");
+      setRoomTheme("voryapp");
       setRoomSettings(data.settings || { publicRoom: false });
       setPendingInviteRoom("");
 	  setLastRestoreMessage("");
@@ -739,7 +672,7 @@ export default function Home({ authUser, onLogout }) {
       setRoomUrl(data.roomCode);
       setRoomCode(data.roomCode);
       setIsHost(data.isHost);
-      setRoomTheme(data.theme || "neon");
+      setRoomTheme("voryapp");
       setRoomSettings(data.settings || { publicRoom: false });
       setPendingInviteRoom("");
 	  setLastRestoreMessage("");
@@ -758,7 +691,7 @@ export default function Home({ authUser, onLogout }) {
       setMediaQueue([]);
       setStatus("");
       setIsHost(false);
-      setRoomTheme("neon");
+      setRoomTheme("voryapp");
       setRoomSettings({ publicRoom: false });
       setLastRestoreMessage("");
       if (syncIntervalRef.current) {
@@ -775,21 +708,8 @@ export default function Home({ authUser, onLogout }) {
       setIsHost(!!me?.isHost);
     });
 
-    socket.on("room-theme-updated", ({ theme }) => {
-      if (!theme) return;
-
-      setRoomTheme(theme);
-
-      toast(`Room theme: ${theme}`, {
-        icon:
-          theme === "cinema"
-            ? "🎬"
-            : theme === "galaxy"
-              ? "🌌"
-              : theme === "gaming"
-                ? "🎮"
-                : "💜",
-      });
+    socket.on("room-theme-updated", () => {
+      setRoomTheme("voryapp");
     });
 
     socket.on("room-host-changed", (payload) => {
@@ -2147,21 +2067,9 @@ export default function Home({ authUser, onLogout }) {
     setActiveMobileTab(nextSection);
   }
 
-  function changeRoomTheme(theme) {
-    if (!roomCode) {
-      toast.error("Önce oda oluştur veya odaya gir.");
-      return;
-    }
-
-    if (!isHost) {
-      toast.error("Temayı sadece host değiştirebilir.");
-      return;
-    }
-
-    socket.emit("room-theme-update", {
-      roomCode,
-      theme,
-    });
+  function changeRoomTheme() {
+    setRoomTheme("voryapp");
+    toast("VoryApp teması sabit aktif 💜");
   }
 
 
@@ -2298,7 +2206,7 @@ export default function Home({ authUser, onLogout }) {
           <div className="mb-6 flex items-center justify-between gap-4">
             <button type="button" onClick={() => handleSectionChange("settings")} className="text-5xl font-black leading-none text-white/90">☰</button>
             <h1 className="text-6xl font-black tracking-[-0.1em] text-white drop-shadow-xl sm:text-7xl">vory</h1>
-            <button type="button" onClick={() => handleSectionChange("friends")} className="text-5xl leading-none text-white/90">👥</button>
+            <button type="button" onClick={handleCreateRoomFlow} className="rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black text-white shadow-[0_18px_55px_rgba(124,58,237,0.35)] transition hover:scale-[1.03]">+ Oda Oluştur</button>
           </div>
 
           <div className="mb-6 flex items-center gap-3 rounded-[1.9rem] bg-black/40 px-5 py-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
@@ -2326,15 +2234,6 @@ export default function Home({ authUser, onLogout }) {
             </div>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={handleCreateRoomFlow}
-          className="vory-rave-floating-plus"
-          aria-label="Oda oluştur"
-        >
-          +
-        </button>
       </section>
     );
   }
@@ -2360,76 +2259,6 @@ export default function Home({ authUser, onLogout }) {
           Linki Kopyala
         </button>
       </div>
-    );
-  }
-
-
-  function renderVoiceParticipantStrip(compact = false) {
-    if (!roomCode || activeVoiceUsers.length === 0) return null;
-
-    return (
-      <div className={`${compact ? "" : "mb-3"} vory-rave-voice-strip`}>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-violet-100/65">Sestekiler ({activeVoiceUsers.length})</p>
-          <span className="rounded-full bg-emerald-400/12 px-3 py-1 text-[10px] font-black text-emerald-200">LIVE</span>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          {activeVoiceUsers.map((user, index) => {
-            const name = user.username || user.name || "Kullanıcı";
-            const socketId = user.socketId || user.id || user.userId || name || index;
-            const speaking = Number(user.level || 0) > 12 && !user.muted;
-            return (
-              <div key={socketId} className={`vory-rave-voice-chip ${speaking ? "vory-rave-voice-chip-speaking" : ""}`}>
-                <span className="vory-rave-voice-avatar">{String(name).charAt(0).toUpperCase()}</span>
-                <span className="min-w-0 truncate text-xs font-black text-white/85">@{name}</span>
-                <span className="vory-rave-voice-dot" />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  function renderRaveRoomTopControls() {
-    if (!roomCode) return null;
-
-    return (
-      <div className="vory-rave-room-topbar">
-        <button type="button" className="vory-rave-top-item" onClick={() => setRightPanelTab("people")}>
-          <span className="text-xl">👥</span>
-          <span><b>{users.length || 1}</b><small>Kişi</small></span>
-        </button>
-        <button type="button" className="vory-rave-top-item" onClick={() => handleSectionChange("voice")}>
-          <span className="text-xl">🎙️</span>
-          <span><b>{liveVoiceCount}</b><small>Seste</small></span>
-        </button>
-        <button type="button" className="vory-rave-top-item" onClick={() => handleSectionChange("screen")}>
-          <span className="text-xl">🖥️</span>
-          <span><b>{liveScreenCount}</b><small>Ekran</small></span>
-        </button>
-        <button type="button" className="vory-rave-top-item" onClick={() => handleSectionChange("settings")}>
-          <span className="text-xl">⚙️</span>
-          <span><b>Ayarlar</b><small>Room</small></span>
-        </button>
-        <button type="button" className="vory-rave-leave-btn" onClick={leaveRoom}>Odadan Ayrıl</button>
-      </div>
-    );
-  }
-
-  function renderFloatingCreateButton() {
-    if (createSheetOpen) return null;
-
-    return (
-      <button
-        type="button"
-        onClick={handleCreateRoomFlow}
-        className="vory-rave-floating-plus"
-        aria-label="Oda oluştur"
-        title="Oda oluştur"
-      >
-        +
-      </button>
     );
   }
 
@@ -2485,12 +2314,6 @@ export default function Home({ authUser, onLogout }) {
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onTogglePublic={togglePublicRoom}
           />
-
-          <LeaderboardPanel
-            users={leaderboardUsers}
-            loading={leaderboardLoading}
-            onRefresh={loadLeaderboard}
-          />
         </div>
       );
     }
@@ -2504,21 +2327,6 @@ export default function Home({ authUser, onLogout }) {
             connectionStatus={connectionStatus}
             stats={displayProfileStats}
             profileProgress={profileProgress}
-          />
-        </div>
-      );
-    }
-
-    if (appSection === "cosmetics") {
-      return (
-        <div className="vory-v5-page-grid">
-          <CustomizationStorePanel
-            profileProgress={profileProgress}
-            stats={displayProfileStats}
-            loading={storeLoading}
-            onRefresh={refreshCustomizationStore}
-            onUnlockItem={unlockCustomizationItem}
-            onEquipItem={equipCustomizationItem}
           />
         </div>
       );
@@ -2544,57 +2352,82 @@ export default function Home({ authUser, onLogout }) {
     }
 
     return (
-      <div className="space-y-3">
-        {renderRaveRoomTopControls()}
-
-        <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
-          <section className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/25 p-2.5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
-            <div className="min-h-0 flex-1 overflow-hidden rounded-[1.7rem]">
-              <VideoPlayer
-                videoUrl={videoUrl}
-                videoInput={videoInput}
-                setVideoInput={setVideoInput}
-                onSetVideo={setRoomVideo}
-                onVideoControl={handleVideoControl}
-                onVideoSeek={handleVideoSeek}
-                playerRef={playerRef}
-                ignoreEventRef={ignoreEventRef}
-                isHost={isHost}
-              />
-            </div>
-          </section>
-
-          <div className="min-w-0">
-            {renderVoiceParticipantStrip()}
-            <VoryRightPanel
-              activeTab={rightPanelTab}
-              onChange={setRightPanelTab}
-              roomCode={roomCode}
+      <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/25 p-2.5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+          <div className="min-h-0 flex-1 overflow-hidden rounded-[1.7rem]">
+            <VideoPlayer
+              videoUrl={videoUrl}
+              videoInput={videoInput}
+              setVideoInput={setVideoInput}
+              onSetVideo={setRoomVideo}
+              onVideoControl={handleVideoControl}
+              onVideoSeek={handleVideoSeek}
+              playerRef={playerRef}
+              ignoreEventRef={ignoreEventRef}
               isHost={isHost}
-              currentMedia={currentMedia}
-              mediaQueue={mediaQueue}
-              onAddMedia={addToQueue}
-              onPlayNext={playNextMedia}
-              onRemoveMedia={removeFromQueue}
-              onClearQueue={clearMediaQueue}
-              onVoteMedia={voteMedia}
-              messages={messages}
-              message={message}
-              setMessage={setMessage}
-              onSendMessage={sendMessage}
-              users={users}
-              onlinePresence={onlinePresence}
-              currentSocketId={socket.id}
-              currentRoomCode={roomCode}
-              inviteCooldowns={inviteCooldowns}
-              dmUnread={dmUnread}
-              activeDM={activeDM}
-              dmLastMessages={dmLastMessages}
-              onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-              onInviteFriend={sendPartyInvite}
-              onOpenDM={openDM}
             />
           </div>
+
+          <RoomPanel
+            compact
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
+          />
+        </section>
+
+        {activeVoiceUsers.length > 0 ? (
+          <div className="mb-3 rounded-[1.5rem] border border-emerald-300/15 bg-emerald-500/8 px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/60">Seste olanlar</p>
+            <div className="flex flex-wrap gap-2">
+              {activeVoiceUsers.map((user, index) => (
+                <span key={user.id || user.userId || user.username || index} className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-2 text-xs font-black text-white/80 ring-1 ring-white/10">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-100">{String(user.username || user.name || "V").charAt(0).toUpperCase()}</span>
+                  {user.username || user.name || "Kullanıcı"}
+                  <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <VoryRightPanel
+          activeTab={rightPanelTab}
+          onChange={setRightPanelTab}
+          roomCode={roomCode}
+          isHost={isHost}
+          currentMedia={currentMedia}
+          mediaQueue={mediaQueue}
+          onAddMedia={addToQueue}
+          onPlayNext={playNextMedia}
+          onRemoveMedia={removeFromQueue}
+          onClearQueue={clearMediaQueue}
+          onVoteMedia={voteMedia}
+          messages={messages}
+          message={message}
+          setMessage={setMessage}
+          onSendMessage={sendMessage}
+          users={users}
+          onlinePresence={onlinePresence}
+          currentSocketId={socket.id}
+          currentRoomCode={roomCode}
+          inviteCooldowns={inviteCooldowns}
+          dmUnread={dmUnread}
+          activeDM={activeDM}
+          dmLastMessages={dmLastMessages}
+          onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+          onInviteFriend={sendPartyInvite}
+          onOpenDM={openDM}
+        />
+
+        <div className="xl:col-span-2">
+          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
         </div>
       </div>
     );
@@ -2634,7 +2467,18 @@ export default function Home({ authUser, onLogout }) {
             isHost={isHost}
           />
 
-          {renderRaveRoomTopControls()}
+          <RoomPanel
+            compact
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
+          />
 
           <div className="grid gap-3 sm:grid-cols-2">
             <button
@@ -2670,7 +2514,20 @@ export default function Home({ authUser, onLogout }) {
             </button>
           </div>
 
-          {renderVoiceParticipantStrip(true)}
+          {activeVoiceUsers.length > 0 ? (
+          <div className="mb-3 rounded-[1.5rem] border border-emerald-300/15 bg-emerald-500/8 px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/60">Seste olanlar</p>
+            <div className="flex flex-wrap gap-2">
+                {activeVoiceUsers.map((user, index) => (
+                <span key={user.id || user.userId || user.username || index} className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-2 text-xs font-black text-white/80 ring-1 ring-white/10">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-100">{String(user.username || user.name || "V").charAt(0).toUpperCase()}</span>
+                    {user.username || user.name || "Kullanıcı"}
+                  <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
           <ChatPanel
             messages={messages}
@@ -2779,11 +2636,6 @@ export default function Home({ authUser, onLogout }) {
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onTogglePublic={togglePublicRoom}
           />
-          <LeaderboardPanel
-            users={leaderboardUsers}
-            loading={leaderboardLoading}
-            onRefresh={loadLeaderboard}
-          />
         </section>
       );
     }
@@ -2825,21 +2677,6 @@ export default function Home({ authUser, onLogout }) {
       );
     }
 
-    if (mobileSection === "cosmetics") {
-      return (
-        <section className="flex min-w-0 flex-col gap-4 pb-28">
-          <CustomizationStorePanel
-            profileProgress={profileProgress}
-            stats={displayProfileStats}
-            loading={storeLoading}
-            onRefresh={refreshCustomizationStore}
-            onUnlockItem={unlockCustomizationItem}
-            onEquipItem={equipCustomizationItem}
-          />
-        </section>
-      );
-    }
-
     return (
       <section className="flex min-w-0 flex-col gap-4 pb-28">
         <RoomPanel
@@ -2855,24 +2692,17 @@ export default function Home({ authUser, onLogout }) {
         />
         {renderRoomInviteCard()}
         <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
-        <RoomThemePanel
-          roomCode={roomCode}
-          isHost={isHost}
-          activeTheme={roomTheme}
-          onThemeChange={changeRoomTheme}
-        />
         {isAdminUser ? <AdminFeedbackPanel authUser={authUser} /> : null}
       </section>
     );
   }
 
   return (
-    <div className={`app-shell theme-${roomTheme} min-h-screen overflow-x-hidden bg-gradient-to-br ${getThemeShellClass(roomTheme)} text-white`}>
-      <AnimatedBackground theme={roomTheme} />
+    <div className={`app-shell theme-voryapp min-h-screen overflow-x-hidden bg-gradient-to-br ${getThemeShellClass()} text-white`}>
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className={`absolute -left-32 top-0 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 1)} blur-3xl`} />
-        <div className={`absolute right-10 top-20 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 2)} blur-3xl`} />
-        <div className={`absolute bottom-0 left-1/2 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 3)} blur-3xl`} />
+        <div className={`absolute -left-32 top-0 h-96 w-96 rounded-full ${getThemeGlowClass(1)} blur-3xl`} />
+        <div className={`absolute right-10 top-20 h-96 w-96 rounded-full ${getThemeGlowClass(2)} blur-3xl`} />
+        <div className={`absolute bottom-0 left-1/2 h-96 w-96 rounded-full ${getThemeGlowClass(3)} blur-3xl`} />
       </div>
 
       <div className="relative flex min-h-screen gap-3 p-3 pb-24 sm:p-4 sm:pb-24 lg:gap-3 lg:p-3 xl:gap-4 xl:p-4">
@@ -2967,7 +2797,7 @@ export default function Home({ authUser, onLogout }) {
               )}
             </div>
 
-            {appSection === "watch" && (
+            {appSection === "watch" && !roomCode && (
               <VoryBottomDock
                 roomCode={roomCode}
                 isHost={isHost}
@@ -3013,22 +2843,6 @@ export default function Home({ authUser, onLogout }) {
 
           {renderDMPanel()}
           {renderPlatformSheet()}
-          {appSection === "watch" && roomCode ? renderFloatingCreateButton() : null}
-
-          <FeedbackWidget
-            authUser={authUser}
-            roomCode={roomCode}
-            connectionStatus={connectionStatus}
-          />
-
-          <DevHealthOverlay
-            connectionStatus={connectionStatus}
-            roomCode={roomCode}
-            isHost={isHost}
-            userCount={users.length}
-            queueCount={mediaQueue.length}
-            currentMedia={currentMedia}
-          />
 
           <MobileBottomNav
             activeTab={activeMobileTab}
