@@ -1438,11 +1438,11 @@ export default function Home({ authUser, onLogout }) {
   }
 
   function createRoom() {
-  setPendingInviteRoom("");
-  setLastRestoreMessage("");
+    setPendingInviteRoom("");
+    setLastRestoreMessage("");
 
-  socket.emit("create-room", currentUserPayload);
-}
+    socket.emit("create-room", currentUserPayload);
+  }
 
   function joinRoom(customRoomCode) {
     setPendingInviteRoom("");
@@ -2147,14 +2147,10 @@ export default function Home({ authUser, onLogout }) {
 
 
   function handleCreateRoomFlow() {
-    if (!roomCode) {
-      createRoom();
-    }
-
     setAppSection("watch");
     setActiveMobileTab("watch");
     setCreateSheetOpen(true);
-    toast.success(roomCode ? "Platform seç ve izlemeye başla 🎬" : "Oda oluşturuluyor, platform seçebilirsin 🎬");
+    toast("Önce platform seç knks. YouTube seçilmeden oda kurulmayacak 🎬", { icon: "➕" });
   }
 
   function selectPlatform(platform) {
@@ -2163,7 +2159,13 @@ export default function Home({ authUser, onLogout }) {
     setActiveMobileTab("watch");
 
     if (platform.id === "youtube") {
-      toast("YouTube linkini yapıştırıp başlat knks ▶️", { icon: "🎬" });
+      if (!roomCode) {
+        createRoom();
+        toast.success("YouTube seçildi, oda oluşturuluyor 🚀");
+      } else {
+        toast("YouTube linkini yapıştırıp başlat knks ▶️", { icon: "🎬" });
+      }
+
       return;
     }
 
@@ -2191,7 +2193,7 @@ export default function Home({ authUser, onLogout }) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h1 className="text-5xl font-black tracking-[-0.08em] text-white drop-shadow-xl">vory</h1>
-                <p className="mt-1 text-sm font-bold text-white/45">Platform seç, oda zaten hazır.</p>
+                <p className="mt-1 text-sm font-bold text-white/45">Platform seç, sonra oda kurulsun.</p>
               </div>
               <button
                 type="button"
@@ -2471,20 +2473,6 @@ export default function Home({ authUser, onLogout }) {
               isHost={isHost}
             />
           </div>
-
-          <RoomPanel
-            compact
-            username={username}
-            setUsername={setUsername}
-            roomInput={roomInput}
-            setRoomInput={setRoomInput}
-            roomCode={roomCode}
-            status={status}
-            onCreateRoom={createRoom}
-            onJoinRoom={() => joinRoom()}
-            onLeaveRoom={leaveRoom}
-          />
-
           {roomCode ? (
             <RoomThemePanel
               roomCode={roomCode}
@@ -2561,20 +2549,6 @@ export default function Home({ authUser, onLogout }) {
             ignoreEventRef={ignoreEventRef}
             isHost={isHost}
           />
-
-          <RoomPanel
-            compact
-            username={username}
-            setUsername={setUsername}
-            roomInput={roomInput}
-            setRoomInput={setRoomInput}
-            roomCode={roomCode}
-            status={status}
-            onCreateRoom={createRoom}
-            onJoinRoom={() => joinRoom()}
-            onLeaveRoom={leaveRoom}
-          />
-
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
@@ -2779,17 +2753,19 @@ export default function Home({ authUser, onLogout }) {
 
     return (
       <section className="flex min-w-0 flex-col gap-4 pb-28">
-        <RoomPanel
-          username={username}
-          setUsername={setUsername}
-          roomInput={roomInput}
-          setRoomInput={setRoomInput}
-          roomCode={roomCode}
-          status={status}
-          onCreateRoom={createRoom}
-          onJoinRoom={() => joinRoom()}
-          onLeaveRoom={leaveRoom}
-        />
+        {!roomCode ? (
+          <RoomPanel
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
+          />
+        ) : null}
         {renderRoomInviteCard()}
         <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
         <RoomThemePanel
