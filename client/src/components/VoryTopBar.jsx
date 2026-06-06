@@ -18,6 +18,7 @@ export default function VoryTopBar({
   onMarkNotificationsRead,
   onClearNotifications,
   onNotificationClick,
+  onLeaveRoom,
 }) {
   return (
     <header className="vory-v5-topbar !rounded-[1.75rem] !border-white/10 !bg-black/25 !px-3.5 !py-2.5 !backdrop-blur-2xl">
@@ -56,6 +57,19 @@ export default function VoryTopBar({
           message={lastRestoreMessage}
           onRestore={onRestore}
         />
+
+        {roomCode ? (
+          <button
+            type="button"
+            onClick={onLeaveRoom}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-red-300/15 bg-red-500/18 px-3 text-xs font-black text-red-100 shadow-[0_14px_45px_rgba(239,68,68,0.16)] transition hover:bg-red-500/28"
+            title="Odadan ayrıl"
+            aria-label="Odadan ayrıl"
+          >
+            <LogOut size={16} />
+            <span className="hidden sm:inline">Odadan Ayrıl</span>
+          </button>
+        ) : null}
 
         <NotificationCenter
           notifications={notifications}

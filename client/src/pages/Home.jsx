@@ -23,6 +23,7 @@ import ScreenShare from "../components/ScreenShare";
 import MobileBottomNav from "../components/MobileBottomNav";
 import AdminFeedbackPanel from "../components/AdminFeedbackPanel";
 import FriendRequestsPanel from "../components/FriendRequestsPanel";
+import FeedbackWidget from "../components/FeedbackWidget";
 import { api } from "../services/api";
 
 function getRoomCodeFromLocation() {
@@ -2575,7 +2576,7 @@ export default function Home({ authUser, onLogout }) {
           setRoomInput={setRoomInput}
           roomCode={roomCode}
           status={status}
-          onCreateRoom={createRoom}
+          onCreateRoom={handleCreateRoomFlow}
           onJoinRoom={() => joinRoom()}
           onLeaveRoom={leaveRoom}
         />
@@ -2623,6 +2624,7 @@ export default function Home({ authUser, onLogout }) {
             onMarkNotificationsRead={markNotificationsRead}
             onClearNotifications={clearNotifications}
             onNotificationClick={handleNotificationClick}
+            onLeaveRoom={leaveRoom}
           />
 
           {partyInvite && (
@@ -2684,25 +2686,16 @@ export default function Home({ authUser, onLogout }) {
                 <ReactionBurst reactions={reactions} />
               )}
             </div>
-
             {appSection === "watch" && !roomCode && (
-              <VoryBottomDock
-                roomCode={roomCode}
-                isHost={isHost}
-                onOpenRoom={() => handleSectionChange("settings")}
-                onOpenVoice={() => handleSectionChange("voice")}
-                onOpenChat={() => {
-                  setRightPanelTab("chat");
-                  setAppSection("watch");
-                }}
-                onReaction={sendReaction}
-                screenShare={
-                  <ScreenShare
-                    roomCode={roomCode}
-                    username={currentUserPayload.username}
-                  />
-                }
-              />
+              <button
+                type="button"
+                onClick={handleCreateRoomFlow}
+                className="vory-rave-create-fab"
+                title="Oda oluştur"
+                aria-label="Oda oluştur"
+              >
+                +
+              </button>
             )}
           </main>
 
@@ -2731,6 +2724,24 @@ export default function Home({ authUser, onLogout }) {
 
           {renderDMPanel()}
           {renderPlatformSheet()}
+
+          {!roomCode && (
+            <button
+              type="button"
+              onClick={handleCreateRoomFlow}
+              className="vory-rave-create-fab lg:hidden"
+              title="Oda oluştur"
+              aria-label="Oda oluştur"
+            >
+              +
+            </button>
+          )}
+
+          <FeedbackWidget
+            authUser={authUser}
+            roomCode={roomCode}
+            connectionStatus={connectionStatus}
+          />
 
           <MobileBottomNav
             activeTab={activeMobileTab}

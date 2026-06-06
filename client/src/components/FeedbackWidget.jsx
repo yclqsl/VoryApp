@@ -83,7 +83,7 @@ export default function FeedbackWidget({ authUser, roomCode, connectionStatus })
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-[5.75rem] right-4 z-[65] flex items-center gap-2 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/15 px-3.5 py-2.5 text-xs font-black text-white shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:bg-fuchsia-500/25 sm:bottom-24 sm:right-4 sm:px-4 sm:py-3 sm:text-sm lg:bottom-5"
+        className="vory-feedback-fab"
       >
         <Bug size={17} className="text-fuchsia-300" />
         Feedback

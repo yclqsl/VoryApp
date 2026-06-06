@@ -545,3 +545,102 @@ body {
     font-size: 1.25rem;
   }
 }
+
+
+/* Vory 3.1.1 Rave hotfix: separated feedback + create FABs */
+.vory-rave-create-fab {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  z-index: 72;
+  display: inline-flex;
+  width: 5rem;
+  height: 5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255,255,255,0.28), transparent 30%),
+    linear-gradient(145deg, #a855f7 0%, #7c3aed 54%, #5b21b6 100%);
+  color: #fff;
+  font-size: 3.25rem;
+  font-weight: 300;
+  line-height: 1;
+  box-shadow:
+    0 22px 70px rgba(88,28,135,0.45),
+    0 0 0 8px rgba(168,85,247,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.22);
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+
+.vory-rave-create-fab:hover {
+  transform: translateY(-2px) scale(1.03);
+  filter: brightness(1.08);
+  box-shadow:
+    0 28px 90px rgba(126,34,206,0.55),
+    0 0 0 10px rgba(168,85,247,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.26);
+}
+
+.vory-feedback-fab {
+  position: fixed;
+  right: max(1.35rem, calc(env(safe-area-inset-right) + 0.35rem));
+  bottom: calc(7.05rem + env(safe-area-inset-bottom));
+  z-index: 73;
+  display: inline-flex;
+  min-width: 3.25rem;
+  height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(217,70,239,0.24);
+  background: rgba(126,34,206,0.42);
+  padding: 0 0.9rem;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 900;
+  box-shadow:
+    0 18px 60px rgba(0,0,0,0.45),
+    0 0 0 6px rgba(217,70,239,0.08);
+  backdrop-filter: blur(18px);
+  transition: transform .18s ease, background .18s ease;
+}
+
+.vory-feedback-fab:hover {
+  transform: translateY(-2px);
+  background: rgba(147,51,234,0.58);
+}
+
+@media (max-width: 640px) {
+  .vory-rave-create-fab {
+    width: 4.75rem;
+    height: 4.75rem;
+    right: calc(1rem + env(safe-area-inset-right));
+    bottom: calc(5.95rem + env(safe-area-inset-bottom));
+    font-size: 3rem;
+  }
+
+  .vory-feedback-fab {
+    right: calc(1.55rem + env(safe-area-inset-right));
+    bottom: calc(11.4rem + env(safe-area-inset-bottom));
+    width: 3.15rem;
+    min-width: 3.15rem;
+    height: 3.15rem;
+    padding: 0;
+    border-radius: 999px;
+    font-size: 0;
+  }
+
+  .vory-feedback-fab svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .vory-feedback-fab {
+    bottom: calc(7rem + env(safe-area-inset-bottom));
+  }
+}
