@@ -22,8 +22,8 @@ import VoiceChat from "../components/VoiceChat";
 import ScreenShare from "../components/ScreenShare";
 import MobileBottomNav from "../components/MobileBottomNav";
 import AdminFeedbackPanel from "../components/AdminFeedbackPanel";
-import FriendRequestsPanel from "../components/FriendRequestsPanel";
 import FeedbackWidget from "../components/FeedbackWidget";
+import FriendRequestsPanel from "../components/FriendRequestsPanel";
 import { api } from "../services/api";
 
 function getRoomCodeFromLocation() {
@@ -1304,6 +1304,30 @@ export default function Home({ authUser, onLogout }) {
     socket.emit("leave-room", { roomCode });
   }
 
+  function handleLogoutCleanup() {
+    try {
+      if (roomCode) {
+        socket.emit("leave-room", { roomCode });
+      }
+
+      localStorage.removeItem("vory-last-room");
+      sessionStorage.removeItem("vory-last-room");
+      window.currentRoomCode = "";
+    } catch {}
+
+    setRoomUrl("");
+    setRoomCode("");
+    setUsers([]);
+    setMessages([]);
+    setVideoUrl("");
+    setCurrentMedia(null);
+    setMediaQueue([]);
+    setIsHost(false);
+    setLastRestoreMessage("");
+
+    onLogout?.();
+  }
+
   function getInviteLink() {
     if (!roomCode) return "";
     return `${window.location.origin}/room/${roomCode}`;
@@ -2100,15 +2124,7 @@ export default function Home({ authUser, onLogout }) {
           <div className="mb-6 flex items-center justify-between gap-4">
             <button type="button" onClick={() => handleSectionChange("settings")} className="text-5xl font-black leading-none text-white/90">☰</button>
             <h1 className="text-6xl font-black tracking-[-0.1em] text-white drop-shadow-xl sm:text-7xl">vory</h1>
-            <button
-              type="button"
-              onClick={handleCreateRoomFlow}
-              className="vory-rave-create-room-btn"
-              aria-label="Oda oluştur"
-            >
-              <span className="vory-rave-create-plus">+</span>
-              <span>Oda Oluştur</span>
-            </button>
+            <div className="w-14" aria-hidden="true" />
           </div>
 
           <div className="mb-6 flex items-center gap-3 rounded-[1.9rem] bg-black/40 px-5 py-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
@@ -2576,7 +2592,7 @@ export default function Home({ authUser, onLogout }) {
           setRoomInput={setRoomInput}
           roomCode={roomCode}
           status={status}
-          onCreateRoom={handleCreateRoomFlow}
+          onCreateRoom={createRoom}
           onJoinRoom={() => joinRoom()}
           onLeaveRoom={leaveRoom}
         />
@@ -2603,15 +2619,16 @@ export default function Home({ authUser, onLogout }) {
           userCount={users.length}
           isAdmin={isAdminUser}
           authUser={authUser}
-          onLogout={onLogout}
+          onLogout={handleLogoutCleanup}
         />
 
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <VoryTopBar
             authUser={authUser}
-            onLogout={onLogout}
+            onLogout={handleLogoutCleanup}
             isHost={isHost}
             roomCode={roomCode}
+            onLeaveRoom={leaveRoom}
             userCount={users.length}
             watchingCount={liveWatchingCount}
             voiceCount={liveVoiceCount}
@@ -2624,7 +2641,6 @@ export default function Home({ authUser, onLogout }) {
             onMarkNotificationsRead={markNotificationsRead}
             onClearNotifications={clearNotifications}
             onNotificationClick={handleNotificationClick}
-            onLeaveRoom={leaveRoom}
           />
 
           {partyInvite && (
@@ -2686,6 +2702,7 @@ export default function Home({ authUser, onLogout }) {
                 <ReactionBurst reactions={reactions} />
               )}
             </div>
+
             {appSection === "watch" && !roomCode && (
               <button
                 type="button"
@@ -2696,6 +2713,26 @@ export default function Home({ authUser, onLogout }) {
               >
                 +
               </button>
+            )}
+
+            {appSection === "watch" && !roomCode && (
+              <VoryBottomDock
+                roomCode={roomCode}
+                isHost={isHost}
+                onOpenRoom={() => handleSectionChange("settings")}
+                onOpenVoice={() => handleSectionChange("voice")}
+                onOpenChat={() => {
+                  setRightPanelTab("chat");
+                  setAppSection("watch");
+                }}
+                onReaction={sendReaction}
+                screenShare={
+                  <ScreenShare
+                    roomCode={roomCode}
+                    username={currentUserPayload.username}
+                  />
+                }
+              />
             )}
           </main>
 
@@ -2725,6 +2762,7 @@ export default function Home({ authUser, onLogout }) {
           {renderDMPanel()}
           {renderPlatformSheet()}
 
+
           {!roomCode && (
             <button
               type="button"
@@ -2750,7 +2788,7 @@ export default function Home({ authUser, onLogout }) {
             dmUnreadCount={totalDmUnread}
             onlineCount={onlinePresence.length}
             roomCode={roomCode}
-            onLogout={onLogout}
+            onLogout={handleLogoutCleanup}
           />
         </div>
       </div>
