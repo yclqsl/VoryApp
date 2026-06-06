@@ -16,18 +16,17 @@ export default function ChatPanel({
   }, [messages]);
 
   return (
-    <section className="flex min-h-[520px] flex-col rounded-[1.7rem] border border-white/8 bg-black/20 p-3">
+    <section className="flex min-h-0 flex-1 flex-col rounded-[1.7rem] border border-white/8 bg-black/18 p-3">
       <div className="mb-3 flex items-center justify-between px-1">
         <div>
           <h2 className="text-base font-black">Chat</h2>
-          <p className="text-xs font-bold text-white/30">Room messages</p>
         </div>
         <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-black text-white/35">
           {messages.length}
         </span>
       </div>
 
-      <div className="custom-scroll flex-1 overflow-y-auto rounded-[1.35rem] bg-black/20 p-3">
+      <div className="custom-scroll min-h-[360px] flex-1 overflow-y-auto rounded-[1.35rem] bg-black/20 p-3">
         {messages.length === 0 && (
           <div className="flex h-full min-h-[220px] items-center justify-center text-center">
             <div>

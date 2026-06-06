@@ -7,12 +7,10 @@ import VoryRightPanel from "../components/VoryRightPanel";
 import VoryBottomDock from "../components/VoryBottomDock";
 import ReactionBurst from "../components/ReactionBurst";
 import MediaQueue from "../components/MediaQueue";
-import DevHealthOverlay from "../components/DevHealthOverlay";
 import QuickActions from "../components/QuickActions";
 import RoomPanel from "../components/RoomPanel";
 import AnimatedBackground from "../components/AnimatedBackground";
 import InviteBox from "../components/InviteBox";
-import PartyDiscoveryPanel from "../components/PartyDiscoveryPanel";
 import PresenceFriendPanel from "../components/PresenceFriendPanel";
 import UserList from "../components/UserList";
 import ChatPanel from "../components/ChatPanel";
@@ -174,7 +172,6 @@ export default function Home({ authUser, onLogout }) {
   const [reactions, setReactions] = useState([]);
   const [typingUser, setTypingUser] = useState("");
   const [partyInvite, setPartyInvite] = useState(null);
-  const [activityFeed, setActivityFeed] = useState([]);
   const [activeDM, setActiveDM] = useState(null);
   const [dmMessages, setDmMessages] = useState({});
   const [dmInput, setDmInput] = useState("");
@@ -818,12 +815,6 @@ export default function Home({ authUser, onLogout }) {
       setRoomSettings(settings || { publicRoom: false });
     });
 
-    socket.on("activity:new", (activity) => {
-      if (!activity) return;
-
-      setActivityFeed((prev) => [activity, ...(prev || [])].slice(0, 50));
-    });
-
     socket.on("dm:received", (dm) => {
       if (!dm) return;
 
@@ -995,7 +986,6 @@ export default function Home({ authUser, onLogout }) {
       socket.off("presence-changed");
       socket.off("discovery-rooms-updated");
       socket.off("room-settings-updated");
-      socket.off("activity:new");
       socket.off("dm:received");
       socket.off("dm:sent");
       socket.off("dm:read");
@@ -2188,7 +2178,6 @@ export default function Home({ authUser, onLogout }) {
             onlineUsers={onlinePresence}
             currentSocketId={socket.id}
             currentRoomCode={roomCode}
-            activityFeed={activityFeed}
             inviteCooldowns={inviteCooldowns}
             dmUnread={dmUnread}
             activeDM={activeDM}
@@ -2196,23 +2185,6 @@ export default function Home({ authUser, onLogout }) {
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onInviteFriend={sendPartyInvite}
             onOpenDM={openDM}
-          />
-        </div>
-      );
-    }
-
-    if (appSection === "discover") {
-      return (
-        <div className="vory-v5-page-grid">
-          <PartyDiscoveryPanel
-            rooms={discoveryRooms}
-            loading={discoveryLoading}
-            currentRoomCode={roomCode}
-            isHost={isHost}
-            currentRoomPublic={!!roomSettings?.publicRoom}
-            onRefresh={refreshDiscoveryRooms}
-            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-            onTogglePublic={togglePublicRoom}
           />
         </div>
       );
@@ -2263,8 +2235,8 @@ export default function Home({ authUser, onLogout }) {
     }
 
     return (
-      <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/25 p-2.5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+      <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/20 p-2.5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
           <div className="min-h-0 flex-1 overflow-hidden rounded-[1.7rem]">
             <VideoPlayer
               videoUrl={videoUrl}
@@ -2278,11 +2250,27 @@ export default function Home({ authUser, onLogout }) {
               isHost={isHost}
             />
           </div>
+
+          {renderVoiceAvatarRow()}
+
+          <div className="mt-3 max-h-[260px] overflow-auto rounded-[1.7rem] border border-white/8 bg-black/18 p-2.5">
+            <MediaQueue
+              roomCode={roomCode}
+              isHost={isHost}
+              currentMedia={currentMedia}
+              queue={mediaQueue}
+              onAdd={addToQueue}
+              onPlayNext={playNextMedia}
+              onRemove={removeFromQueue}
+              onClear={clearMediaQueue}
+              onVote={voteMedia}
+              currentUserId={currentUserId || socket.id}
+              defaultOpen={false}
+            />
+          </div>
         </section>
 
         <aside className="flex min-h-0 flex-col gap-3">
-          {renderVoiceAvatarRow(true)}
-
           <VoryRightPanel
             activeTab={rightPanelTab}
             onChange={setRightPanelTab}
@@ -2299,6 +2287,8 @@ export default function Home({ authUser, onLogout }) {
             message={message}
             setMessage={setMessage}
             onSendMessage={sendMessage}
+            typingUser={typingUser}
+            onTyping={handleTyping}
             users={users}
             onlinePresence={onlinePresence}
             currentSocketId={socket.id}
@@ -2374,6 +2364,7 @@ export default function Home({ authUser, onLogout }) {
       chat: "watch",
       dm: "friends",
       social: "friends",
+      discover: "watch",
       admin: "settings",
     };
     const mobileSection = mobileSectionMap[activeMobileTab] || activeMobileTab || "watch";
@@ -2526,23 +2517,6 @@ export default function Home({ authUser, onLogout }) {
             onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
             onInviteFriend={sendPartyInvite}
             onOpenDM={openDM}
-          />
-        </section>
-      );
-    }
-
-    if (mobileSection === "discover") {
-      return (
-        <section className="flex min-w-0 flex-col gap-4 pb-28">
-          <PartyDiscoveryPanel
-            rooms={discoveryRooms}
-            loading={discoveryLoading}
-            currentRoomCode={roomCode}
-            isHost={isHost}
-            currentRoomPublic={!!roomSettings?.publicRoom}
-            onRefresh={refreshDiscoveryRooms}
-            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-            onTogglePublic={togglePublicRoom}
           />
         </section>
       );

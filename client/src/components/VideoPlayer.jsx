@@ -170,13 +170,13 @@ export default function VideoPlayer({
   }, [videoId, isHost]);
 
   return (
-    <section className="glass flex min-h-[560px] flex-1 flex-col">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <section className="glass flex min-h-[68vh] flex-1 flex-col !rounded-[1.7rem] !border-white/8 !bg-black/16 !p-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-white/30">
-            Vory Player
+          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/28">
+            Watch Party
           </p>
-          <h2 className="text-xl font-black text-white">
+          <h2 className="text-lg font-black text-white">
             {videoId ? "Now Playing" : "Ready to Watch"}
           </h2>
         </div>
@@ -193,7 +193,7 @@ export default function VideoPlayer({
         </div>
       </div>
 
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black text-white/40 shadow-2xl">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-[1.55rem] border border-white/10 bg-black text-white/40 shadow-2xl">
         {videoId ? (
           <YouTube
             key={videoId}

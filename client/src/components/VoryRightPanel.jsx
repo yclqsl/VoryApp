@@ -1,13 +1,11 @@
-import { ListVideo, MessageCircle, UsersRound } from "lucide-react";
+import { MessageCircle, UsersRound } from "lucide-react";
 import ChatPanel from "./ChatPanel";
-import MediaQueue from "./MediaQueue";
 import PresenceFriendPanel from "./PresenceFriendPanel";
 import UserList from "./UserList";
 
 const tabs = [
   { id: "chat", label: "Chat", icon: MessageCircle },
   { id: "people", label: "People", icon: UsersRound },
-  { id: "queue", label: "Queue", icon: ListVideo },
 ];
 
 export default function VoryRightPanel({
@@ -26,6 +24,8 @@ export default function VoryRightPanel({
   message,
   setMessage,
   onSendMessage,
+  typingUser,
+  onTyping,
   users,
   onlinePresence,
   currentSocketId,
@@ -35,8 +35,8 @@ export default function VoryRightPanel({
   const safeTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : "chat";
 
   return (
-    <aside className="vory-v5-right-panel !min-w-0 !rounded-[1.75rem] !border-white/10 !bg-black/25 !p-2.5 !shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
-      <div className="mb-2 grid grid-cols-3 gap-1.5 rounded-[1.35rem] border border-white/8 bg-black/25 p-1">
+    <aside className="vory-v5-right-panel !min-w-0 !rounded-[1.75rem] !border-white/10 !bg-black/22 !p-2.5 !shadow-[0_20px_70px_rgba(0,0,0,0.24)]">
+      <div className="mb-2 grid grid-cols-2 gap-1.5 rounded-[1.35rem] border border-white/8 bg-black/25 p-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = safeTab === tab.id;
@@ -62,6 +62,8 @@ export default function VoryRightPanel({
             message={message}
             setMessage={setMessage}
             onSendMessage={onSendMessage}
+            typingUser={typingUser}
+            onTyping={onTyping}
           />
         )}
 
@@ -75,20 +77,6 @@ export default function VoryRightPanel({
               onInviteFriend={onInviteFriend}
             />
           </div>
-        )}
-
-        {safeTab === "queue" && (
-          <MediaQueue
-            roomCode={roomCode}
-            isHost={isHost}
-            currentMedia={currentMedia}
-            queue={mediaQueue}
-            onAdd={onAddMedia}
-            onPlayNext={onPlayNext}
-            onRemove={onRemoveMedia}
-            onClear={onClearQueue}
-            onVote={onVoteMedia}
-          />
         )}
       </div>
     </aside>
