@@ -1,4 +1,4 @@
-import { LogOut, MonitorUp, Radio, UsersRound } from "lucide-react";
+import { LogOut, Radio, UsersRound } from "lucide-react";
 import ConnectionBanner from "./ConnectionBanner";
 import NotificationCenter from "./NotificationCenter";
 
@@ -11,7 +11,6 @@ export default function VoryTopBar({
   userCount,
   watchingCount = 0,
   voiceCount = 0,
-  screenCount = 0,
   connectionStatus,
   lastRestoreMessage,
   onRestore,
@@ -44,9 +43,6 @@ export default function VoryTopBar({
         </div>
         <div className="rounded-2xl bg-white/8 px-2.5 py-2 text-xs font-black text-white/55">
           <span className="inline-flex items-center gap-2"><Radio size={14} />{voiceCount || 0}</span>
-        </div>
-        <div className={`rounded-2xl px-2.5 py-2 text-xs font-black ${screenCount > 0 ? "bg-emerald-400/12 text-emerald-200" : "bg-white/8 text-white/55"}`}>
-          <span className="inline-flex items-center gap-2"><MonitorUp size={14} />{screenCount || 0}</span>
         </div>
       </div>
 
