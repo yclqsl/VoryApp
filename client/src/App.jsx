@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import LandingPage from "./pages/LandingPage";
+import AnimatedBackground from "./components/AnimatedBackground";
 import { socket } from "./services/socket";
 
 function App() {
@@ -61,7 +62,12 @@ function App() {
     return <Auth initialMode={authMode} onLogin={handleLogin} onBack={() => setScreen("landing")} />;
   }
 
-  return <Home authUser={authUser} onLogout={handleLogout} />;
+  return (
+    <>
+      <AnimatedBackground />
+      <Home authUser={authUser} onLogout={handleLogout} />
+    </>
+  );
 }
 
 export default App;
