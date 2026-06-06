@@ -7,7 +7,9 @@ import VoryRightPanel from "../components/VoryRightPanel";
 import VoryBottomDock from "../components/VoryBottomDock";
 import ReactionBurst from "../components/ReactionBurst";
 import MediaQueue from "../components/MediaQueue";
+import DevHealthOverlay from "../components/DevHealthOverlay";
 import QuickActions from "../components/QuickActions";
+import RoomPanel from "../components/RoomPanel";
 import AnimatedBackground from "../components/AnimatedBackground";
 import InviteBox from "../components/InviteBox";
 import PartyDiscoveryPanel from "../components/PartyDiscoveryPanel";
@@ -19,6 +21,7 @@ import ProfileCard from "../components/ProfileCard";
 import VoiceChat from "../components/VoiceChat";
 import ScreenShare from "../components/ScreenShare";
 import MobileBottomNav from "../components/MobileBottomNav";
+import AdminFeedbackPanel from "../components/AdminFeedbackPanel";
 import FriendRequestsPanel from "../components/FriendRequestsPanel";
 import { api } from "../services/api";
 
@@ -2054,7 +2057,7 @@ export default function Home({ authUser, onLogout }) {
     if (section === "chat") {
       setRightPanelTab("chat");
     } else if (section === "voice") {
-      setRightPanelTab("voice");
+      setRightPanelTab("people");
     } else if (nextSection === "watch") {
       setRightPanelTab("chat");
     } else if (nextSection === "friends") {
@@ -2200,10 +2203,18 @@ export default function Home({ authUser, onLogout }) {
       <section className="relative min-h-[calc(100vh-2rem)] overflow-hidden rounded-[2.3rem] border border-white/8 bg-black/18 p-5 pb-28 shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-2xl lg:p-8">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(236,72,153,0.20),transparent_28%),radial-gradient(circle_at_84%_20%,rgba(79,70,229,0.22),transparent_32%),radial-gradient(circle_at_72%_92%,rgba(14,165,233,0.18),transparent_28%)]" />
         <div className="relative z-10 mx-auto max-w-5xl">
-          <div className="sticky top-3 z-20 mb-6 flex items-center justify-between gap-4 rounded-[2rem] border border-white/8 bg-black/35 px-4 py-3 backdrop-blur-xl">
+          <div className="mb-6 flex items-center justify-between gap-4">
             <button type="button" onClick={() => handleSectionChange("settings")} className="text-5xl font-black leading-none text-white/90">☰</button>
             <h1 className="text-6xl font-black tracking-[-0.1em] text-white drop-shadow-xl sm:text-7xl">vory</h1>
-            <button type="button" onClick={handleCreateRoomFlow} className="rounded-full bg-violet-600 px-5 py-3 text-sm font-black text-white shadow-[0_18px_55px_rgba(124,58,237,0.35)] transition hover:scale-[1.03]">+ Oda Oluştur</button>
+            <button
+              type="button"
+              onClick={handleCreateRoomFlow}
+              className="vory-rave-create-room-btn"
+              aria-label="Oda oluştur"
+            >
+              <span className="vory-rave-create-plus">+</span>
+              <span>Oda Oluştur</span>
+            </button>
           </div>
 
           <div className="mb-6 flex items-center gap-3 rounded-[1.9rem] bg-black/40 px-5 py-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
@@ -2324,6 +2335,9 @@ export default function Home({ authUser, onLogout }) {
             connectionStatus={connectionStatus}
             stats={displayProfileStats}
             profileProgress={profileProgress}
+            onUserUpdate={(nextUser) => {
+              if (nextUser) localStorage.setItem("vory_user", JSON.stringify(nextUser));
+            }}
           />
         </div>
       );
@@ -2340,7 +2354,16 @@ export default function Home({ authUser, onLogout }) {
     }
 
     if (appSection === "admin") {
-      return null;
+      return (
+        <div className="vory-v5-page-grid">
+          <section className="rounded-[2rem] border border-white/10 bg-black/24 p-5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-fuchsia-200/55">Admin</p>
+            <h2 className="mt-1 text-2xl font-black text-white">Feedback</h2>
+            <p className="mt-1 text-sm font-bold text-white/40">Kullanıcı geri bildirimleri burada durur.</p>
+          </section>
+          <AdminFeedbackPanel authUser={authUser} />
+        </div>
+      );
     }
 
     if (!roomCode) {
@@ -2348,7 +2371,7 @@ export default function Home({ authUser, onLogout }) {
     }
 
     return (
-      <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_390px]">
+      <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
         <section className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/25 p-2.5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
           <div className="min-h-0 flex-1 overflow-hidden rounded-[1.7rem]">
             <VideoPlayer
@@ -2365,38 +2388,53 @@ export default function Home({ authUser, onLogout }) {
           </div>
         </section>
 
-        <aside className="flex min-h-0 flex-col gap-3">
-          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
+        {activeVoiceUsers.length > 0 ? (
+          <div className="mb-3 rounded-[1.5rem] border border-emerald-300/15 bg-emerald-500/8 px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/60">Seste olanlar</p>
+            <div className="flex flex-wrap gap-2">
+              {activeVoiceUsers.map((user, index) => (
+                <span key={user.id || user.userId || user.username || index} className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-2 text-xs font-black text-white/80 ring-1 ring-white/10">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-100">{String(user.username || user.name || "V").charAt(0).toUpperCase()}</span>
+                  {user.username || user.name || "Kullanıcı"}
+                  <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
-          <VoryRightPanel
-            activeTab={rightPanelTab === "voice" ? "chat" : rightPanelTab}
-            onChange={setRightPanelTab}
-            roomCode={roomCode}
-            isHost={isHost}
-            currentMedia={currentMedia}
-            mediaQueue={mediaQueue}
-            onAddMedia={addToQueue}
-            onPlayNext={playNextMedia}
-            onRemoveMedia={removeFromQueue}
-            onClearQueue={clearMediaQueue}
-            onVoteMedia={voteMedia}
-            messages={messages}
-            message={message}
-            setMessage={setMessage}
-            onSendMessage={sendMessage}
-            users={users}
-            onlinePresence={onlinePresence}
-            currentSocketId={socket.id}
-            currentRoomCode={roomCode}
-            inviteCooldowns={inviteCooldowns}
-            dmUnread={dmUnread}
-            activeDM={activeDM}
-            dmLastMessages={dmLastMessages}
-            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-            onInviteFriend={sendPartyInvite}
-            onOpenDM={openDM}
-          />
-        </aside>
+        <VoryRightPanel
+          activeTab={rightPanelTab}
+          onChange={setRightPanelTab}
+          roomCode={roomCode}
+          isHost={isHost}
+          currentMedia={currentMedia}
+          mediaQueue={mediaQueue}
+          onAddMedia={addToQueue}
+          onPlayNext={playNextMedia}
+          onRemoveMedia={removeFromQueue}
+          onClearQueue={clearMediaQueue}
+          onVoteMedia={voteMedia}
+          messages={messages}
+          message={message}
+          setMessage={setMessage}
+          onSendMessage={sendMessage}
+          users={users}
+          onlinePresence={onlinePresence}
+          currentSocketId={socket.id}
+          currentRoomCode={roomCode}
+          inviteCooldowns={inviteCooldowns}
+          dmUnread={dmUnread}
+          activeDM={activeDM}
+          dmLastMessages={dmLastMessages}
+          onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+          onInviteFriend={sendPartyInvite}
+          onOpenDM={openDM}
+        />
+
+        <div className="xl:col-span-2">
+          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
+        </div>
       </div>
     );
   }
@@ -2627,6 +2665,9 @@ export default function Home({ authUser, onLogout }) {
             connectionStatus={connectionStatus}
             stats={displayProfileStats}
             profileProgress={profileProgress}
+            onUserUpdate={(nextUser) => {
+              if (nextUser) localStorage.setItem("vory_user", JSON.stringify(nextUser));
+            }}
           />
         </section>
       );
@@ -2634,8 +2675,18 @@ export default function Home({ authUser, onLogout }) {
 
     return (
       <section className="flex min-w-0 flex-col gap-4 pb-28">
+        <RoomPanel
+          username={username}
+          setUsername={setUsername}
+          roomInput={roomInput}
+          setRoomInput={setRoomInput}
+          roomCode={roomCode}
+          status={status}
+          onCreateRoom={createRoom}
+          onJoinRoom={() => joinRoom()}
+          onLeaveRoom={leaveRoom}
+        />
         {renderRoomInviteCard()}
-        <InviteBox roomCode={roomCode} />
         <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
       </section>
     );

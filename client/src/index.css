@@ -488,8 +488,60 @@ body {
   }
 }
 
-/* Vory 3.0 Back To Rave Cleanup */
-.theme-voryapp::before{opacity:.55;background:radial-gradient(circle at 18% 12%,rgba(124,58,237,.34),transparent 28%),radial-gradient(circle at 82% 20%,rgba(14,165,233,.20),transparent 30%),linear-gradient(145deg,#05030d,#10071f 48%,#020716);animation:none!important}
-.theme-voryapp::after{opacity:.18;background-image:radial-gradient(circle,rgba(255,255,255,.55) 1px,transparent 1.5px);background-size:110px 110px;animation:none!important}
-.theme-neon::before,.theme-neon::after,.theme-galaxy::before,.theme-galaxy::after,.theme-cinema::before,.theme-cinema::after,.theme-gaming::before,.theme-gaming::after{animation:none!important}
-.vory-feedback-widget,[data-vory-feedback],.feedback-widget{display:none!important}
+
+/* Vory 3.0.1 - Rave Create Button + Admin Feedback polish */
+.vory-rave-create-room-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 52px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 999px;
+  padding: 0.78rem 1.15rem 0.78rem 0.78rem;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255,255,255,0.24), transparent 32%),
+    linear-gradient(135deg, rgba(168,85,247,0.96), rgba(217,70,239,0.9) 52%, rgba(14,165,233,0.74));
+  color: white;
+  font-size: 0.92rem;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  box-shadow: 0 18px 54px rgba(168,85,247,0.28), inset 0 1px 0 rgba(255,255,255,0.28);
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+  white-space: nowrap;
+}
+
+.vory-rave-create-room-btn:hover {
+  transform: translateY(-1px) scale(1.025);
+  filter: brightness(1.06);
+  box-shadow: 0 22px 64px rgba(217,70,239,0.32), inset 0 1px 0 rgba(255,255,255,0.32);
+}
+
+.vory-rave-create-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.92);
+  color: #120518;
+  font-size: 1.5rem;
+  font-weight: 950;
+  line-height: 1;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.18);
+}
+
+@media (max-width: 520px) {
+  .vory-rave-create-room-btn {
+    min-height: 48px;
+    padding: 0.66rem 0.9rem 0.66rem 0.66rem;
+    font-size: 0.78rem;
+  }
+
+  .vory-rave-create-plus {
+    width: 30px;
+    height: 30px;
+    font-size: 1.25rem;
+  }
+}

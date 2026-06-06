@@ -114,8 +114,8 @@ export default function VorySidebar({
 
               {isAdmin ? (
                 <button type="button" onClick={() => go("admin")} className="flex w-full flex-col items-center gap-3 rounded-[2rem] py-4 text-white transition hover:bg-white/8">
-                  <span className="flex h-24 w-24 items-center justify-center rounded-full bg-fuchsia-500/20 text-4xl font-black">A</span>
-                  <span className="text-3xl font-black">Admin</span>
+                  <span className="flex h-24 w-24 items-center justify-center rounded-full bg-fuchsia-500/20 text-4xl font-black">F</span>
+                  <span className="text-3xl font-black">Feedback</span>
                 </button>
               ) : null}
 
