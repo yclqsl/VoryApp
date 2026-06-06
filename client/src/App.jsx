@@ -32,14 +32,6 @@ function App() {
   }
 
   function handleLogout() {
-    const activeRoomCode = window.currentRoomCode || localStorage.getItem("vory-last-room") || "";
-
-    if (activeRoomCode) {
-      socket.emit("leave-room", { roomCode: activeRoomCode });
-    }
-
-    window.currentRoomCode = "";
-    localStorage.removeItem("vory-last-room");
     localStorage.removeItem("vory_user");
     localStorage.removeItem("vory_token");
     setAuthUser(null);

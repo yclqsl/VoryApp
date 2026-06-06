@@ -139,21 +139,53 @@ function normalizeHistoryTitle(value = "") {
 function getThemeShellClass(theme = "neon") {
   const cleanTheme = String(theme || "neon").toLowerCase();
 
-  if (cleanTheme === "cinema") return "from-[#080505] via-[#120707] to-black";
-  if (cleanTheme === "galaxy") return "from-[#050716] via-[#090b20] to-black";
-  if (cleanTheme === "gaming") return "from-[#030806] via-[#06130d] to-black";
+  if (cleanTheme === "cinema") {
+    return "from-black via-[#180707] to-[#050004]";
+  }
 
-  return "from-[#070610] via-[#10071f] to-black";
+  if (cleanTheme === "galaxy") {
+    return "from-[#040014] via-[#100a35] to-[#020617]";
+  }
+
+  if (cleanTheme === "gaming") {
+    return "from-black via-[#03140b] to-[#020617]";
+  }
+
+  return "from-[#090014] via-[#15032d] to-[#050010]";
 }
 
 function getThemeGlowClass(theme = "neon", slot = 1) {
   const cleanTheme = String(theme || "neon").toLowerCase();
 
-  if (cleanTheme === "cinema") return slot === 1 ? "bg-red-900/12" : slot === 2 ? "bg-amber-900/10" : "bg-rose-900/8";
-  if (cleanTheme === "galaxy") return slot === 1 ? "bg-indigo-900/14" : slot === 2 ? "bg-sky-900/10" : "bg-fuchsia-900/8";
-  if (cleanTheme === "gaming") return slot === 1 ? "bg-emerald-900/12" : slot === 2 ? "bg-lime-900/8" : "bg-cyan-900/8";
+  if (cleanTheme === "cinema") {
+    return slot === 1
+      ? "bg-red-700/20"
+      : slot === 2
+        ? "bg-amber-600/15"
+        : "bg-rose-700/10";
+  }
 
-  return slot === 1 ? "bg-violet-900/14" : slot === 2 ? "bg-fuchsia-900/10" : "bg-indigo-900/8";
+  if (cleanTheme === "galaxy") {
+    return slot === 1
+      ? "bg-indigo-600/25"
+      : slot === 2
+        ? "bg-sky-500/15"
+        : "bg-fuchsia-600/12";
+  }
+
+  if (cleanTheme === "gaming") {
+    return slot === 1
+      ? "bg-emerald-500/18"
+      : slot === 2
+        ? "bg-lime-500/12"
+        : "bg-cyan-500/10";
+  }
+
+  return slot === 1
+    ? "bg-violet-700/25"
+    : slot === 2
+      ? "bg-fuchsia-700/20"
+      : "bg-indigo-700/15";
 }
 
 export default function Home({ authUser, onLogout }) {
@@ -210,7 +242,6 @@ export default function Home({ authUser, onLogout }) {
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
-  const [lightweightFx, setLightweightFx] = useState(false);
 
   const currentUserId = authUser?._id || authUser?.id || "";
 
@@ -219,15 +250,6 @@ export default function Home({ authUser, onLogout }) {
     username: username || authUser?.username || "Misafir",
     avatar: authUser?.avatar || "",
   };
-
-  useEffect(() => {
-    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    const lowCpu = Number(navigator.hardwareConcurrency || 8) <= 4;
-    const lowMemory = Number(navigator.deviceMemory || 8) <= 4;
-    const smallScreen = window.matchMedia?.("(max-width: 768px)")?.matches;
-
-    setLightweightFx(Boolean(reduceMotion || lowCpu || lowMemory || smallScreen));
-  }, []);
 
   const isAdminUser =
     authUser?.username === "admin" ||
@@ -1449,19 +1471,6 @@ export default function Home({ authUser, onLogout }) {
     socket.emit("leave-room", { roomCode });
   }
 
-  function handleLogoutFromHome() {
-    const activeRoomCode = roomCode || window.currentRoomCode || localStorage.getItem("vory-last-room") || "";
-
-    if (activeRoomCode) {
-      socket.emit("leave-room", { roomCode: activeRoomCode });
-    }
-
-    window.currentRoomCode = "";
-    localStorage.removeItem("vory-last-room");
-    setRoomUrl("");
-    onLogout?.();
-  }
-
   function getInviteLink() {
     if (!roomCode) return "";
     return `${window.location.origin}/room/${roomCode}`;
@@ -2138,10 +2147,14 @@ export default function Home({ authUser, onLogout }) {
 
 
   function handleCreateRoomFlow() {
+    if (!roomCode) {
+      createRoom();
+    }
+
     setAppSection("watch");
     setActiveMobileTab("watch");
     setCreateSheetOpen(true);
-    toast("Platform seçince oda hazırlanacak 🎬", { icon: "✨" });
+    toast.success(roomCode ? "Platform seç ve izlemeye başla 🎬" : "Oda oluşturuluyor, platform seçebilirsin 🎬");
   }
 
   function selectPlatform(platform) {
@@ -2150,15 +2163,116 @@ export default function Home({ authUser, onLogout }) {
     setActiveMobileTab("watch");
 
     if (platform.id === "youtube") {
-      if (!roomCode) {
-        createRoom();
-      }
-
       toast("YouTube linkini yapıştırıp başlat knks ▶️", { icon: "🎬" });
       return;
     }
 
     toast(`${platform.name} yakında. Şimdilik YouTube/Web akışı aktif.`, { icon: "✨" });
+  }
+
+
+  function getVoiceParticipants() {
+    const byId = new Map();
+
+    (users || []).forEach((user, index) => {
+      const id = String(user?.userId || user?._id || user?.id || user?.socketId || user?.username || index);
+      byId.set(id, {
+        ...user,
+        id,
+        username: user?.username || user?.name || `Guest ${index + 1}`,
+        voiceActive: !!user?.voiceActive || user?.activity === "voice" || user?.inVoice === true,
+      });
+    });
+
+    (currentRoomPresence || []).forEach((user, index) => {
+      const id = String(user?.userId || user?._id || user?.id || user?.socketId || user?.username || `presence-${index}`);
+      const existing = byId.get(id) || {};
+      byId.set(id, {
+        ...existing,
+        ...user,
+        id,
+        username: user?.username || existing.username || `Guest ${index + 1}`,
+        voiceActive: !!user?.voiceActive || user?.activity === "voice" || user?.inVoice === true || !!existing.voiceActive,
+      });
+    });
+
+    const activeVoiceUsers = Array.from(byId.values()).filter((user) => user.voiceActive);
+    const fallbackUsers = Array.from(byId.values()).slice(0, 5);
+
+    return activeVoiceUsers.length ? activeVoiceUsers : fallbackUsers;
+  }
+
+  function renderRoomActionBar() {
+    if (!roomCode) return null;
+
+    return (
+      <div className="mt-3 flex flex-col gap-3 rounded-[1.6rem] border border-white/10 bg-black/28 p-3 shadow-[0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-violet-200/55">Aktif oda</p>
+          <h2 className="mt-1 truncate text-base font-black text-white">Room {roomCode}</h2>
+          <p className="mt-0.5 text-xs font-bold text-white/42">👥 {users.length || currentRoomPresence.length || 1} kişi • 🎤 {liveVoiceCount} voice</p>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setRightPanelTab("chat");
+              setAppSection("watch");
+              setActiveMobileTab("watch");
+            }}
+            className="flex-1 rounded-2xl bg-white/10 px-4 py-3 text-xs font-black text-white/70 transition hover:bg-white/15 hover:text-white sm:flex-none"
+          >
+            Sohbet
+          </button>
+          <button
+            type="button"
+            onClick={leaveRoom}
+            className="flex-1 rounded-2xl bg-red-500/15 px-4 py-3 text-xs font-black text-red-100 ring-1 ring-red-300/15 transition hover:bg-red-500/25 sm:flex-none"
+          >
+            Odadan ayrıl
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function renderRaveVoiceStack(compact = false) {
+    if (!roomCode) return null;
+
+    const voiceParticipants = getVoiceParticipants();
+
+    return (
+      <div className={`rounded-[1.7rem] border border-sky-300/15 bg-sky-400/[0.055] p-3 shadow-[0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl ${compact ? "" : "mb-3"}`}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-200/55">Rave Voice</p>
+            <h2 className="text-sm font-black text-white">Sesteki kişiler</h2>
+          </div>
+          <span className="rounded-full bg-sky-300/12 px-3 py-1 text-xs font-black text-sky-100">🎤 {liveVoiceCount || voiceParticipants.length}</span>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {voiceParticipants.length ? voiceParticipants.map((user, index) => {
+            const initial = String(user?.username || "V").charAt(0).toUpperCase();
+            const isSpeaking = user?.voiceActive || user?.activity === "voice" || user?.speaking;
+
+            return (
+              <div key={user?.id || user?.userId || user?.username || index} className="flex min-w-[76px] flex-col items-center gap-1 rounded-[1.2rem] bg-black/24 px-3 py-2 ring-1 ring-white/8">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="avatar" className={`h-11 w-11 rounded-full object-cover ring-2 ${isSpeaking ? "ring-emerald-300/70" : "ring-white/15"}`} />
+                ) : (
+                  <span className={`flex h-11 w-11 items-center justify-center rounded-full bg-white/12 text-sm font-black text-white ring-2 ${isSpeaking ? "ring-emerald-300/70" : "ring-white/15"}`}>{initial}</span>
+                )}
+                <span className="max-w-[64px] truncate text-[10px] font-black text-white/70">{user?.username || "Vory"}</span>
+              </div>
+            );
+          }) : (
+            <p className="rounded-2xl bg-black/20 px-3 py-2 text-xs font-bold text-white/42">Sese çıkanlar burada profil olarak görünecek.</p>
+          )}
+        </div>
+      </div>
+    );
   }
 
   function renderPlatformSheet() {
@@ -2182,7 +2296,7 @@ export default function Home({ authUser, onLogout }) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h1 className="text-5xl font-black tracking-[-0.08em] text-white drop-shadow-xl">vory</h1>
-                <p className="mt-1 text-sm font-bold text-white/45">YouTube seçince oda kurulacak.</p>
+                <p className="mt-1 text-sm font-bold text-white/45">Platform seç, oda zaten hazır.</p>
               </div>
               <button
                 type="button"
@@ -2463,45 +2577,41 @@ export default function Home({ authUser, onLogout }) {
             />
           </div>
 
-          {roomCode ? (
-            <RoomThemePanel
-              roomCode={roomCode}
-              isHost={isHost}
-              activeTheme={roomTheme}
-              onThemeChange={changeRoomTheme}
-              compact
-            />
-          ) : null}
+          {renderRoomActionBar()}
         </section>
 
-        <VoryRightPanel
-          activeTab={rightPanelTab}
-          onChange={setRightPanelTab}
-          roomCode={roomCode}
-          isHost={isHost}
-          currentMedia={currentMedia}
-          mediaQueue={mediaQueue}
-          onAddMedia={addToQueue}
-          onPlayNext={playNextMedia}
-          onRemoveMedia={removeFromQueue}
-          onClearQueue={clearMediaQueue}
-          onVoteMedia={voteMedia}
-          messages={messages}
-          message={message}
-          setMessage={setMessage}
-          onSendMessage={sendMessage}
-          users={users}
-          onlinePresence={onlinePresence}
-          currentSocketId={socket.id}
-          currentRoomCode={roomCode}
-          inviteCooldowns={inviteCooldowns}
-          dmUnread={dmUnread}
-          activeDM={activeDM}
-          dmLastMessages={dmLastMessages}
-          onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-          onInviteFriend={sendPartyInvite}
-          onOpenDM={openDM}
-        />
+        <aside className="flex min-h-0 flex-col">
+          {renderRaveVoiceStack()}
+          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
+          <VoryRightPanel
+            activeTab={rightPanelTab}
+            onChange={setRightPanelTab}
+            roomCode={roomCode}
+            isHost={isHost}
+            currentMedia={currentMedia}
+            mediaQueue={mediaQueue}
+            onAddMedia={addToQueue}
+            onPlayNext={playNextMedia}
+            onRemoveMedia={removeFromQueue}
+            onClearQueue={clearMediaQueue}
+            onVoteMedia={voteMedia}
+            messages={messages}
+            message={message}
+            setMessage={setMessage}
+            onSendMessage={sendMessage}
+            users={users}
+            onlinePresence={onlinePresence}
+            currentSocketId={socket.id}
+            currentRoomCode={roomCode}
+            inviteCooldowns={inviteCooldowns}
+            dmUnread={dmUnread}
+            activeDM={activeDM}
+            dmLastMessages={dmLastMessages}
+            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+            onInviteFriend={sendPartyInvite}
+            onOpenDM={openDM}
+          />
+        </aside>
       </div>
     );
   }
@@ -2540,6 +2650,19 @@ export default function Home({ authUser, onLogout }) {
             isHost={isHost}
           />
 
+          <RoomPanel
+            compact
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
+          />
+
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
@@ -2573,6 +2696,8 @@ export default function Home({ authUser, onLogout }) {
               </p>
             </button>
           </div>
+
+          {renderRaveVoiceStack(true)}
 
           <ChatPanel
             messages={messages}
@@ -2770,15 +2895,11 @@ export default function Home({ authUser, onLogout }) {
 
   return (
     <div className={`app-shell theme-${roomTheme} min-h-screen overflow-x-hidden bg-gradient-to-br ${getThemeShellClass(roomTheme)} text-white`}>
-      {!lightweightFx ? <AnimatedBackground theme={roomTheme} /> : null}
-      <div className="pointer-events-none fixed inset-0 hidden overflow-hidden sm:block">
-        <div className={`absolute -left-24 top-0 h-72 w-72 rounded-full ${getThemeGlowClass(roomTheme, 1)} blur-2xl`} />
-        {!lightweightFx ? (
-          <>
-            <div className={`absolute right-10 top-20 h-72 w-72 rounded-full ${getThemeGlowClass(roomTheme, 2)} blur-2xl`} />
-            <div className={`absolute bottom-0 left-1/2 h-72 w-72 rounded-full ${getThemeGlowClass(roomTheme, 3)} blur-2xl`} />
-          </>
-        ) : null}
+      <AnimatedBackground theme={roomTheme} />
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className={`absolute -left-32 top-0 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 1)} blur-3xl`} />
+        <div className={`absolute right-10 top-20 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 2)} blur-3xl`} />
+        <div className={`absolute bottom-0 left-1/2 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 3)} blur-3xl`} />
       </div>
 
       <div className="relative flex min-h-screen gap-3 p-3 pb-24 sm:p-4 sm:pb-24 lg:gap-3 lg:p-3 xl:gap-4 xl:p-4">
@@ -2790,13 +2911,13 @@ export default function Home({ authUser, onLogout }) {
           userCount={users.length}
           isAdmin={isAdminUser}
           authUser={authUser}
-          onLogout={handleLogoutFromHome}
+          onLogout={onLogout}
         />
 
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <VoryTopBar
             authUser={authUser}
-            onLogout={handleLogoutFromHome}
+            onLogout={onLogout}
             isHost={isHost}
             roomCode={roomCode}
             userCount={users.length}
@@ -2942,7 +3063,7 @@ export default function Home({ authUser, onLogout }) {
             dmUnreadCount={totalDmUnread}
             onlineCount={onlinePresence.length}
             roomCode={roomCode}
-            onLogout={handleLogoutFromHome}
+            onLogout={onLogout}
           />
         </div>
       </div>
