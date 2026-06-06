@@ -139,53 +139,21 @@ function normalizeHistoryTitle(value = "") {
 function getThemeShellClass(theme = "neon") {
   const cleanTheme = String(theme || "neon").toLowerCase();
 
-  if (cleanTheme === "cinema") {
-    return "from-black via-[#180707] to-[#050004]";
-  }
+  if (cleanTheme === "cinema") return "from-[#080505] via-[#120707] to-black";
+  if (cleanTheme === "galaxy") return "from-[#050716] via-[#090b20] to-black";
+  if (cleanTheme === "gaming") return "from-[#030806] via-[#06130d] to-black";
 
-  if (cleanTheme === "galaxy") {
-    return "from-[#040014] via-[#100a35] to-[#020617]";
-  }
-
-  if (cleanTheme === "gaming") {
-    return "from-black via-[#03140b] to-[#020617]";
-  }
-
-  return "from-[#090014] via-[#15032d] to-[#050010]";
+  return "from-[#070610] via-[#10071f] to-black";
 }
 
 function getThemeGlowClass(theme = "neon", slot = 1) {
   const cleanTheme = String(theme || "neon").toLowerCase();
 
-  if (cleanTheme === "cinema") {
-    return slot === 1
-      ? "bg-red-700/20"
-      : slot === 2
-        ? "bg-amber-600/15"
-        : "bg-rose-700/10";
-  }
+  if (cleanTheme === "cinema") return slot === 1 ? "bg-red-900/12" : slot === 2 ? "bg-amber-900/10" : "bg-rose-900/8";
+  if (cleanTheme === "galaxy") return slot === 1 ? "bg-indigo-900/14" : slot === 2 ? "bg-sky-900/10" : "bg-fuchsia-900/8";
+  if (cleanTheme === "gaming") return slot === 1 ? "bg-emerald-900/12" : slot === 2 ? "bg-lime-900/8" : "bg-cyan-900/8";
 
-  if (cleanTheme === "galaxy") {
-    return slot === 1
-      ? "bg-indigo-600/25"
-      : slot === 2
-        ? "bg-sky-500/15"
-        : "bg-fuchsia-600/12";
-  }
-
-  if (cleanTheme === "gaming") {
-    return slot === 1
-      ? "bg-emerald-500/18"
-      : slot === 2
-        ? "bg-lime-500/12"
-        : "bg-cyan-500/10";
-  }
-
-  return slot === 1
-    ? "bg-violet-700/25"
-    : slot === 2
-      ? "bg-fuchsia-700/20"
-      : "bg-indigo-700/15";
+  return slot === 1 ? "bg-violet-900/14" : slot === 2 ? "bg-fuchsia-900/10" : "bg-indigo-900/8";
 }
 
 export default function Home({ authUser, onLogout }) {
@@ -242,6 +210,7 @@ export default function Home({ authUser, onLogout }) {
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
+  const [lightweightFx, setLightweightFx] = useState(false);
 
   const currentUserId = authUser?._id || authUser?.id || "";
 
@@ -250,6 +219,15 @@ export default function Home({ authUser, onLogout }) {
     username: username || authUser?.username || "Misafir",
     avatar: authUser?.avatar || "",
   };
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    const lowCpu = Number(navigator.hardwareConcurrency || 8) <= 4;
+    const lowMemory = Number(navigator.deviceMemory || 8) <= 4;
+    const smallScreen = window.matchMedia?.("(max-width: 768px)")?.matches;
+
+    setLightweightFx(Boolean(reduceMotion || lowCpu || lowMemory || smallScreen));
+  }, []);
 
   const isAdminUser =
     authUser?.username === "admin" ||
@@ -1438,11 +1416,11 @@ export default function Home({ authUser, onLogout }) {
   }
 
   function createRoom() {
-    setPendingInviteRoom("");
-    setLastRestoreMessage("");
+  setPendingInviteRoom("");
+  setLastRestoreMessage("");
 
-    socket.emit("create-room", currentUserPayload);
-  }
+  socket.emit("create-room", currentUserPayload);
+}
 
   function joinRoom(customRoomCode) {
     setPendingInviteRoom("");
@@ -1469,6 +1447,19 @@ export default function Home({ authUser, onLogout }) {
   function leaveRoom() {
     if (!roomCode) return;
     socket.emit("leave-room", { roomCode });
+  }
+
+  function handleLogoutFromHome() {
+    const activeRoomCode = roomCode || window.currentRoomCode || localStorage.getItem("vory-last-room") || "";
+
+    if (activeRoomCode) {
+      socket.emit("leave-room", { roomCode: activeRoomCode });
+    }
+
+    window.currentRoomCode = "";
+    localStorage.removeItem("vory-last-room");
+    setRoomUrl("");
+    onLogout?.();
   }
 
   function getInviteLink() {
@@ -2150,7 +2141,7 @@ export default function Home({ authUser, onLogout }) {
     setAppSection("watch");
     setActiveMobileTab("watch");
     setCreateSheetOpen(true);
-    toast("Önce platform seç knks. YouTube seçilmeden oda kurulmayacak 🎬", { icon: "➕" });
+    toast("Platform seçince oda hazırlanacak 🎬", { icon: "✨" });
   }
 
   function selectPlatform(platform) {
@@ -2161,11 +2152,9 @@ export default function Home({ authUser, onLogout }) {
     if (platform.id === "youtube") {
       if (!roomCode) {
         createRoom();
-        toast.success("YouTube seçildi, oda oluşturuluyor 🚀");
-      } else {
-        toast("YouTube linkini yapıştırıp başlat knks ▶️", { icon: "🎬" });
       }
 
+      toast("YouTube linkini yapıştırıp başlat knks ▶️", { icon: "🎬" });
       return;
     }
 
@@ -2193,7 +2182,7 @@ export default function Home({ authUser, onLogout }) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h1 className="text-5xl font-black tracking-[-0.08em] text-white drop-shadow-xl">vory</h1>
-                <p className="mt-1 text-sm font-bold text-white/45">Platform seç, sonra oda kurulsun.</p>
+                <p className="mt-1 text-sm font-bold text-white/45">YouTube seçince oda kurulacak.</p>
               </div>
               <button
                 type="button"
@@ -2473,6 +2462,7 @@ export default function Home({ authUser, onLogout }) {
               isHost={isHost}
             />
           </div>
+
           {roomCode ? (
             <RoomThemePanel
               roomCode={roomCode}
@@ -2549,6 +2539,7 @@ export default function Home({ authUser, onLogout }) {
             ignoreEventRef={ignoreEventRef}
             isHost={isHost}
           />
+
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
@@ -2753,19 +2744,17 @@ export default function Home({ authUser, onLogout }) {
 
     return (
       <section className="flex min-w-0 flex-col gap-4 pb-28">
-        {!roomCode ? (
-          <RoomPanel
-            username={username}
-            setUsername={setUsername}
-            roomInput={roomInput}
-            setRoomInput={setRoomInput}
-            roomCode={roomCode}
-            status={status}
-            onCreateRoom={createRoom}
-            onJoinRoom={() => joinRoom()}
-            onLeaveRoom={leaveRoom}
-          />
-        ) : null}
+        <RoomPanel
+          username={username}
+          setUsername={setUsername}
+          roomInput={roomInput}
+          setRoomInput={setRoomInput}
+          roomCode={roomCode}
+          status={status}
+          onCreateRoom={createRoom}
+          onJoinRoom={() => joinRoom()}
+          onLeaveRoom={leaveRoom}
+        />
         {renderRoomInviteCard()}
         <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
         <RoomThemePanel
@@ -2781,11 +2770,15 @@ export default function Home({ authUser, onLogout }) {
 
   return (
     <div className={`app-shell theme-${roomTheme} min-h-screen overflow-x-hidden bg-gradient-to-br ${getThemeShellClass(roomTheme)} text-white`}>
-      <AnimatedBackground theme={roomTheme} />
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className={`absolute -left-32 top-0 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 1)} blur-3xl`} />
-        <div className={`absolute right-10 top-20 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 2)} blur-3xl`} />
-        <div className={`absolute bottom-0 left-1/2 h-96 w-96 rounded-full ${getThemeGlowClass(roomTheme, 3)} blur-3xl`} />
+      {!lightweightFx ? <AnimatedBackground theme={roomTheme} /> : null}
+      <div className="pointer-events-none fixed inset-0 hidden overflow-hidden sm:block">
+        <div className={`absolute -left-24 top-0 h-72 w-72 rounded-full ${getThemeGlowClass(roomTheme, 1)} blur-2xl`} />
+        {!lightweightFx ? (
+          <>
+            <div className={`absolute right-10 top-20 h-72 w-72 rounded-full ${getThemeGlowClass(roomTheme, 2)} blur-2xl`} />
+            <div className={`absolute bottom-0 left-1/2 h-72 w-72 rounded-full ${getThemeGlowClass(roomTheme, 3)} blur-2xl`} />
+          </>
+        ) : null}
       </div>
 
       <div className="relative flex min-h-screen gap-3 p-3 pb-24 sm:p-4 sm:pb-24 lg:gap-3 lg:p-3 xl:gap-4 xl:p-4">
@@ -2797,13 +2790,13 @@ export default function Home({ authUser, onLogout }) {
           userCount={users.length}
           isAdmin={isAdminUser}
           authUser={authUser}
-          onLogout={onLogout}
+          onLogout={handleLogoutFromHome}
         />
 
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <VoryTopBar
             authUser={authUser}
-            onLogout={onLogout}
+            onLogout={handleLogoutFromHome}
             isHost={isHost}
             roomCode={roomCode}
             userCount={users.length}
@@ -2949,7 +2942,7 @@ export default function Home({ authUser, onLogout }) {
             dmUnreadCount={totalDmUnread}
             onlineCount={onlinePresence.length}
             roomCode={roomCode}
-            onLogout={onLogout}
+            onLogout={handleLogoutFromHome}
           />
         </div>
       </div>
