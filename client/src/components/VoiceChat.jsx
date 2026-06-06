@@ -73,7 +73,7 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
           roomCode,
           level: finalLevel,
         });
-      }, 120);
+      }, 300);
     } catch (error) {
       console.error("Voice meter error:", error);
     }
@@ -198,6 +198,7 @@ export default function VoiceChat({ roomCode, username, onReaction }) {
         audio.autoplay = true;
         audio.playsInline = true;
         audio.srcObject = remoteStream;
+        audio.play?.().catch(() => {});
         document.body.appendChild(audio);
         audioRefs.current[targetSocketId] = audio;
       }

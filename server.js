@@ -11,12 +11,16 @@ const screenShares = {};
 const partyInviteCooldowns = new Map();
 const PARTY_INVITE_COOLDOWN_MS = 60 * 1000;
 
-const SYNC_DRIFT_WARN_SECONDS = 1.5;
-const SYNC_HARD_DRIFT_SECONDS = 3.5;
-const SYNC_HEARTBEAT_MIN_MS = 700;
+// Vory 1.1 - Voice + Video Sync Fix
+// Daha gevşek eşikler + response throttle: voice chat açılınca video sürekli seek döngüsüne girmesin.
+const SYNC_DRIFT_WARN_SECONDS = 2.25;
+const SYNC_HARD_DRIFT_SECONDS = 6;
+const SYNC_HEARTBEAT_MIN_MS = 1200;
+const SYNC_RESPONSE_MIN_MS = 2600;
 
 const syncClients = {};
 const syncHeartbeatLimiter = {};
+const syncResponseLimiter = {};
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -285,6 +289,18 @@ function getSyncedVideoState(room) {
     updatedAt: Date.now(),
   };
 }
+
+function shouldEmitSyncResponse(roomCode, socketId, minMs = SYNC_RESPONSE_MIN_MS) {
+  const key = `${roomCode}:${socketId}`;
+  const now = Date.now();
+  const last = syncResponseLimiter[key] || 0;
+
+  if (now - last < minMs) return false;
+
+  syncResponseLimiter[key] = now;
+  return true;
+}
+
 
 
 function getOnlineUserBySocketId(socketId) {
@@ -1437,15 +1453,26 @@ io.on("connection", (socket) => {
       updatedAt: Date.now(),
     };
 
-    if (drift >= SYNC_HARD_DRIFT_SECONDS || !!isPlaying !== !!targetState.isPlaying) {
+    const playStateMismatch = !!isPlaying !== !!targetState.isPlaying;
+    const shouldHardResync = drift >= SYNC_HARD_DRIFT_SECONDS || playStateMismatch;
+    const shouldSoftResync = drift >= SYNC_DRIFT_WARN_SECONDS;
+
+    // Voice chat aktifken client state eventleri sık gelir. Aynı kullanıcıya arka arkaya
+    // sync yollamak YouTube player'da 1 sn oynayıp donma döngüsü oluşturuyordu.
+    if ((shouldHardResync || shouldSoftResync) && !shouldEmitSyncResponse(roomCode, socket.id)) {
+      return;
+    }
+
+    if (shouldHardResync) {
       socket.emit("video-sync", {
         ...targetState,
-        reason: "hard-resync",
+        drift,
+        reason: playStateMismatch ? "play-state-resync" : "hard-resync",
       });
       return;
     }
 
-    if (drift >= SYNC_DRIFT_WARN_SECONDS) {
+    if (shouldSoftResync) {
       socket.emit("video-soft-sync", {
         ...targetState,
         drift,
@@ -1454,14 +1481,23 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("force-video-sync", ({ roomCode }) => {
+  socket.on("force-video-sync", ({ roomCode, reason = "recovery" }) => {
     const room = rooms[roomCode];
 
     if (!room) return;
 
-    socket.emit("video-sync", {
+    // İlk girişte hard sync, arka plan recovery'de soft sync.
+    // Böylece voice'a gir/çık sırasında player sürekli seek yemiyor.
+    const hardReasons = new Set(["initial-ready", "join-room", "socket-connect", "manual-hard"]);
+    const eventName = hardReasons.has(reason) ? "video-sync" : "video-soft-sync";
+
+    if (!shouldEmitSyncResponse(roomCode, socket.id, eventName === "video-sync" ? 900 : SYNC_RESPONSE_MIN_MS)) {
+      return;
+    }
+
+    socket.emit(eventName, {
       ...getSyncedVideoState(room),
-      reason: "manual-sync",
+      reason: eventName === "video-sync" ? reason : "soft-recovery",
     });
   });
 
@@ -1506,7 +1542,8 @@ io.on("connection", (socket) => {
 
     updateRoomPresence(socket.id, roomCode, {
       voiceActive: true,
-      activity: "voice",
+      // Video oynarken activity'yi "watching" bırakıyoruz; voice state artık video sync'i tetiklemez.
+      activity: rooms[roomCode]?.videoUrl ? "watching" : "voice",
     });
 
     emitPresence();

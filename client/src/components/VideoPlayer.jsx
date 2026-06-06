@@ -16,7 +16,8 @@ export default function VideoPlayer({
   isHost,
 }) {
   const heartbeatRef = useRef(null);
-  const driftCheckRef = useRef(null);
+  const recoveryTimerRef = useRef(null);
+  const lastForceSyncRef = useRef(0);
   const autoNextLockRef = useRef(false);
 
   function getYouTubeVideoId(url) {
@@ -51,11 +52,17 @@ export default function VideoPlayer({
     return window.currentRoomCode || "";
   }
 
-  function requestForceSync() {
+  function requestForceSync(reason = "recovery") {
     const roomCode = getRoomCode();
     if (!roomCode) return;
 
-    socket.emit("force-video-sync", { roomCode });
+    const now = Date.now();
+    const minDelay = reason === "initial-ready" ? 650 : 3200;
+
+    if (now - lastForceSyncRef.current < minDelay) return;
+    lastForceSyncRef.current = now;
+
+    socket.emit("force-video-sync", { roomCode, reason });
   }
 
   function requestAutoNext() {
@@ -81,8 +88,8 @@ export default function VideoPlayer({
     // Yeni giren viewer host state'ini otomatik alır.
     // Manuel "herkesi senkronla" yerine Rave tarzı otomatik recovery.
     if (!isHost) {
-      setTimeout(requestForceSync, 450);
-      setTimeout(requestForceSync, 1600);
+      setTimeout(() => requestForceSync("initial-ready"), 450);
+      setTimeout(() => requestForceSync("initial-ready"), 1800);
     }
   }
 
@@ -132,22 +139,34 @@ export default function VideoPlayer({
         currentTime: playerRef.current.getCurrentTime(),
         isPlaying: playerRef.current.getPlayerState() === 1,
       });
-    }, 2000);
+    }, 3000);
 
     return () => clearInterval(heartbeatRef.current);
   }, [isHost, playerRef]);
 
   useEffect(() => {
-    clearInterval(driftCheckRef.current);
+    clearTimeout(recoveryTimerRef.current);
 
     if (!videoId || isHost) return;
 
-    // Rave tarzı otomatik recovery: viewer host state'ini arka planda ister.
-    driftCheckRef.current = setInterval(() => {
-      requestForceSync();
-    }, 5000);
+    // Periyodik hard sync kaldırıldı. Voice chat sırasında bu döngü YouTube'a sürekli seek attırıyordu.
+    // Bunun yerine sadece görünürlük/focus geri geldiğinde yumuşak recovery istiyoruz.
+    const recover = () => {
+      recoveryTimerRef.current = setTimeout(() => requestForceSync("focus-recovery"), 350);
+    };
 
-    return () => clearInterval(driftCheckRef.current);
+    const handleVisibility = () => {
+      if (!document.hidden) recover();
+    };
+
+    window.addEventListener("focus", recover);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearTimeout(recoveryTimerRef.current);
+      window.removeEventListener("focus", recover);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [videoId, isHost]);
 
   return (
