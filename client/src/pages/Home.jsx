@@ -17,7 +17,6 @@ import ChatPanel from "../components/ChatPanel";
 import VideoPlayer from "../components/VideoPlayer";
 import ProfileCard from "../components/ProfileCard";
 import VoiceChat from "../components/VoiceChat";
-import ScreenShare from "../components/ScreenShare";
 import MobileBottomNav from "../components/MobileBottomNav";
 import AdminFeedbackPanel from "../components/AdminFeedbackPanel";
 import FeedbackWidget from "../components/FeedbackWidget";
@@ -218,9 +217,6 @@ export default function Home({ authUser, onLogout }) {
   const liveWatchingCount = roomCode ? Math.max(users.length, currentRoomPresence.length) : 0;
   const activeVoiceUsers = roomCode ? voiceRoster : [];
   const liveVoiceCount = activeVoiceUsers.length;
-  const liveScreenCount = roomCode
-    ? currentRoomPresence.filter((user) => user.screenSharing || user.activity === "sharing-screen").length
-    : 0;
 
   const dmLastMessages = Object.fromEntries(
     Object.entries(dmMessages || {}).map(([threadId, messages]) => {
@@ -907,9 +903,7 @@ export default function Home({ authUser, onLogout }) {
       if (notification?.message) {
         toast(notification.message, {
           icon:
-            notification.type === "screen"
-              ? "📺"
-              : notification.type === "voice"
+            notification.type === "voice"
                 ? "🎤"
                 : notification.type === "video"
                   ? "🎬"
@@ -1933,6 +1927,7 @@ export default function Home({ authUser, onLogout }) {
       chat: "watch",
       dm: "friends",
       social: "friends",
+      screen: "watch",
     };
 
     const nextSection = nextSectionMap[section] || section || "watch";
@@ -2365,6 +2360,7 @@ export default function Home({ authUser, onLogout }) {
       dm: "friends",
       social: "friends",
       discover: "watch",
+      screen: "watch",
       admin: "settings",
     };
     const mobileSection = mobileSectionMap[activeMobileTab] || activeMobileTab || "watch";
@@ -2522,29 +2518,6 @@ export default function Home({ authUser, onLogout }) {
       );
     }
 
-    if (mobileSection === "screen") {
-      return (
-        <section className="flex min-w-0 flex-col gap-4 pb-28">
-          <div className="rounded-[1.75rem] border border-emerald-300/15 bg-emerald-400/[0.06] p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
-            <p className="text-xs font-black uppercase tracking-[0.26em] text-emerald-200/60">
-              Mobile Screen Viewer
-            </p>
-            <h2 className="mt-1 text-xl font-black text-white">
-              {roomCode ? "Ekran Yayını" : "Önce odaya gir"}
-            </h2>
-            <p className="mt-1 text-sm font-bold text-white/42">
-              Mobilde ekran paylaşımı başlatmak yerine PC’den açılan yayını izleyebilirsin.
-            </p>
-          </div>
-
-          <ScreenShare
-            roomCode={roomCode}
-            username={currentUserPayload.username}
-          />
-        </section>
-      );
-    }
-
     if (mobileSection === "profile") {
       return (
         <section className="flex min-w-0 flex-col gap-4 pb-28">
@@ -2607,7 +2580,6 @@ export default function Home({ authUser, onLogout }) {
             userCount={users.length}
             watchingCount={liveWatchingCount}
             voiceCount={liveVoiceCount}
-            screenCount={liveScreenCount}
             connectionStatus={connectionStatus}
             lastRestoreMessage={lastRestoreMessage}
             hostTransferMessage={hostTransferMessage}
@@ -2701,12 +2673,6 @@ export default function Home({ authUser, onLogout }) {
                   setAppSection("watch");
                 }}
                 onReaction={sendReaction}
-                screenShare={
-                  <ScreenShare
-                    roomCode={roomCode}
-                    username={currentUserPayload.username}
-                  />
-                }
               />
             )}
           </main>

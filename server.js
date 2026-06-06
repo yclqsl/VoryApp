@@ -7,7 +7,6 @@ dns.setServers(["8.8.8.8", "1.1.1.1"]);
 const rooms = {};
 const onlineUsers = new Map();
 const voiceRooms = {};
-const screenShares = {};
 const partyInviteCooldowns = new Map();
 const PARTY_INVITE_COOLDOWN_MS = 60 * 1000;
 
@@ -320,7 +319,6 @@ function normalizePresenceActivity(activity = "idle") {
     "in-room",
     "watching",
     "voice",
-    "sharing-screen",
   ]);
 
   return allowedActivities.has(cleanActivity) ? cleanActivity : "idle";
@@ -431,7 +429,6 @@ function getRoomSummary(roomCode) {
       roomCode,
       userCount: 0,
       voiceCount: 0,
-      screenSharing: false,
       videoActive: false,
     };
   }
@@ -440,7 +437,6 @@ function getRoomSummary(roomCode) {
     roomCode,
     userCount: room.users?.length || 0,
     voiceCount: voiceRooms[roomCode] ? Object.keys(voiceRooms[roomCode]).length : 0,
-    screenSharing: !!screenShares[roomCode],
     videoActive: !!room.videoUrl,
   };
 }
@@ -460,7 +456,6 @@ function serializeDiscoveryRoom(roomCode) {
     hostUsername: hostUser.username || "Host",
     userCount: summary.userCount,
     voiceCount: summary.voiceCount,
-    screenSharing: summary.screenSharing,
     videoActive: summary.videoActive,
     theme: room.theme || getDefaultRoomTheme(),
     currentMedia: room.currentMedia || null,
@@ -537,7 +532,6 @@ function clearSocketRoomPresence(socketId) {
     roomSummary: null,
     activity: "idle",
     voiceActive: false,
-    screenSharing: false,
   });
 }
 
@@ -667,7 +661,6 @@ function buildRoomSnapshot(roomCode) {
     videoState: getSyncedVideoState(room),
     currentMedia: room.currentMedia || null,
     mediaQueue: room.mediaQueue || [],
-    screenShare: room.screenShare || null,
     roomSummary: getRoomSummary(roomCode),
     settings: getPublicRoomSettings(roomCode),
     theme: getPublicRoomTheme(roomCode),
@@ -711,13 +704,6 @@ function emitRoomSnapshot(socket, roomCode, reason = "snapshot") {
     theme: snapshot.theme || getDefaultRoomTheme(),
     reason,
   });
-
-  if (snapshot.screenShare?.broadcaster) {
-    socket.emit("screen-share-started", {
-      broadcaster: snapshot.screenShare.broadcaster,
-      username: snapshot.screenShare.username,
-    });
-  }
 }
 
 function setRoomMedia(roomCode, mediaItem) {
@@ -857,7 +843,6 @@ io.on("connection", (socket) => {
       roomSummary: existing.roomSummary || null,
       activity: existing.activity || "online",
       voiceActive: !!existing.voiceActive,
-      screenSharing: !!existing.screenSharing,
       lastActiveAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -942,7 +927,6 @@ io.on("connection", (socket) => {
     updateRoomPresence(socket.id, roomCode, {
       activity: room.videoUrl ? "watching" : "in-room",
       voiceActive: false,
-      screenSharing: !!screenShares[roomCode],
     });
 
     emitPresence();
@@ -973,7 +957,6 @@ io.on("connection", (socket) => {
         currentTime: 0,
         updatedAt: Date.now(),
       },
-      screenShare: null,
       mediaQueue: [],
       currentMedia: null,
       theme: getDefaultRoomTheme(),
@@ -1002,7 +985,6 @@ io.on("connection", (socket) => {
     updateRoomPresence(socket.id, roomCode, {
       activity: "in-room",
       voiceActive: false,
-      screenSharing: false,
     });
 
     emitPresence();
@@ -1090,7 +1072,6 @@ io.on("connection", (socket) => {
     updateRoomPresence(socket.id, targetRoomCode, {
       activity: room.videoUrl ? "watching" : "in-room",
       voiceActive: false,
-      screenSharing: !!screenShares[targetRoomCode],
     });
 
     emitPresence();
@@ -1122,12 +1103,6 @@ io.on("connection", (socket) => {
       currentMedia: room.currentMedia || null,
       queue: room.mediaQueue || [],
     });
-
-    if (screenShares[targetRoomCode]) {
-      socket.emit("screen-share-started", {
-        broadcaster: screenShares[targetRoomCode],
-      });
-    }
 
     emitRoomSnapshot(socket, targetRoomCode, "join-room");
     emitDiscoveryRooms();
@@ -1665,178 +1640,15 @@ io.on("connection", (socket) => {
 
 
 
-  socket.on("screen-share-start", ({ roomCode, username }) => {
-    const targetRoomCode = normalizeRoomCode(roomCode);
-    if (!targetRoomCode || !rooms[targetRoomCode]) return;
+  // Vory 3.3.1 Pure Rave: screen share socket flow removed.
 
-    const activeBroadcaster = screenShares[targetRoomCode];
-
-    if (activeBroadcaster && activeBroadcaster !== socket.id) {
-      socket.emit("screen-share-error", "Bu odada zaten ekran paylaşımı var.");
-      return;
-    }
-
-    screenShares[targetRoomCode] = socket.id;
-    rooms[targetRoomCode].screenShare = {
-      broadcaster: socket.id,
-      username: username || "Kullanıcı",
-      startedAt: Date.now(),
-    };
-
-    updateRoomPresence(socket.id, targetRoomCode, {
-      activity: "sharing-screen",
-      screenSharing: true,
-    });
-
-    emitPresence();
-
-    io.to(targetRoomCode).emit("screen-share-started", {
-      broadcaster: socket.id,
-      username: username || "Kullanıcı",
-      roomCode: targetRoomCode,
-    });
-
-    io.to(targetRoomCode).emit(
-      "system-message",
-      `${username || "Kullanıcı"} ekran paylaşımı başlattı.`
-    );
-
-    emitNotification(targetRoomCode, {
-      type: "screen",
-      title: "Ekran paylaşımı",
-      message: `${username || "Kullanıcı"} ekran paylaşımı başlattı.`,
-    });
-
-    emitActivity(targetRoomCode, {
-      type: "screen",
-      title: "Screen Share",
-      username: username || "Kullanıcı",
-      message: `${username || "Kullanıcı"} ekran paylaşımı başlattı.`,
-    });
-  });
-
-  socket.on("screen-share-stop", ({ roomCode }) => {
-    const targetRoomCode = normalizeRoomCode(roomCode);
-    if (!targetRoomCode || !rooms[targetRoomCode]) return;
-    if (screenShares[targetRoomCode] !== socket.id) return;
-
-    delete screenShares[targetRoomCode];
-    rooms[targetRoomCode].screenShare = null;
-
-    updateRoomPresence(socket.id, targetRoomCode, {
-      activity: rooms[targetRoomCode]?.videoUrl ? "watching" : "in-room",
-      screenSharing: false,
-    });
-
-    emitPresence();
-
-    io.to(targetRoomCode).emit("screen-share-stopped", {
-      broadcaster: socket.id,
-      roomCode: targetRoomCode,
-    });
-
-    io.to(targetRoomCode).emit("system-message", "Ekran paylaşımı durduruldu.");
-
-    emitNotification(targetRoomCode, {
-      type: "screen",
-      title: "Ekran paylaşımı durdu",
-      message: "Ekran paylaşımı durduruldu.",
-    });
-
-    emitActivity(targetRoomCode, {
-      type: "screen",
-      title: "Screen Share bitti",
-      username: "Kullanıcı",
-      message: "Ekran paylaşımı durduruldu.",
-    });
-  });
-
-  socket.on("request-screen-stream", ({ roomCode }) => {
-    const targetRoomCode = normalizeRoomCode(roomCode);
-    if (!targetRoomCode || !rooms[targetRoomCode]) return;
-
-    const broadcaster = screenShares[targetRoomCode];
-    if (!broadcaster || broadcaster === socket.id) return;
-
-    io.to(broadcaster).emit("screen-viewer-joined", {
-      viewer: socket.id,
-      roomCode: targetRoomCode,
-    });
-  });
-
-  socket.on("request-screen-share-state", ({ roomCode }) => {
-    const targetRoomCode = normalizeRoomCode(roomCode);
-    if (!targetRoomCode || !rooms[targetRoomCode]) return;
-
-    const activeShare = rooms[targetRoomCode].screenShare;
-    const broadcaster = screenShares[targetRoomCode] || activeShare?.broadcaster;
-
-    if (!broadcaster) {
-      socket.emit("screen-share-state", {
-        active: false,
-        roomCode: targetRoomCode,
-      });
-      return;
-    }
-
-    socket.emit("screen-share-state", {
-      active: true,
-      broadcaster,
-      username: activeShare?.username || "Kullanıcı",
-      roomCode: targetRoomCode,
-    });
-
-    socket.emit("screen-share-started", {
-      broadcaster,
-      username: activeShare?.username || "Kullanıcı",
-      roomCode: targetRoomCode,
-      replay: true,
-    });
-
-    if (broadcaster !== socket.id) {
-      io.to(broadcaster).emit("screen-viewer-joined", {
-        viewer: socket.id,
-        roomCode: targetRoomCode,
-        replay: true,
-      });
-    }
-  });
-
-  socket.on("screen-offer", ({ target, offer }) => {
-    if (!target || !offer) return;
-
-    io.to(target).emit("screen-offer", {
-      from: socket.id,
-      offer,
-    });
-  });
-
-  socket.on("screen-answer", ({ target, answer }) => {
-    if (!target || !answer) return;
-
-    io.to(target).emit("screen-answer", {
-      from: socket.id,
-      answer,
-    });
-  });
-
-  socket.on("screen-ice-candidate", ({ target, candidate }) => {
-    if (!target || !candidate) return;
-
-    io.to(target).emit("screen-ice-candidate", {
-      from: socket.id,
-      candidate,
-    });
-  });
-
-  socket.on("presence-update", ({ roomCode, activity, voiceActive, screenSharing, watchTitle, watchTime }) => {
+  socket.on("presence-update", ({ roomCode, activity, voiceActive, watchTitle, watchTime }) => {
     const existingPresence = getOnlineUserBySocketId(socket.id) || {};
     const nextActivity = normalizePresenceActivity(activity || existingPresence.activity || "idle");
 
     updateRoomPresence(socket.id, roomCode || existingPresence.roomCode || "", {
       activity: nextActivity,
       voiceActive: typeof voiceActive === "boolean" ? voiceActive : !!existingPresence.voiceActive,
-      screenSharing: typeof screenSharing === "boolean" ? screenSharing : !!existingPresence.screenSharing,
       watchTitle: String(watchTitle || existingPresence.watchTitle || "").slice(0, 120),
       watchTime: Math.max(0, Number(watchTime ?? existingPresence.watchTime) || 0),
       watchingUpdatedAt: Date.now(),
@@ -1852,7 +1664,6 @@ io.on("connection", (socket) => {
     updateRoomPresence(socket.id, roomCode || existingPresence.roomCode || "", {
       activity: nextActivity,
       voiceActive: !!existingPresence.voiceActive,
-      screenSharing: !!existingPresence.screenSharing,
       watchTitle: String(watchTitle || existingPresence.watchTitle || "").slice(0, 120),
       watchTime: Math.max(0, Number(watchTime ?? existingPresence.watchTime) || 0),
       watchingUpdatedAt: Date.now(),
@@ -2327,21 +2138,6 @@ io.on("connection", (socket) => {
 
         io.to(roomName).emit("voice-users", {
           users: Object.values(voiceRooms[roomCode] || {}),
-        });
-      }
-    }
-
-    for (const roomCode in screenShares) {
-      if (screenShares[roomCode] === socket.id) {
-        delete screenShares[roomCode];
-
-        if (rooms[roomCode]) {
-          rooms[roomCode].screenShare = null;
-        }
-
-        io.to(roomCode).emit("screen-share-stopped", {
-          broadcaster: socket.id,
-          roomCode,
         });
       }
     }
