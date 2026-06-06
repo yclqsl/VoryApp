@@ -86,10 +86,10 @@ export default function QuickActions({ roomCode, isHost, userCount = 0 }) {
     const enabled = nextSettings[key];
 
     const labels = {
-      roomLocked: enabled ? "Oda kilitlendi 🔒" : "Oda kilidi açıldı 🔓",
-      inviteOnly: enabled ? "Davetli mod açıldı 👥" : "Davetli mod kapandı 👥",
-      muteAll: enabled ? "Herkes susturuldu 🔇" : "Mikrofonlar açıldı 🎤",
-      chatLocked: enabled ? "Sohbet kilitlendi 💬" : "Sohbet açıldı 💬",
+      roomLocked: enabled ? "Room locked 🔒" : "Room unlocked 🔓",
+      inviteOnly: enabled ? "Invite only enabled 👥" : "Invite only disabled 👥",
+      muteAll: enabled ? "Mute all enabled 🔇" : "Mute all disabled 🎤",
+      chatLocked: enabled ? "Chat locked 💬" : "Chat unlocked 💬",
     };
 
     toast.success(labels[key] || "Room setting updated");
@@ -127,28 +127,28 @@ export default function QuickActions({ roomCode, isHost, userCount = 0 }) {
     items.push(
       {
         icon: Lock,
-        label: "Oda Kilidi",
+        label: "Room Lock",
         value: roomSettings.roomLocked ? "Enabled" : "Disabled",
         color: roomSettings.roomLocked ? "text-red-300" : "text-white/38",
         onClick: () => updateSetting("roomLocked"),
       },
       {
         icon: UserCheck,
-        label: "Davetli",
+        label: "Invite Only",
         value: roomSettings.inviteOnly ? "Enabled" : "Disabled",
         color: roomSettings.inviteOnly ? "text-violet-300" : "text-white/38",
         onClick: () => updateSetting("inviteOnly"),
       },
       {
         icon: MicOff,
-        label: "Herkesi Sustur",
+        label: "Mute All",
         value: roomSettings.muteAll ? "Enabled" : "Disabled",
         color: roomSettings.muteAll ? "text-amber-300" : "text-white/38",
         onClick: () => updateSetting("muteAll"),
       },
       {
         icon: MessageSquareOff,
-        label: "Sohbet Kilidi",
+        label: "Chat Lock",
         value: roomSettings.chatLocked ? "Enabled" : "Disabled",
         color: roomSettings.chatLocked ? "text-fuchsia-300" : "text-white/38",
         onClick: () => updateSetting("chatLocked"),
@@ -176,7 +176,7 @@ export default function QuickActions({ roomCode, isHost, userCount = 0 }) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.25em] text-violet-200/60">
-                Oda Ayarları
+                Room Settings
               </p>
               <h3 className="mt-1 text-lg font-black text-white">
                 Closed Beta Host Controls
@@ -211,8 +211,8 @@ export default function QuickActions({ roomCode, isHost, userCount = 0 }) {
 
       {isHost && (
         <p className="mt-4 rounded-3xl bg-white/[0.04] p-3 text-xs text-white/35">
-          Oda Kilidi ve Davetli yeni katılımları engeller. Sohbet Kilidi viewer mesajlarını engeller.
-          Herkesi Sustur şu an odadaki herkese mute sinyali gönderir; V13.0.3 ile VoiceChat seviyesinde mikrofon kapatma zorlaması eklenecek.
+          Room Lock ve Invite Only yeni katılımları engeller. Chat Lock viewer mesajlarını engeller.
+          Mute All şu an odadaki herkese mute sinyali gönderir; V13.0.3 ile VoiceChat seviyesinde mikrofon kapatma zorlaması eklenecek.
         </p>
       )}
     </section>

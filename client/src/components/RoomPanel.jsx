@@ -54,14 +54,14 @@ export default function RoomPanel({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="rounded-full border border-violet-300/15 bg-violet-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-violet-100/70">
-                Oda Ayarları
+                Room Control
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-white/7 px-2.5 py-1 text-[11px] font-black text-white/45">
                 <Radio size={12} /> {roomCode ? roomCode : "Lobby"}
               </span>
             </div>
             <h2 className="mt-2 truncate text-base font-black text-white">
-              {roomCode ? "Watch party hazır" : "Yeni oda oluştur"}
+              {roomCode ? "Watch party hazır" : "Yeni watch party başlat"}
             </h2>
           </div>
 
@@ -96,8 +96,8 @@ export default function RoomPanel({
     <section className="rounded-[2rem] border border-white/10 bg-black/25 p-5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-violet-200/55">Oda Ayarları</p>
-          <h2 className="mt-1 text-xl font-black text-white">Watch party</h2>
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-violet-200/55">Room Control</p>
+          <h2 className="mt-1 text-xl font-black text-white">Watch party ayarları</h2>
           <p className="mt-1 text-sm font-bold text-white/40">Oda oluştur, katıl ve davet linkini paylaş.</p>
         </div>
         <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-white/45">{roomCode || "Lobby"}</span>

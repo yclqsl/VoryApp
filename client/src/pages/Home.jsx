@@ -4,6 +4,7 @@ import { socket } from "../services/socket";
 import VorySidebar from "../components/VorySidebar";
 import VoryTopBar from "../components/VoryTopBar";
 import VoryRightPanel from "../components/VoryRightPanel";
+import VoryBottomDock from "../components/VoryBottomDock";
 import ReactionBurst from "../components/ReactionBurst";
 import MediaQueue from "../components/MediaQueue";
 import DevHealthOverlay from "../components/DevHealthOverlay";
@@ -20,6 +21,7 @@ import ProfileCard from "../components/ProfileCard";
 import VoiceChat from "../components/VoiceChat";
 import ScreenShare from "../components/ScreenShare";
 import MobileBottomNav from "../components/MobileBottomNav";
+import AdminFeedbackPanel from "../components/AdminFeedbackPanel";
 import FriendRequestsPanel from "../components/FriendRequestsPanel";
 import { api } from "../services/api";
 
@@ -551,7 +553,6 @@ export default function Home({ authUser, onLogout }) {
   const activeDMRef = useRef(null);
   const currentUserIdRef = useRef(currentUserId);
   const pendingResumeRef = useRef(null);
-  const pendingCreateVideoRef = useRef(null);
 
   useEffect(() => {
     activeDMRef.current = activeDM;
@@ -664,24 +665,7 @@ export default function Home({ authUser, onLogout }) {
 	  setLastRestoreMessage("");
       setStatus("Oda oluşturuldu.");
       bumpProfileStat("roomsJoined", 1);
-
-      const pendingVideoUrl = pendingCreateVideoRef.current;
-      if (pendingVideoUrl) {
-        pendingCreateVideoRef.current = null;
-        recordWatchItem({
-          url: pendingVideoUrl,
-          title: normalizeHistoryTitle(pendingVideoUrl),
-          meta: `Room ${data.roomCode}`,
-        });
-        socket.emit("set-video", {
-          roomCode: data.roomCode,
-          videoUrl: pendingVideoUrl,
-          title: pendingVideoUrl,
-        });
-        toast.success("Oda oluşturuldu ve video başlatıldı 🎬");
-      } else {
-        toast.success("Oda oluşturuldu 🚀");
-      }
+      toast.success("Oda oluşturuldu 🚀");
     });
 
     socket.on("room-joined", (data) => {
@@ -1448,19 +1432,17 @@ export default function Home({ authUser, onLogout }) {
   }
 
   function setRoomVideo() {
+    if (!roomCode) {
+      toast.error("Önce odaya gir");
+      return;
+    }
+
     if (!videoInput.trim()) {
       toast.error("YouTube linki gir");
       return;
     }
 
     const cleanUrl = videoInput.trim();
-
-    if (!roomCode) {
-      pendingCreateVideoRef.current = cleanUrl;
-      createRoom();
-      toast("Oda oluşturuluyor, video otomatik başlatılacak 🎬", { icon: "➕" });
-      return;
-    }
 
     recordWatchItem({
       url: cleanUrl,
@@ -2104,7 +2086,10 @@ export default function Home({ authUser, onLogout }) {
     setActiveMobileTab("watch");
 
     if (platform.id === "youtube") {
-      toast("YouTube seçildi. Linki yapıştırınca oda oluşturulup video başlatılacak ▶️", { icon: "🎬" });
+      if (!roomCode) {
+        createRoom();
+      }
+      toast("YouTube seçildi. Linki yapıştırıp başlat knks ▶️", { icon: "🎬" });
       return;
     }
 
@@ -2132,7 +2117,7 @@ export default function Home({ authUser, onLogout }) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h1 className="text-5xl font-black tracking-[-0.08em] text-white drop-shadow-xl">vory</h1>
-                <p className="mt-1 text-sm font-bold text-white/45">Platform seç, oda en son adımda oluşsun.</p>
+                <p className="mt-1 text-sm font-bold text-white/45">Platform seç, oda zaten hazır.</p>
               </div>
               <button
                 type="button"
@@ -2221,7 +2206,7 @@ export default function Home({ authUser, onLogout }) {
           <div className="mb-6 flex items-center justify-between gap-4">
             <button type="button" onClick={() => handleSectionChange("settings")} className="text-5xl font-black leading-none text-white/90">☰</button>
             <h1 className="text-6xl font-black tracking-[-0.1em] text-white drop-shadow-xl sm:text-7xl">vory</h1>
-            <button type="button" onClick={handleCreateRoomFlow} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-black text-white shadow-[0_18px_55px_rgba(124,58,237,0.30)] ring-1 ring-white/15 transition hover:scale-[1.03]"><span className="text-lg leading-none">+</span> Oda Oluştur</button>
+            <button type="button" onClick={handleCreateRoomFlow} className="rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black text-white shadow-[0_18px_55px_rgba(124,58,237,0.35)] transition hover:scale-[1.03]">+ Oda Oluştur</button>
           </div>
 
           <div className="mb-6 flex items-center gap-3 rounded-[1.9rem] bg-black/40 px-5 py-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
@@ -2353,12 +2338,13 @@ export default function Home({ authUser, onLogout }) {
           {renderRoomInviteCard()}
           <InviteBox roomCode={roomCode} />
           <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+          {isAdminUser ? <AdminFeedbackPanel authUser={authUser} /> : null}
         </div>
       );
     }
 
     if (appSection === "admin") {
-      return null;
+      return <AdminFeedbackPanel authUser={authUser} />;
     }
 
     if (!roomCode) {
@@ -2366,7 +2352,7 @@ export default function Home({ authUser, onLogout }) {
     }
 
     return (
-      <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px_320px] 2xl:grid-cols-[minmax(0,1fr)_360px_340px]">
+      <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
         <section className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/25 p-2.5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
           <div className="min-h-0 flex-1 overflow-hidden rounded-[1.7rem]">
             <VideoPlayer
@@ -2381,6 +2367,19 @@ export default function Home({ authUser, onLogout }) {
               isHost={isHost}
             />
           </div>
+
+          <RoomPanel
+            compact
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
+          />
         </section>
 
         {activeVoiceUsers.length > 0 ? (
@@ -2427,7 +2426,9 @@ export default function Home({ authUser, onLogout }) {
           onOpenDM={openDM}
         />
 
-        <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
+        <div className="xl:col-span-2">
+          <VoiceChat roomCode={roomCode} username={currentUserPayload.username} onReaction={sendReaction} />
+        </div>
       </div>
     );
   }
@@ -2464,6 +2465,19 @@ export default function Home({ authUser, onLogout }) {
             playerRef={playerRef}
             ignoreEventRef={ignoreEventRef}
             isHost={isHost}
+          />
+
+          <RoomPanel
+            compact
+            username={username}
+            setUsername={setUsername}
+            roomInput={roomInput}
+            setRoomInput={setRoomInput}
+            roomCode={roomCode}
+            status={status}
+            onCreateRoom={createRoom}
+            onJoinRoom={() => joinRoom()}
+            onLeaveRoom={leaveRoom}
           />
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -2678,6 +2692,7 @@ export default function Home({ authUser, onLogout }) {
         />
         {renderRoomInviteCard()}
         <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
+        {isAdminUser ? <AdminFeedbackPanel authUser={authUser} /> : null}
       </section>
     );
   }
@@ -2781,6 +2796,26 @@ export default function Home({ authUser, onLogout }) {
                 <ReactionBurst reactions={reactions} />
               )}
             </div>
+
+            {appSection === "watch" && !roomCode && (
+              <VoryBottomDock
+                roomCode={roomCode}
+                isHost={isHost}
+                onOpenRoom={() => handleSectionChange("settings")}
+                onOpenVoice={() => handleSectionChange("voice")}
+                onOpenChat={() => {
+                  setRightPanelTab("chat");
+                  setAppSection("watch");
+                }}
+                onReaction={sendReaction}
+                screenShare={
+                  <ScreenShare
+                    roomCode={roomCode}
+                    username={currentUserPayload.username}
+                  />
+                }
+              />
+            )}
           </main>
 
           <main className="block flex-1 lg:hidden">
