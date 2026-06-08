@@ -2731,6 +2731,9 @@ export default function Home({ authUser, onLogout }) {
               )}
             </div>
 
+            {/* Vory 4.2.2: desktop duplicate create FAB removed.
+                Keep the lower dock + button only. */}
+
             {appSection === "watch" && !roomCode && (
               <VoryBottomDock
                 roomCode={roomCode}
