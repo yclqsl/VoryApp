@@ -2732,18 +2732,6 @@ export default function Home({ authUser, onLogout }) {
             </div>
 
             {appSection === "watch" && !roomCode && (
-              <button
-                type="button"
-                onClick={handleCreateRoomFlow}
-                className="vory-rave-create-fab"
-                title="Oda oluştur"
-                aria-label="Oda oluştur"
-              >
-                +
-              </button>
-            )}
-
-            {appSection === "watch" && !roomCode && (
               <VoryBottomDock
                 roomCode={roomCode}
                 isHost={isHost}
