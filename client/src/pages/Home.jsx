@@ -2767,19 +2767,6 @@ export default function Home({ authUser, onLogout }) {
           {renderDMPanel()}
           {renderPlatformSheet()}
 
-
-          {!roomCode && (
-            <button
-              type="button"
-              onClick={handleCreateRoomFlow}
-              className="vory-rave-create-fab !bottom-[13.25rem] !right-6 lg:hidden"
-              title="Oda oluştur"
-              aria-label="Oda oluştur"
-            >
-              +
-            </button>
-          )}
-
           <FeedbackWidget
             authUser={authUser}
             roomCode={roomCode}
