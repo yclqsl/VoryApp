@@ -648,36 +648,6 @@ function emitMediaQueue(roomCode) {
   });
 }
 
-
-function removeSocketFromVoiceRooms(socketId, targetRoomCode = "") {
-  const target = normalizeRoomCode(targetRoomCode || "");
-  const roomCodes = target ? [target] : Object.keys(voiceRooms || {});
-
-  roomCodes.forEach((roomCode) => {
-    if (!voiceRooms[roomCode]?.[socketId]) return;
-
-    const voiceRoomName = `voice-${roomCode}`;
-    delete voiceRooms[roomCode][socketId];
-
-    if (Object.keys(voiceRooms[roomCode]).length === 0) {
-      delete voiceRooms[roomCode];
-    }
-
-    io.to(voiceRoomName).emit("voice-user-left", { socketId });
-    io.to(voiceRoomName).emit("voice-users", {
-      users: Object.values(voiceRooms[roomCode] || {}),
-    });
-
-    const activeRoom = rooms[roomCode];
-    const stillInRoom = activeRoom?.users?.some((user) => user.id === socketId);
-
-    updateRoomPresence(socketId, stillInRoom ? roomCode : "", {
-      voiceActive: false,
-      activity: stillInRoom ? (activeRoom?.videoUrl ? "watching" : "in-room") : "idle",
-    });
-  });
-}
-
 function buildRoomSnapshot(roomCode) {
   const room = rooms[roomCode];
 
@@ -1139,9 +1109,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("leave-room", ({ roomCode }) => {
-    const targetRoomCode = normalizeRoomCode(roomCode);
-    removeSocketFromVoiceRooms(socket.id, targetRoomCode);
-    socket.leave(targetRoomCode || roomCode);
+    socket.leave(roomCode);
     removeUserFromRooms(socket.id);
     clearSocketRoomPresence(socket.id);
     emitPresence();
@@ -1565,6 +1533,13 @@ io.on("connection", (socket) => {
       title: "Voice aktif",
       message: `${username || "Kullanıcı"} sesli sohbete katıldı.`,
     });
+
+    emitActivity(roomCode, {
+      type: "voice",
+      title: "Voice Chat",
+      username: username || "Kullanıcı",
+      message: `${username || "Kullanıcı"} sesli sohbete katıldı.`,
+    });
   });
 
   socket.on("voice-mute-state", ({ roomCode, muted }) => {
@@ -1617,12 +1592,50 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-leave", ({ roomCode }) => {
-    const targetRoomCode = normalizeRoomCode(roomCode);
-    if (!targetRoomCode) return;
+    if (!roomCode) return;
 
-    socket.leave(`voice-${targetRoomCode}`);
-    removeSocketFromVoiceRooms(socket.id, targetRoomCode);
+    const voiceRoomName = `voice-${roomCode}`;
+
+    socket.leave(voiceRoomName);
+
+    if (voiceRooms[roomCode]) {
+      delete voiceRooms[roomCode][socket.id];
+
+      if (Object.keys(voiceRooms[roomCode]).length === 0) {
+        delete voiceRooms[roomCode];
+      }
+    }
+
+    socket.to(voiceRoomName).emit("voice-user-left", {
+      socketId: socket.id,
+    });
+
+    const activeRoom = rooms[roomCode];
+    const stillInRoom = activeRoom?.users?.some((user) => user.id === socket.id);
+
+    updateRoomPresence(socket.id, stillInRoom ? roomCode : "", {
+      voiceActive: false,
+      activity: stillInRoom ? (activeRoom?.videoUrl ? "watching" : "in-room") : "idle",
+    });
+
     emitPresence();
+
+    io.to(voiceRoomName).emit("voice-users", {
+      users: Object.values(voiceRooms[roomCode] || {}),
+    });
+
+    emitNotification(roomCode, {
+      type: "voice",
+      title: "Voice ayrıldı",
+      message: "Bir kullanıcı sesli sohbetten ayrıldı.",
+    });
+
+    emitActivity(roomCode, {
+      type: "voice",
+      title: "Voice ayrıldı",
+      username: "Kullanıcı",
+      message: "Bir kullanıcı sesli sohbetten ayrıldı.",
+    });
   });
 
 
@@ -2107,7 +2120,27 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     removeUserFromRooms(socket.id);
 
-    removeSocketFromVoiceRooms(socket.id);
+    for (const roomName of socket.rooms) {
+      if (roomName.startsWith("voice-")) {
+        const roomCode = roomName.replace("voice-", "");
+
+        if (voiceRooms[roomCode]) {
+          delete voiceRooms[roomCode][socket.id];
+
+          if (Object.keys(voiceRooms[roomCode]).length === 0) {
+            delete voiceRooms[roomCode];
+          }
+        }
+
+        socket.to(roomName).emit("voice-user-left", {
+          socketId: socket.id,
+        });
+
+        io.to(roomName).emit("voice-users", {
+          users: Object.values(voiceRooms[roomCode] || {}),
+        });
+      }
+    }
 
     for (const [userId, user] of onlineUsers.entries()) {
       if (user.socketId === socket.id) {

@@ -215,22 +215,7 @@ export default function Home({ authUser, onLogout }) {
 
   const currentRoomPresence = onlinePresence.filter((user) => user.roomCode === roomCode);
   const liveWatchingCount = roomCode ? Math.max(users.length, currentRoomPresence.length) : 0;
-  const activeVoiceUsers = roomCode
-    ? Array.from(
-        new Map(
-          (voiceRoster || [])
-            .filter((user) => user?.socketId)
-            .map((user) => [
-              user.socketId,
-              {
-                ...user,
-                level: Math.max(0, Math.min(100, Number(user.level || 0))),
-                muted: !!user.muted,
-              },
-            ])
-        ).values()
-      ).sort((a, b) => Number(b.level || 0) - Number(a.level || 0))
-    : [];
+  const activeVoiceUsers = roomCode ? voiceRoster : [];
   const liveVoiceCount = activeVoiceUsers.length;
 
   const dmLastMessages = Object.fromEntries(
@@ -2329,7 +2314,7 @@ export default function Home({ authUser, onLogout }) {
     return (
       <div className={`rounded-[1.45rem] border border-emerald-300/15 bg-black/28 px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl ${compact ? "" : "mb-3"}`}>
         <div className="mb-2 flex items-center justify-between gap-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/60">Voice Live</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/60">Voice</p>
           <span className="rounded-full bg-emerald-400/12 px-2.5 py-1 text-[10px] font-black text-emerald-100">
             {activeVoiceUsers.length} kişi
           </span>
@@ -2337,7 +2322,7 @@ export default function Home({ authUser, onLogout }) {
 
         <div className="flex gap-2 overflow-x-auto pb-1">
           {activeVoiceUsers.map((user, index) => {
-            const speaking = Number(user.level || 0) > 10 && !user.muted;
+            const speaking = Number(user.level || 0) > 14 && !user.muted;
             const muted = !!user.muted;
             const label = user.username || user.name || "Kullanıcı";
 
