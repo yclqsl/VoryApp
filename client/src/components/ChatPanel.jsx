@@ -26,7 +26,7 @@ export default function ChatPanel({
         </span>
       </div>
 
-      <div className="custom-scroll min-h-[360px] flex-1 overflow-y-auto rounded-[1.35rem] bg-black/20 p-3">
+      <div className="custom-scroll min-h-[260px] flex-1 overflow-y-auto rounded-[1.35rem] bg-black/20 p-3 md:min-h-[360px]">
         {messages.length === 0 && (
           <div className="flex h-full min-h-[220px] items-center justify-center text-center">
             <div>

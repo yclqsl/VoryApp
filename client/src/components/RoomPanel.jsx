@@ -22,9 +22,9 @@ export default function RoomPanel({ roomInput, setRoomInput, roomCode, onJoinRoo
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-black uppercase tracking-[0.26em] text-violet-200/55">Vory Party</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-white">Watch together</h2>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-white">Join room</h2>
           <p className="mt-1 max-w-xl text-sm font-bold text-white/40">
-            Rave akışı: sağ alttaki + ile oda oluştur, kodla katıl, arkadaşlarını davet et.
+            Rave akışı: + ile oda oluştur, kodla katıl, arkadaşlarını davet et.
           </p>
         </div>
 

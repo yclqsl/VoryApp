@@ -170,8 +170,8 @@ export default function VideoPlayer({
   }, [videoId, isHost]);
 
   return (
-    <section className="glass flex min-h-[68vh] flex-1 flex-col !rounded-[1.7rem] !border-white/8 !bg-black/16 !p-3">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1">
+    <section className="glass flex min-h-[72vh] flex-1 flex-col !rounded-[1.7rem] !border-white/8 !bg-black/16 !p-3 lg:min-h-[68vh]">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/28">
             Watch Party

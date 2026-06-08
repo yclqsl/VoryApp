@@ -2326,7 +2326,7 @@ export default function Home({ authUser, onLogout }) {
     if (!roomCode || activeVoiceUsers.length === 0) return null;
 
     return (
-      <div className={`rounded-[1.45rem] border border-emerald-300/15 bg-black/28 px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl ${compact ? "" : "mb-3"}`}>
+      <div className={`rounded-[1.45rem] border border-emerald-300/15 bg-black/28 px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl ${compact ? "-mt-1" : "mb-3"}`}>
         <div className="mb-2 flex items-center justify-between gap-3">
           <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/60">Voice</p>
           <span className="rounded-full bg-emerald-400/12 px-2.5 py-1 text-[10px] font-black text-emerald-100">
@@ -2405,6 +2405,8 @@ export default function Home({ authUser, onLogout }) {
             isHost={isHost}
           />
 
+          {renderVoiceAvatarRow(true)}
+
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
@@ -2424,11 +2426,11 @@ export default function Home({ authUser, onLogout }) {
 
             <button
               type="button"
-              onClick={() => setMobileQueueOpen(false)}
+              onClick={() => handleSectionChange("room")}
               className="rounded-[1.75rem] border border-sky-300/15 bg-sky-500/10 p-4 text-left shadow-[0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl"
             >
               <p className="text-xs font-black uppercase tracking-[0.24em] text-sky-200/55">
-                Room Status
+                Room
               </p>
               <h2 className="mt-2 truncate text-lg font-black text-white">
                 {roomCode ? `Room ${roomCode}` : "Lobby"}
@@ -2438,8 +2440,6 @@ export default function Home({ authUser, onLogout }) {
               </p>
             </button>
           </div>
-
-          {renderVoiceAvatarRow()}
 
           <ChatPanel
             messages={messages}
@@ -2582,10 +2582,10 @@ export default function Home({ authUser, onLogout }) {
     return (
       <section className="flex min-w-0 flex-col gap-4 pb-28">
         <div className="rounded-[2rem] border border-white/10 bg-black/24 p-4 shadow-[0_22px_80px_rgba(0,0,0,0.32)] backdrop-blur-2xl">
-          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-violet-200/50">Vory Party</p>
-          <h2 className="mt-1 text-2xl font-black text-white">{roomCode ? `Room ${roomCode}` : "Watch together"}</h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-violet-200/50">Room Hub</p>
+          <h2 className="mt-1 text-2xl font-black text-white">{roomCode ? `Room ${roomCode}` : "Join a room"}</h2>
           <p className="mt-1 text-sm font-bold leading-6 text-white/42">
-            Sağ alttaki + ile oda oluştur, kodla katıl, arkadaşlarını davet et.
+            Oda kodu, üyeler, voice ve davet linki tek yerde.
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
@@ -2622,14 +2622,14 @@ export default function Home({ authUser, onLogout }) {
                 onClick={copyInviteLink}
                 className="rounded-[1.5rem] border border-violet-300/15 bg-violet-500/12 px-4 py-3 text-sm font-black text-violet-50"
               >
-                Invite Link Kopyala
+                Invite Link
               </button>
               <button
                 type="button"
                 onClick={leaveRoom}
                 className="rounded-[1.5rem] border border-red-300/15 bg-red-500/12 px-4 py-3 text-sm font-black text-red-100"
               >
-                Odadan Ayrıl
+                Leave Room
               </button>
             </div>
           )}
