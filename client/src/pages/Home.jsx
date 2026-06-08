@@ -2772,7 +2772,7 @@ export default function Home({ authUser, onLogout }) {
             <button
               type="button"
               onClick={handleCreateRoomFlow}
-              className="vory-rave-create-fab !bottom-[7.8rem] !right-6 lg:hidden"
+              className="vory-rave-create-fab !bottom-[13.25rem] !right-6 lg:hidden"
               title="Oda oluştur"
               aria-label="Oda oluştur"
             >
