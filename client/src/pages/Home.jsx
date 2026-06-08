@@ -2506,31 +2506,58 @@ export default function Home({ authUser, onLogout }) {
     if (mobileSection === "friends") {
       return (
         <section className="flex min-w-0 flex-col gap-4 pb-28">
-          <FriendRequestsPanel
-            authUser={authUser}
-            friendState={friendState}
-            searchQuery={friendSearchQuery}
-            setSearchQuery={setFriendSearchQuery}
-            searchResults={friendSearchResults}
-            loading={friendsLoading}
-            onSendRequest={sendFriendRequest}
-            onAcceptRequest={acceptFriendRequest}
-            onRejectRequest={rejectFriendRequest}
-            onRemoveFriend={removeFriend}
-          />
-          <PresenceFriendPanel
-            friendState={friendState}
-            onlineUsers={onlinePresence}
-            currentSocketId={socket.id}
-            currentRoomCode={roomCode}
-            inviteCooldowns={inviteCooldowns}
-            dmUnread={dmUnread}
-            activeDM={activeDM}
-            dmLastMessages={dmLastMessages}
-            onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
-            onInviteFriend={sendPartyInvite}
-            onOpenDM={openDM}
-          />
+          <div className="rounded-[2rem] border border-white/10 bg-black/24 p-4 shadow-[0_22px_80px_rgba(0,0,0,0.32)] backdrop-blur-2xl">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-violet-200/50">People</p>
+                <h2 className="mt-1 text-2xl font-black text-white">Room Members</h2>
+              </div>
+              <span className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-black text-white/65">
+                👥 {users.length || 0}
+              </span>
+            </div>
+            <UserList users={users} />
+          </div>
+
+          <div className="rounded-[2rem] border border-white/10 bg-black/24 p-4 shadow-[0_22px_80px_rgba(0,0,0,0.32)] backdrop-blur-2xl">
+            <div className="mb-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-emerald-200/50">Online</p>
+              <h2 className="mt-1 text-2xl font-black text-white">Friends Online</h2>
+            </div>
+            <PresenceFriendPanel
+              friendState={friendState}
+              onlineUsers={onlinePresence}
+              currentSocketId={socket.id}
+              currentRoomCode={roomCode}
+              inviteCooldowns={inviteCooldowns}
+              dmUnread={dmUnread}
+              activeDM={activeDM}
+              dmLastMessages={dmLastMessages}
+              onJoinRoom={(targetRoomCode) => joinRoom(targetRoomCode)}
+              onInviteFriend={sendPartyInvite}
+              onOpenDM={openDM}
+            />
+          </div>
+
+          <details className="rounded-[2rem] border border-white/10 bg-black/18 p-3 shadow-[0_18px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
+            <summary className="cursor-pointer list-none rounded-[1.5rem] bg-white/[0.06] px-4 py-3 text-sm font-black text-white/80">
+              Friend Requests / Search
+            </summary>
+            <div className="mt-3">
+              <FriendRequestsPanel
+                authUser={authUser}
+                friendState={friendState}
+                searchQuery={friendSearchQuery}
+                setSearchQuery={setFriendSearchQuery}
+                searchResults={friendSearchResults}
+                loading={friendsLoading}
+                onSendRequest={sendFriendRequest}
+                onAcceptRequest={acceptFriendRequest}
+                onRejectRequest={rejectFriendRequest}
+                onRemoveFriend={removeFriend}
+              />
+            </div>
+          </details>
         </section>
       );
     }
@@ -2554,18 +2581,60 @@ export default function Home({ authUser, onLogout }) {
 
     return (
       <section className="flex min-w-0 flex-col gap-4 pb-28">
-        <RoomPanel
-          username={username}
-          setUsername={setUsername}
-          roomInput={roomInput}
-          setRoomInput={setRoomInput}
-          roomCode={roomCode}
-          status={status}
-          onCreateRoom={createRoom}
-          onJoinRoom={() => joinRoom()}
-          onLeaveRoom={leaveRoom}
-        />
-        {renderRoomInviteCard()}
+        <div className="rounded-[2rem] border border-white/10 bg-black/24 p-4 shadow-[0_22px_80px_rgba(0,0,0,0.32)] backdrop-blur-2xl">
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-violet-200/50">Vory Party</p>
+          <h2 className="mt-1 text-2xl font-black text-white">{roomCode ? `Room ${roomCode}` : "Watch together"}</h2>
+          <p className="mt-1 text-sm font-bold leading-6 text-white/42">
+            Sağ alttaki + ile oda oluştur, kodla katıl, arkadaşlarını davet et.
+          </p>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.045] p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/35">Members</p>
+              <p className="mt-1 text-xl font-black text-white">{users.length || 0}</p>
+            </div>
+            <div className="rounded-[1.5rem] border border-emerald-300/10 bg-emerald-400/8 p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100/45">Voice</p>
+              <p className="mt-1 text-xl font-black text-emerald-100">{liveVoiceCount}</p>
+            </div>
+          </div>
+
+          {!roomCode ? (
+            <div className="mt-4 space-y-2">
+              <input
+                value={roomInput}
+                onChange={(event) => setRoomInput(event.target.value.toUpperCase())}
+                placeholder="ODA KODU"
+                className="h-14 w-full rounded-[1.5rem] border border-white/10 bg-black/24 px-5 text-sm font-black uppercase tracking-[0.18em] text-white outline-none placeholder:text-white/28 focus:border-violet-300/40"
+              />
+              <button
+                type="button"
+                onClick={() => joinRoom()}
+                className="h-14 w-full rounded-[1.5rem] border border-white/10 bg-white/10 text-sm font-black text-white transition hover:bg-white/15"
+              >
+                Join
+              </button>
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-2">
+              <button
+                type="button"
+                onClick={copyInviteLink}
+                className="rounded-[1.5rem] border border-violet-300/15 bg-violet-500/12 px-4 py-3 text-sm font-black text-violet-50"
+              >
+                Invite Link Kopyala
+              </button>
+              <button
+                type="button"
+                onClick={leaveRoom}
+                className="rounded-[1.5rem] border border-red-300/15 bg-red-500/12 px-4 py-3 text-sm font-black text-red-100"
+              >
+                Odadan Ayrıl
+              </button>
+            </div>
+          )}
+        </div>
+
         <QuickActions roomCode={roomCode} isHost={isHost} userCount={users.length} />
       </section>
     );
@@ -2598,9 +2667,9 @@ export default function Home({ authUser, onLogout }) {
             watchingCount={liveWatchingCount}
             voiceCount={liveVoiceCount}
             connectionStatus={connectionStatus}
-            lastRestoreMessage={lastRestoreMessage}
+            lastRestoreMessage=""
             hostTransferMessage={hostTransferMessage}
-            onRestore={() => restorePreviousSession("manual-click")}
+            onRestore={undefined}
             notifications={notifications}
             onMarkNotificationsRead={markNotificationsRead}
             onClearNotifications={clearNotifications}
@@ -2632,7 +2701,7 @@ export default function Home({ authUser, onLogout }) {
             </div>
           )}
 
-          {(pendingInviteRoom || lastRestoreMessage) && !roomCode && (
+          {pendingInviteRoom && !roomCode && (
             <div className="glass-panel flex flex-col gap-4 border-emerald-400/25 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-300/70">
@@ -2643,11 +2712,6 @@ export default function Home({ authUser, onLogout }) {
                     ? `${pendingInviteRoom} odasına yönlendiriliyorsun`
                     : "Bu oda artık aktif değil"}
                 </h2>
-                {!pendingInviteRoom && lastRestoreMessage ? (
-                  <p className="mt-1 text-sm font-bold text-white/45">
-                    {lastRestoreMessage}
-                  </p>
-                ) : null}
               </div>
 
               {pendingInviteRoom ? (
@@ -2696,28 +2760,6 @@ export default function Home({ authUser, onLogout }) {
 
           <main className="block flex-1 lg:hidden">
             <div className="mobile-stage space-y-4">
-              <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-[0.28em] text-violet-200/50">
-                      Vory Mobile
-                    </p>
-                    <h1 className="mt-1 truncate text-xl font-black">
-                      {roomCode ? `Room ${roomCode}` : "Lobby"}
-                    </h1>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-2">
-                    <div className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-black text-white/70">
-                      👥 {users.length || onlinePresence.length}
-                    </div>
-                    <div className="rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-black text-emerald-200">
-                      🎤 {liveVoiceCount}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {renderMobilePanel()}
             </div>
           </main>
@@ -2730,7 +2772,7 @@ export default function Home({ authUser, onLogout }) {
             <button
               type="button"
               onClick={handleCreateRoomFlow}
-              className="vory-rave-create-fab lg:hidden"
+              className="vory-rave-create-fab !bottom-[7.8rem] !right-6 lg:hidden"
               title="Oda oluştur"
               aria-label="Oda oluştur"
             >

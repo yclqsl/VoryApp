@@ -41,13 +41,13 @@ function Avatar({ user }) {
       <img
         src={user.avatar}
         alt="avatar"
-        className="h-24 w-24 rounded-[2rem] border border-white/15 object-cover shadow-[0_20px_70px_rgba(0,0,0,0.4)]"
+        className="h-20 w-20 rounded-[1.7rem] sm:h-24 sm:w-24 sm:rounded-[2rem] border border-white/15 object-cover shadow-[0_20px_70px_rgba(0,0,0,0.4)]"
       />
     );
   }
 
   return (
-    <div className="flex h-24 w-24 items-center justify-center rounded-[2rem] border border-white/15 bg-gradient-to-br from-violet-500 to-fuchsia-500 text-4xl font-black text-white shadow-[0_20px_70px_rgba(0,0,0,0.4)]">
+    <div className="flex h-20 w-20 items-center justify-center rounded-[1.7rem] sm:h-24 sm:w-24 sm:rounded-[2rem] border border-white/15 bg-gradient-to-br from-violet-500 to-fuchsia-500 text-4xl font-black text-white shadow-[0_20px_70px_rgba(0,0,0,0.4)]">
       {(user?.username || "V").charAt(0).toUpperCase()}
     </div>
   );
@@ -138,7 +138,7 @@ export default function ProfileCard({
   }
 
   return (
-    <section className="overflow-hidden rounded-[2.25rem] border border-white/10 bg-black/25 p-5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+    <section className="overflow-hidden rounded-[2.25rem] border border-white/10 bg-black/25 p-4 sm:p-5 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
         <div className="relative w-fit">
           <Avatar user={{ ...authUser, ...user }} />
@@ -165,7 +165,7 @@ export default function ProfileCard({
             <span className={`h-2 w-2 rounded-full ${online ? "bg-emerald-300" : "bg-white/25"}`} />
             {online ? "Online" : "Offline"}
           </div>
-          <h2 className="mt-3 truncate text-3xl font-black text-white">@{username}</h2>
+          <h2 className="mt-3 truncate text-2xl font-black text-white sm:text-3xl">@{username}</h2>
           <p className="mt-1 truncate text-sm font-bold text-white/38">{email}</p>
           <p className="mt-3 max-w-2xl text-sm font-bold leading-6 text-white/55">
             {bio || "Henüz bio eklenmedi."}
@@ -173,17 +173,17 @@ export default function ProfileCard({
         </div>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-3xl border border-white/8 bg-white/[0.04] p-4 text-center">
-          <p className="text-2xl font-black text-white">{compactNumber(roomsJoined)}</p>
+      <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="rounded-[1.35rem] border border-white/8 bg-white/[0.04] p-3 text-center sm:rounded-3xl sm:p-4">
+          <p className="text-xl font-black text-white sm:text-2xl">{compactNumber(roomsJoined)}</p>
           <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/35">Rooms</p>
         </div>
-        <div className="rounded-3xl border border-white/8 bg-white/[0.04] p-4 text-center">
-          <p className="text-2xl font-black text-white">{watchTime}</p>
+        <div className="rounded-[1.35rem] border border-white/8 bg-white/[0.04] p-3 text-center sm:rounded-3xl sm:p-4">
+          <p className="text-xl font-black text-white sm:text-2xl">{watchTime}</p>
           <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/35">Watch</p>
         </div>
-        <div className="rounded-3xl border border-white/8 bg-white/[0.04] p-4 text-center">
-          <p className="text-2xl font-black text-white">{compactNumber(friendsCount)}</p>
+        <div className="rounded-[1.35rem] border border-white/8 bg-white/[0.04] p-3 text-center sm:rounded-3xl sm:p-4">
+          <p className="text-xl font-black text-white sm:text-2xl">{compactNumber(friendsCount)}</p>
           <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/35">Friends</p>
         </div>
       </div>

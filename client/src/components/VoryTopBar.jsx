@@ -1,5 +1,4 @@
 import { LogOut, Radio, UsersRound } from "lucide-react";
-import ConnectionBanner from "./ConnectionBanner";
 import NotificationCenter from "./NotificationCenter";
 
 export default function VoryTopBar({
@@ -12,8 +11,6 @@ export default function VoryTopBar({
   watchingCount = 0,
   voiceCount = 0,
   connectionStatus,
-  lastRestoreMessage,
-  onRestore,
   notifications,
   onMarkNotificationsRead,
   onClearNotifications,
@@ -51,12 +48,18 @@ export default function VoryTopBar({
       </div>
 
       <div className="flex min-w-0 items-center justify-end gap-2">
-        <ConnectionBanner
-          status={connectionStatus}
-          roomCode={roomCode}
-          message={lastRestoreMessage}
-          onRestore={onRestore}
-        />
+        <div
+          className={`hidden rounded-2xl border px-3 py-2 text-xs font-black sm:inline-flex ${
+            connectionStatus === "connected"
+              ? "border-emerald-300/15 bg-emerald-400/10 text-emerald-100"
+              : connectionStatus === "reconnecting"
+                ? "border-amber-300/15 bg-amber-400/10 text-amber-100"
+                : "border-white/10 bg-white/[0.06] text-white/55"
+          }`}
+          title={connectionStatus}
+        >
+          {connectionStatus === "connected" ? "Connected" : connectionStatus === "reconnecting" ? "Reconnecting" : "Offline"}
+        </div>
 
         {roomCode ? (
           <button
