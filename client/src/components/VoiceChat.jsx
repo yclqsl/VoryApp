@@ -46,12 +46,14 @@ export default function VoiceChat({ roomCode, username, onReaction, onVoiceUsers
       });
     }
 
-    return safeList.map((user) => ({
-      ...user,
-      username: user.username || (user.socketId === socket.id ? username : "Kullanıcı"),
-      muted: user.socketId === socket.id ? isMutedRef.current : !!user.muted,
-      level: voiceLevels[user.socketId] || user.level || 0,
-    }));
+    return safeList
+      .map((user) => ({
+        ...user,
+        username: user.username || (user.socketId === socket.id ? username : "Kullanıcı"),
+        muted: user.socketId === socket.id ? isMutedRef.current : !!user.muted,
+        level: Math.max(0, Math.min(100, Number(voiceLevels[user.socketId] || user.level || 0))),
+      }))
+      .sort((a, b) => Number(b.level || 0) - Number(a.level || 0));
   }
 
   function publishVoiceUsers(nextUsers = voiceUsers) {
@@ -535,6 +537,21 @@ export default function VoiceChat({ roomCode, username, onReaction, onVoiceUsers
       if (localStreamRef.current) {
         stopVoice();
       }
+    };
+  }, [roomCode]);
+
+  useEffect(() => {
+    const cleanupVoiceOnExit = () => {
+      if (!roomCode || !localStreamRef.current) return;
+      socket.emit("voice-leave", { roomCode });
+    };
+
+    window.addEventListener("pagehide", cleanupVoiceOnExit);
+    window.addEventListener("beforeunload", cleanupVoiceOnExit);
+
+    return () => {
+      window.removeEventListener("pagehide", cleanupVoiceOnExit);
+      window.removeEventListener("beforeunload", cleanupVoiceOnExit);
     };
   }, [roomCode]);
 
