@@ -31,9 +31,13 @@ export default function VoryTopBar({
             </h1>
             {isHost ? <span className="vory-top-host-badge">HOST</span> : null}
           </div>
-          <p className="mt-0.5 truncate text-xs font-bold text-white/38">
+          <p className="mt-0.5 hidden truncate text-xs font-bold text-white/38 sm:block">
             @{authUser?.username || "user"} • {userCount || 0} online
           </p>
+          <div className="mt-1 flex items-center gap-1.5 sm:hidden">
+            <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-black text-white/60">👥 {watchingCount || userCount || 0}</span>
+            <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] font-black text-emerald-200">🎤 {voiceCount || 0}</span>
+          </div>
         </div>
       </div>
 

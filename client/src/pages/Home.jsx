@@ -1923,6 +1923,9 @@ export default function Home({ authUser, onLogout }) {
   function handleSectionChange(section) {
     const nextSectionMap = {
       room: "settings",
+      settings: "settings",
+      people: "friends",
+      friends: "friends",
       voice: "watch",
       chat: "watch",
       dm: "friends",
@@ -1949,7 +1952,18 @@ export default function Home({ authUser, onLogout }) {
       setRightPanelTab("people");
     }
 
-    setActiveMobileTab(nextSection);
+    const nextMobileTabMap = {
+      settings: "room",
+      room: "room",
+      friends: "people",
+      people: "people",
+      dm: "people",
+      social: "people",
+      profile: "profile",
+      watch: "watch",
+    };
+
+    setActiveMobileTab(nextMobileTabMap[section] || nextMobileTabMap[nextSection] || "watch");
   }
 
   function changeRoomTheme() {
@@ -2355,6 +2369,9 @@ export default function Home({ authUser, onLogout }) {
   function renderMobilePanel() {
     const mobileSectionMap = {
       room: "settings",
+      settings: "settings",
+      people: "friends",
+      friends: "friends",
       voice: "watch",
       chat: "watch",
       dm: "friends",
@@ -2681,17 +2698,22 @@ export default function Home({ authUser, onLogout }) {
             <div className="mobile-stage space-y-4">
               <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
                 <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.28em] text-violet-200/50">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-[0.28em] text-violet-200/50">
                       Vory Mobile
                     </p>
-                    <h1 className="mt-1 text-xl font-black">
+                    <h1 className="mt-1 truncate text-xl font-black">
                       {roomCode ? `Room ${roomCode}` : "Lobby"}
                     </h1>
                   </div>
 
-                  <div className="rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-black text-emerald-200">
-                    👥 {users.length || onlinePresence.length}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-black text-white/70">
+                      👥 {users.length || onlinePresence.length}
+                    </div>
+                    <div className="rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-black text-emerald-200">
+                      🎤 {liveVoiceCount}
+                    </div>
                   </div>
                 </div>
               </div>

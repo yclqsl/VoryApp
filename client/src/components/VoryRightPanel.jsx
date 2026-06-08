@@ -69,13 +69,29 @@ export default function VoryRightPanel({
 
         {safeTab === "people" && (
           <div className="space-y-3">
-            <UserList users={users} />
-            <PresenceFriendPanel
-              onlineUsers={onlinePresence}
-              currentSocketId={currentSocketId}
-              onJoinRoom={onJoinRoom}
-              onInviteFriend={onInviteFriend}
-            />
+            <div className="rounded-[1.45rem] border border-white/8 bg-black/20 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                <div>
+                  <h2 className="text-sm font-black text-white">Members</h2>
+                  <p className="text-[11px] font-bold text-white/35">Odada bulunan kullanıcılar</p>
+                </div>
+                <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-black text-white/50">{users?.length || 0}</span>
+              </div>
+              <UserList users={users} />
+            </div>
+
+            <div className="rounded-[1.45rem] border border-white/8 bg-black/20 p-3">
+              <div className="mb-2 px-1">
+                <h2 className="text-sm font-black text-white">Friends Online</h2>
+                <p className="text-[11px] font-bold text-white/35">Rave tarzı hızlı katıl / davet akışı</p>
+              </div>
+              <PresenceFriendPanel
+                onlineUsers={onlinePresence}
+                currentSocketId={currentSocketId}
+                onJoinRoom={onJoinRoom}
+                onInviteFriend={onInviteFriend}
+              />
+            </div>
           </div>
         )}
       </div>

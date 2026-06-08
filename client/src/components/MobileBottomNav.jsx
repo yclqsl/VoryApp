@@ -1,10 +1,10 @@
-import { Home, MonitorUp, UserRound, UsersRound } from "lucide-react";
+import { Home, Radio, UserRound, UsersRound } from "lucide-react";
 
 const tabs = [
-  { id: "watch", label: "Home", icon: Home },
-  { id: "friends", label: "Friends", icon: UsersRound },
+  { id: "watch", label: "Watch", icon: Home },
+  { id: "people", label: "People", icon: UsersRound },
   { id: "profile", label: "Profile", icon: UserRound },
-  { id: "screen", label: "Screen", icon: MonitorUp },
+  { id: "room", label: "Room", icon: Radio },
 ];
 
 export default function MobileBottomNav({
@@ -15,7 +15,7 @@ export default function MobileBottomNav({
   onlineCount = 0,
   roomCode,
 }) {
-  const activeId = activeTab === "dm" || activeTab === "social" ? "friends" : activeTab === "room" ? "screen" : activeTab;
+  const activeId = activeTab === "dm" || activeTab === "social" || activeTab === "friends" ? "people" : activeTab === "settings" ? "room" : activeTab;
 
   return (
     <nav className="fixed inset-x-4 bottom-4 z-50 rounded-[2rem] border border-white/10 bg-black/82 p-2 shadow-[0_24px_90px_rgba(0,0,0,0.6)] backdrop-blur-2xl lg:hidden">
@@ -25,7 +25,7 @@ export default function MobileBottomNav({
           const active = activeId === tab.id;
 
           const badge =
-            tab.id === "friends" && (dmUnreadCount > 0 || onlineCount > 0)
+            tab.id === "people" && (dmUnreadCount > 0 || onlineCount > 0)
               ? Math.min(dmUnreadCount || onlineCount, 99)
               : tab.id === "watch" && unreadMessages > 0
                 ? Math.min(unreadMessages, 99)
@@ -53,7 +53,7 @@ export default function MobileBottomNav({
 
               <span>{tab.label}</span>
 
-              {tab.id === "screen" && roomCode ? (
+              {tab.id === "room" && roomCode ? (
                 <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
               ) : null}
             </button>
