@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>VoryApp</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #08080b;
+      color: white;
+    }
+
+    header {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: #11111a;
+      border-bottom: 1px solid #242436;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .tag {
+      color: #8b8ba7;
+      font-size: 14px;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 18px;
+      padding: 18px;
+      height: calc(100vh - 64px);
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .panel {
+      background: #12121c;
+      border: 1px solid #242436;
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .video-panel {
+      flex: 1;
+      min-height: 500px;
+    }
+
+    #player {
+      width: 100%;
+      height: calc(100% - 90px);
+      min-height: 420px;
+      background: black;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      margin-top: 8px;
+      border: 1px solid #2c2c42;
+      border-radius: 12px;
+      background: #0b0b12;
+      color: white;
+      outline: none;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 12px 14px;
+      border: none;
+      border-radius: 12px;
+      background: #6c5ce7;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+
+    button.secondary {
+      background: #252538;
+    }
+
+    button.danger {
+      background: #e74c3c;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .row button {
+      flex: 1;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-height: 0;
+    }
+
+    #roomCode {
+      margin: 10px 0 0;
+      font-size: 20px;
+      color: #00ff88;
+    }
+
+    #status {
+      color: #aaa;
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    #users {
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    .user {
+      padding: 8px 10px;
+      background: #0b0b12;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      color: #00ff88;
+    }
+
+    .host {
+      color: gold;
+    }
+
+    .chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      background: #0b0b12;
+      border-radius: 14px;
+      padding: 12px;
+      text-align: left;
+      min-height: 220px;
+    }
+
+    .message {
+      background: #1d1d2b;
+      padding: 9px 11px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .system {
+      color: #8b8ba7;
+      font-size: 13px;
+      font-style: italic;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    h3 {
+      margin-top: 0;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      .video-panel {
+        min-height: auto;
+      }
+
+      #player {
+        height: 320px;
+        min-height: 320px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">VoryApp 🚀</div>
+    <div class="tag">Watch together. Chat together.</div>
+  </header>
+
+  <div class="app">
+    <main class="main">
+      <section class="panel video-panel">
+        <h3>YouTube Watch Room</h3>
+
+        <div class="row">
+          <input id="videoUrlInput" placeholder="YouTube video linki gir">
+          <button id="setVideoBtn">Videoyu Aç</button>
+        </div>
+
+        <div id="player"></div>
+
+        <div class="row">
+          <button id="restartVideoBtn" class="secondary">Baştan Başlat</button>
+          <button id="syncVideoBtn" class="secondary">Herkesi Senkronla</button>
+        </div>
+      </section>
+    </main>
+
+    <aside class="sidebar">
+      <section class="panel">
+        <h3>Oda</h3>
+
+        <input id="usernameInput" placeholder="Kullanıcı adın">
+
+        <div class="row">
+          <button id="createRoomBtn">Oda Oluştur</button>
+          <button id="joinRoomBtn" class="secondary">Katıl</button>
+        </div>
+
+        <input id="roomInput" placeholder="Oda kodu">
+
+        <h2 id="roomCode"></h2>
+        <button id="copyRoomBtn" class="secondary" style="display:none;">Kodu Kopyala</button>
+        <p id="status"></p>
+      </section>
+
+      <section class="panel">
+        <h3>Odadakiler</h3>
+        <div id="users"></div>
+      </section>
+
+      <section class="panel chat-panel">
+        <h3>Canlı Sohbet</h3>
+
+        <div id="messages"></div>
+
+        <div class="row">
+          <input id="messageInput" placeholder="Mesaj yaz...">
+          <button id="sendMessageBtn">Gönder</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <script>
+    const socket = io();
+
+    let currentRoomCode = "";
+    let currentUsername = "";
+    let isHost = false;
+    let player = null;
+    let playerReady = false;
+    let ignorePlayerEvent = false;
+
+    const usernameInput = document.getElementById("usernameInput");
+    const createRoomBtn = document.getElementById("createRoomBtn");
+    const joinRoomBtn = document.getElementById("joinRoomBtn");
+    const sendMessageBtn = document.getElementById("sendMessageBtn");
+    const setVideoBtn = document.getElementById("setVideoBtn");
+    const copyRoomBtn = document.getElementById("copyRoomBtn");
+    const restartVideoBtn = document.getElementById("restartVideoBtn");
+    const syncVideoBtn = document.getElementById("syncVideoBtn");
+
+    const roomInput = document.getElementById("roomInput");
+    const roomCodeDiv = document.getElementById("roomCode");
+    const statusDiv = document.getElementById("status");
+    const messageInput = document.getElementById("messageInput");
+    const messagesDiv = document.getElementById("messages");
+    const usersDiv = document.getElementById("users");
+    const videoUrlInput = document.getElementById("videoUrlInput");
+
+    function onYouTubeIframeAPIReady() {
+      playerReady = true;
+    }
+
+    function getYouTubeVideoId(url) {
+      try {
+        const parsedUrl = new URL(url);
+
+        if (parsedUrl.hostname.includes("youtube.com")) {
+          return parsedUrl.searchParams.get("v");
+        }
+
+        if (parsedUrl.hostname.includes("youtu.be")) {
+          return parsedUrl.pathname.replace("/", "");
+        }
+
+        return null;
+      } catch {
+        return null;
+      }
+    }
+
+    function loadYouTubeVideo(videoUrl) {
+      const videoId = getYouTubeVideoId(videoUrl);
+
+      if (!videoId) {
+        alert("Video linki okunamadı");
+        return;
+      }
+
+      if (!playerReady || !window.YT) {
+        setTimeout(() => loadYouTubeVideo(videoUrl), 500);
+        return;
+      }
+
+      if (!player) {
+        player = new YT.Player("player", {
+          height: "420",
+          width: "100%",
+          videoId,
+          playerVars: {
+            playsinline: 1
+          },
+          events: {
+            onStateChange: onPlayerStateChange
+          }
+        });
+      } else {
+        ignorePlayerEvent = true;
+        player.loadVideoById(videoId);
+        player.pauseVideo();
+
+        setTimeout(() => {
+          ignorePlayerEvent = false;
+        }, 700);
+      }
+
+      statusDiv.innerText = "Video odaya eklendi.";
+    }
+
+    function onPlayerStateChange(event) {
+      if (!currentRoomCode || ignorePlayerEvent || !player) return;
+
+      const currentTime = player.getCurrentTime();
+
+      if (event.data === YT.PlayerState.PLAYING) {
+        socket.emit("video-control", {
+          roomCode: currentRoomCode,
+          action: "play",
+          currentTime
+        });
+      }
+
+      if (event.data === YT.PlayerState.PAUSED) {
+        socket.emit("video-control", {
+          roomCode: currentRoomCode,
+          action: "pause",
+          currentTime
+        });
+      }
+    }
+
+    function addMessage(text, className = "message") {
+      const div = document.createElement("div");
+      div.classList.add(className);
+      div.innerText = text;
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function sendMessage() {
+      const message = messageInput.value.trim();
+
+      if (!currentRoomCode) {
+        alert("Önce oda oluştur ya da odaya katıl");
+        return;
+      }
+
+      if (!message) return;
+
+      socket.emit("send-message", {
+        roomCode: currentRoomCode,
+        message,
+        username: currentUsername || "Misafir"
+      });
+
+      messageInput.value = "";
+    }
+
+    createRoomBtn.addEventListener("click", () => {
+      currentUsername = usernameInput.value.trim() || "Misafir";
+      socket.emit("create-room", currentUsername);
+    });
+
+    joinRoomBtn.addEventListener("click", () => {
+      currentUsername = usernameInput.value.trim() || "Misafir";
+      const roomCode = roomInput.value.trim().toUpperCase();
+
+      if (!roomCode) {
+        alert("Oda kodu gir kanks");
+        return;
+      }
+
+      currentRoomCode = roomCode;
+
+      socket.emit("join-room", {
+        roomCode,
+        username: currentUsername
+      });
+    });
+
+    setVideoBtn.addEventListener("click", () => {
+      const videoUrl = videoUrlInput.value.trim();
+      const videoId = getYouTubeVideoId(videoUrl);
+
+      if (!currentRoomCode) {
+        alert("Önce oda oluştur ya da odaya katıl");
+        return;
+      }
+
+      if (!videoId) {
+        alert("Geçerli bir YouTube linki gir kanks");
+        return;
+      }
+
+      socket.emit("set-video", {
+        roomCode: currentRoomCode,
+        videoUrl
+      });
+    });
+
+    restartVideoBtn.addEventListener("click", () => {
+      if (!player || !currentRoomCode) return;
+
+      player.seekTo(0, true);
+      player.playVideo();
+
+      socket.emit("video-sync-request", {
+        roomCode: currentRoomCode,
+        currentTime: 0,
+        isPlaying: true
+      });
+    });
+
+    syncVideoBtn.addEventListener("click", () => {
+      if (!player || !currentRoomCode) return;
+
+      socket.emit("video-sync-request", {
+        roomCode: currentRoomCode,
+        currentTime: player.getCurrentTime(),
+        isPlaying: player.getPlayerState() === YT.PlayerState.PLAYING
+      });
+    });
+
+    copyRoomBtn.addEventListener("click", async () => {
+      if (!currentRoomCode) return;
+
+      await navigator.clipboard.writeText(currentRoomCode);
+      statusDiv.innerText = "Oda kodu kopyalandı.";
+    });
+
+    sendMessageBtn.addEventListener("click", sendMessage);
+
+    messageInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        sendMessage();
+      }
+    });
+
+    socket.on("room-created", (data) => {
+      currentRoomCode = data.roomCode;
+      isHost = data.isHost;
+      roomCodeDiv.innerText = `Oda Kodu: ${data.roomCode}`;
+      copyRoomBtn.style.display = "inline-block";
+      statusDiv.innerText = `${currentUsername} odayı oluşturdu.`;
+    });
+
+    socket.on("room-joined", (data) => {
+      currentRoomCode = data.roomCode;
+      isHost = data.isHost;
+      roomCodeDiv.innerText = `Oda Kodu: ${data.roomCode}`;
+      copyRoomBtn.style.display = "inline-block";
+      statusDiv.innerText = "Odaya katıldın.";
+    });
+
+    socket.on("room-users", (users) => {
+      usersDiv.innerHTML = "";
+
+      users.forEach((user) => {
+        const div = document.createElement("div");
+        div.classList.add("user");
+
+        if (user.isHost) {
+          div.classList.add("host");
+          div.innerText = `👑 ${user.username} - Host`;
+        } else {
+          div.innerText = `• ${user.username}`;
+        }
+
+        usersDiv.appendChild(div);
+      });
+    });
+
+    socket.on("video-updated", (videoUrl) => {
+      loadYouTubeVideo(videoUrl);
+    });
+
+    socket.on("video-control", ({ action, currentTime }) => {
+      if (!player) return;
+
+      ignorePlayerEvent = true;
+      player.seekTo(currentTime, true);
+
+      if (action === "play") {
+        player.playVideo();
+      }
+
+      if (action === "pause") {
+        player.pauseVideo();
+      }
+
+      setTimeout(() => {
+        ignorePlayerEvent = false;
+      }, 700);
+    });
+
+    socket.on("video-sync", ({ isPlaying, currentTime }) => {
+      if (!player) return;
+
+      ignorePlayerEvent = true;
+      player.seekTo(currentTime, true);
+
+      if (isPlaying) {
+        player.playVideo();
+      } else {
+        player.pauseVideo();
+      }
+
+      setTimeout(() => {
+        ignorePlayerEvent = false;
+      }, 700);
+    });
+
+    socket.on("receive-message", (data) => {
+      addMessage(`${data.sender}: ${data.message}`);
+    });
+
+    socket.on("system-message", (message) => {
+      addMessage(message, "system");
+    });
+
+    socket.on("room-error", (message) => {
+      alert(message);
+    });
+  </script>
+</body>
+</html>

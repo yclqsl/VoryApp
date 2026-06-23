@@ -1,0 +1,926 @@
+@import "./styles/vory-ui-v3.css";
+@import "./styles/vory-ui-v4.css";
+@import "./styles/vory-ui-v5.css";
+@import "./styles/landing-v1.css";
+@import "tailwindcss";
+
+body {
+  background: #050509;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+.rave-mobile-shell {
+  background:
+    radial-gradient(circle at 20% 10%, rgba(236, 72, 153, 0.42), transparent 30%),
+    radial-gradient(circle at 90% 25%, rgba(14, 165, 233, 0.35), transparent 32%),
+    linear-gradient(145deg, #14051f 0%, #25104f 45%, #082033 100%);
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* V12.3.1 Closed Beta Branding + Stat Bar Fix */
+.vory-live-pill,
+.vory-live-pill-fixed {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.45rem !important;
+  white-space: nowrap !important;
+}
+
+.vory-live-pill strong,
+.vory-live-pill span,
+.vory-live-pill-text {
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: 1 !important;
+}
+
+.vory-live-pill-text {
+  font-weight: 900 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.vory-closed-beta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid rgba(244, 114, 182, 0.18);
+  border-radius: 999px;
+  background: rgba(217, 70, 239, 0.14);
+  padding: 0.25rem 0.55rem;
+  color: rgb(251, 207, 232);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  box-shadow: 0 0 20px rgba(217, 70, 239, 0.12);
+}
+
+
+/* NEON */
+.theme-neon::before {
+  opacity: 0.78;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(168, 85, 247, 0.42), transparent 28%),
+    radial-gradient(circle at 82% 22%, rgba(236, 72, 153, 0.32), transparent 28%),
+    radial-gradient(circle at 50% 92%, rgba(99, 102, 241, 0.28), transparent 32%);
+  animation: vory-neon-pan 8s ease-in-out infinite alternate;
+}
+
+.theme-neon::after {
+  opacity: 0.34;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.85) 1px, transparent 1.7px),
+    radial-gradient(circle, rgba(217,70,239,0.95) 1.2px, transparent 2px);
+  background-size: 72px 72px, 112px 112px;
+  animation: vory-bg-slide-fast 10s linear infinite, vory-twinkle 2.4s ease-in-out infinite;
+}
+
+/* GALAXY */
+.theme-galaxy::before {
+  opacity: 0.86;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(79, 70, 229, 0.48), transparent 28%),
+    radial-gradient(circle at 78% 28%, rgba(14, 165, 233, 0.34), transparent 30%),
+    radial-gradient(circle at 50% 90%, rgba(217, 70, 239, 0.26), transparent 36%);
+  animation: vory-galaxy-nebula-strong 9s ease-in-out infinite alternate;
+}
+
+.theme-galaxy::after {
+  opacity: 0.92;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,1), transparent 55%),
+    radial-gradient(1.6px 1.6px at 90px 80px, rgba(255,255,255,.9), transparent 55%),
+    radial-gradient(1.5px 1.5px at 140px 40px, rgba(125,211,252,1), transparent 55%),
+    radial-gradient(2.2px 2.2px at 210px 120px, rgba(255,255,255,.95), transparent 55%),
+    radial-gradient(1.2px 1.2px at 245px 20px, rgba(216,180,254,.9), transparent 55%);
+  background-size: 280px 190px;
+  animation: vory-stars-drift-visible 8s linear infinite, vory-twinkle 1.8s ease-in-out infinite;
+}
+
+/* CINEMA */
+.theme-cinema::before {
+  opacity: 0.46;
+  background:
+    linear-gradient(180deg, rgba(127, 29, 29, 0.3), transparent 35%, rgba(245, 158, 11, 0.12)),
+    radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.32), transparent 45%);
+  animation: vory-cinema-flicker-strong 1.2s steps(2) infinite;
+}
+
+.theme-cinema::after {
+  opacity: 0.2;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+    radial-gradient(circle, rgba(255,255,255,0.45) 0.8px, transparent 1.4px);
+  background-size: 100% 4px, 26px 26px;
+  mix-blend-mode: screen;
+  animation: vory-film-grain-visible 0.32s steps(2) infinite;
+}
+
+/* GAMING */
+.theme-gaming::before {
+  opacity: 0.62;
+  background:
+    linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.18) 45%, rgba(6, 182, 212, 0.12) 55%, transparent 100%),
+    radial-gradient(circle at 15% 25%, rgba(16, 185, 129, 0.3), transparent 32%),
+    radial-gradient(circle at 85% 75%, rgba(6, 182, 212, 0.22), transparent 34%);
+  animation: vory-gaming-scan-visible 3s ease-in-out infinite;
+}
+
+.theme-gaming::after {
+  opacity: 0.34;
+  background-image:
+    linear-gradient(90deg, rgba(34,197,94,0.3) 1px, transparent 1px),
+    linear-gradient(rgba(6,182,212,0.22) 1px, transparent 1px);
+  background-size: 64px 64px;
+  animation: vory-grid-slide-visible 5s linear infinite;
+}
+
+.app-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes vory-neon-pan {
+  0% { transform: translate3d(-2%, 0, 0) scale(1); filter: hue-rotate(0deg); }
+  100% { transform: translate3d(2%, -4%, 0) scale(1.08); filter: hue-rotate(16deg); }
+}
+
+@keyframes vory-bg-slide-fast {
+  from { background-position: 0 0, 34px 48px; transform: translate3d(0, 0, 0); }
+  to { background-position: 180px -220px, -160px -260px; transform: translate3d(-3%, -5%, 0); }
+}
+
+@keyframes vory-galaxy-nebula-strong {
+  0% { transform: translate3d(-2%, 1%, 0) scale(1); filter: hue-rotate(0deg); }
+  100% { transform: translate3d(2%, -4%, 0) scale(1.08); filter: hue-rotate(24deg); }
+}
+
+@keyframes vory-stars-drift-visible {
+  from { background-position: 0 0; transform: translate3d(0, 0, 0); }
+  to { background-position: -280px 190px; transform: translate3d(-6%, 8%, 0); }
+}
+
+@keyframes vory-twinkle {
+  0%, 100% { opacity: 0.62; }
+  50% { opacity: 1; }
+}
+
+@keyframes vory-cinema-flicker-strong {
+  0%, 100% { opacity: 0.32; transform: translateX(0); }
+  50% { opacity: 0.5; transform: translateX(0.4%); }
+}
+
+@keyframes vory-film-grain-visible {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-1.5%, 1%); }
+  50% { transform: translate(1.2%, -1.5%); }
+  75% { transform: translate(-1%, -1%); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes vory-gaming-scan-visible {
+  0%, 100% { transform: translateX(-22%); opacity: 0.36; }
+  50% { transform: translateX(22%); opacity: 0.72; }
+}
+
+@keyframes vory-grid-slide-visible {
+  from { background-position: 0 0; }
+  to { background-position: 128px 128px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-neon::before,
+  .theme-cinema::before,
+  .theme-galaxy::before,
+  .theme-gaming::before,
+  .theme-neon::after,
+  .theme-cinema::after,
+  .theme-galaxy::after,
+  .theme-gaming::after {
+    animation: none !important;
+  }
+}
+
+/* V13.8.2.4 Animated Backgrounds Visible Motion Hotfix */
+.vory-animated-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.vory-animated-bg::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  opacity: 0.78;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(139,92,246,0.45), transparent 28%),
+    radial-gradient(circle at 80% 20%, rgba(236,72,153,0.32), transparent 30%),
+    radial-gradient(circle at 55% 90%, rgba(14,165,233,0.22), transparent 34%);
+  animation: vory-visible-pan 14s ease-in-out infinite alternate !important;
+}
+
+.vory-animated-orb {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 999px;
+  filter: blur(42px);
+  opacity: 0.42;
+  animation: vory-visible-orb 18s ease-in-out infinite alternate !important;
+}
+
+.vory-animated-orb-one {
+  left: -110px;
+  top: 70px;
+  background: rgba(139, 92, 246, 0.78);
+}
+
+.vory-animated-orb-two {
+  right: -120px;
+  top: 150px;
+  background: rgba(14, 165, 233, 0.62);
+  animation-delay: -1.2s !important;
+}
+
+.vory-animated-orb-three {
+  left: 34%;
+  bottom: -160px;
+  background: rgba(217, 70, 239, 0.56);
+  animation-delay: -2.2s !important;
+}
+
+.vory-animated-star {
+  position: absolute;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 0 10px rgba(255,255,255,1), 0 0 18px rgba(125,211,252,0.8);
+  animation:
+    vory-visible-star-drift linear infinite,
+    vory-visible-twinkle 4s ease-in-out infinite !important;
+}
+
+.vory-shooting-star {
+  position: absolute;
+  left: -18%;
+  width: 180px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), rgba(125,211,252,0.9), transparent);
+  transform: rotate(-18deg);
+  opacity: 0;
+  box-shadow: 0 0 18px rgba(125,211,252,0.75);
+  animation: vory-shooting-star 12s linear infinite !important;
+}
+
+.vory-animated-particle {
+  position: absolute;
+  color: rgba(255,255,255,0.92);
+  font-size: 14px;
+  text-shadow: 0 0 18px rgba(217,70,239,1);
+  animation: vory-visible-particle-rise linear infinite !important;
+}
+
+.vory-cinema-scanlines {
+  position: absolute;
+  inset: 0;
+  opacity: 0.28;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,0.12) 0px,
+      rgba(255,255,255,0.12) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+  animation: vory-visible-film-scroll 1.8s linear infinite !important;
+}
+
+.vory-cinema-projector {
+  position: absolute;
+  inset: -20%;
+  opacity: 0.48;
+  background:
+    linear-gradient(105deg, transparent 0%, rgba(245,158,11,0.18) 45%, rgba(239,68,68,0.28) 50%, transparent 62%);
+  animation: vory-visible-projector 8s ease-in-out infinite alternate !important;
+}
+
+.vory-cinema-flicker-card {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  animation: vory-visible-flicker 4s steps(2) infinite !important;
+}
+
+.vory-gaming-grid {
+  position: absolute;
+  inset: -20%;
+  opacity: 0.42;
+  background-image:
+    linear-gradient(90deg, rgba(34,197,94,0.45) 1px, transparent 1px),
+    linear-gradient(rgba(6,182,212,0.32) 1px, transparent 1px);
+  background-size: 54px 54px;
+  transform: perspective(500px) rotateX(58deg) translateY(90px);
+  animation: vory-visible-grid-move 10s linear infinite !important;
+}
+
+.vory-gaming-scanline {
+  position: absolute;
+  left: -45%;
+  top: 0;
+  width: 55%;
+  height: 100%;
+  opacity: 0.68;
+  background: linear-gradient(90deg, transparent, rgba(34,197,94,0.42), rgba(6,182,212,0.26), transparent);
+  animation: vory-visible-scanline 8s ease-in-out infinite !important;
+}
+
+.vory-gaming-pulse {
+  position: absolute;
+  inset: 0;
+  opacity: 0.28;
+  background: radial-gradient(circle at center, rgba(34,197,94,0.3), transparent 45%);
+  animation: vory-visible-pulse 6s ease-in-out infinite alternate !important;
+}
+
+.vory-animated-bg-galaxy::before {
+  background:
+    radial-gradient(circle at 20% 18%, rgba(79,70,229,0.62), transparent 30%),
+    radial-gradient(circle at 78% 28%, rgba(14,165,233,0.42), transparent 30%),
+    radial-gradient(circle at 50% 90%, rgba(217,70,239,0.34), transparent 36%);
+}
+
+.vory-animated-bg-cinema::before {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(239,68,68,0.42), transparent 38%),
+    linear-gradient(180deg, rgba(127,29,29,0.36), transparent 50%, rgba(245,158,11,0.16));
+}
+
+.vory-animated-bg-gaming::before {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(34,197,94,0.36), transparent 32%),
+    radial-gradient(circle at 82% 72%, rgba(6,182,212,0.28), transparent 34%);
+}
+
+.app-shell > *:not(.vory-animated-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes vory-visible-pan {
+  0% { transform: translate3d(-4%, -2%, 0) scale(1); filter: hue-rotate(0deg); }
+  100% { transform: translate3d(4%, 4%, 0) scale(1.14); filter: hue-rotate(35deg); }
+}
+
+@keyframes vory-visible-orb {
+  0% { transform: translate3d(-20px, 0, 0) scale(1); }
+  100% { transform: translate3d(70px, -55px, 0) scale(1.18); }
+}
+
+@keyframes vory-visible-star-drift {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-240px, 270px, 0); }
+}
+
+@keyframes vory-visible-twinkle {
+  0%, 100% { opacity: 0.22; }
+  50% { opacity: 1; }
+}
+
+@keyframes vory-shooting-star {
+  0% { transform: translate3d(0, 0, 0) rotate(-18deg); opacity: 0; }
+  12% { opacity: 1; }
+  70% { opacity: 0.9; }
+  100% { transform: translate3d(150vw, 55vh, 0) rotate(-18deg); opacity: 0; }
+}
+
+@keyframes vory-visible-particle-rise {
+  0% { transform: translate3d(0, 35px, 0) scale(0.8) rotate(0deg); opacity: 0; }
+  18% { opacity: 1; }
+  100% { transform: translate3d(-110px, -230px, 0) scale(1.35) rotate(180deg); opacity: 0; }
+}
+
+@keyframes vory-visible-film-scroll {
+  from { transform: translateY(0); }
+  to { transform: translateY(12px); }
+}
+
+@keyframes vory-visible-projector {
+  0% { transform: translateX(-12%) rotate(-3deg); opacity: 0.24; }
+  100% { transform: translateX(12%) rotate(3deg); opacity: 0.58; }
+}
+
+@keyframes vory-visible-flicker {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.12; }
+}
+
+@keyframes vory-visible-grid-move {
+  from { background-position: 0 0; }
+  to { background-position: 0 108px; }
+}
+
+@keyframes vory-visible-scanline {
+  0% { transform: translateX(0); opacity: 0; }
+  18% { opacity: 0.78; }
+  100% { transform: translateX(350%); opacity: 0; }
+}
+
+@keyframes vory-visible-pulse {
+  0% { transform: scale(0.96); opacity: 0.16; }
+  100% { transform: scale(1.08); opacity: 0.42; }
+}
+
+
+/* VoryApp default Rave theme - single lightweight theme */
+.theme-voryapp::before {
+  opacity: 0.54;
+  background:
+    radial-gradient(circle at 16% 12%, rgba(124, 58, 237, 0.32), transparent 30%),
+    radial-gradient(circle at 86% 18%, rgba(217, 70, 239, 0.18), transparent 34%),
+    radial-gradient(circle at 74% 84%, rgba(14, 165, 233, 0.18), transparent 32%),
+    linear-gradient(135deg, #05030d 0%, #10071f 50%, #020716 100%);
+  animation: none !important;
+}
+
+.theme-voryapp::after {
+  opacity: 0.16;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.65) 1px, transparent 1.5px);
+  background-size: 96px 96px;
+  animation: none !important;
+}
+
+.theme-voryapp .vory-v5-bottom-dock {
+  display: none !important;
+}
+
+.theme-voryapp .feedback-widget,
+.theme-voryapp [data-feedback-widget],
+.theme-voryapp .dev-health-overlay,
+.theme-voryapp [data-dev-health-overlay] {
+  display: none !important;
+}
+
+.theme-voryapp .vory-v5-sidebar,
+.theme-voryapp .glass,
+.theme-voryapp .glass-panel {
+  backdrop-filter: blur(12px) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-voryapp *,
+  .theme-voryapp *::before,
+  .theme-voryapp *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* Vory 3.0.1 - Rave Create Button + Admin Feedback polish */
+.vory-rave-create-room-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 52px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 999px;
+  padding: 0.78rem 1.15rem 0.78rem 0.78rem;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255,255,255,0.24), transparent 32%),
+    linear-gradient(135deg, rgba(168,85,247,0.96), rgba(217,70,239,0.9) 52%, rgba(14,165,233,0.74));
+  color: white;
+  font-size: 0.92rem;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  box-shadow: 0 18px 54px rgba(168,85,247,0.28), inset 0 1px 0 rgba(255,255,255,0.28);
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+  white-space: nowrap;
+}
+
+.vory-rave-create-room-btn:hover {
+  transform: translateY(-1px) scale(1.025);
+  filter: brightness(1.06);
+  box-shadow: 0 22px 64px rgba(217,70,239,0.32), inset 0 1px 0 rgba(255,255,255,0.32);
+}
+
+.vory-rave-create-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.92);
+  color: #120518;
+  font-size: 1.5rem;
+  font-weight: 950;
+  line-height: 1;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.18);
+}
+
+@media (max-width: 520px) {
+  .vory-rave-create-room-btn {
+    min-height: 48px;
+    padding: 0.66rem 0.9rem 0.66rem 0.66rem;
+    font-size: 0.78rem;
+  }
+
+  .vory-rave-create-plus {
+    width: 30px;
+    height: 30px;
+    font-size: 1.25rem;
+  }
+}
+
+
+/* Vory 3.1.4 Stability & Rave Fix: FAB order + Feedback bottom */
+.vory-rave-create-fab {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(6.4rem + env(safe-area-inset-bottom));
+  z-index: 74;
+  display: inline-flex;
+  width: 5rem;
+  height: 5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255,255,255,0.28), transparent 30%),
+    linear-gradient(145deg, #a855f7 0%, #7c3aed 54%, #5b21b6 100%);
+  color: #fff;
+  font-size: 3.25rem;
+  font-weight: 300;
+  line-height: 1;
+  box-shadow:
+    0 22px 70px rgba(88,28,135,0.45),
+    0 0 0 8px rgba(168,85,247,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.22);
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+.vory-rave-create-fab:hover { transform: translateY(-2px) scale(1.03); filter: brightness(1.08); }
+.vory-feedback-fab {
+  position: fixed;
+  right: max(1.35rem, calc(env(safe-area-inset-right) + 0.35rem));
+  bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  z-index: 73;
+  display: inline-flex;
+  min-width: 3.25rem;
+  height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(217,70,239,0.24);
+  background: rgba(126,34,206,0.42);
+  padding: 0 0.9rem;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 900;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.45), 0 0 0 6px rgba(217,70,239,0.08);
+  backdrop-filter: blur(18px);
+  transition: transform .18s ease, background .18s ease;
+}
+.vory-feedback-fab:hover { transform: translateY(-2px); background: rgba(147,51,234,0.58); }
+@media (max-width: 640px) {
+  .vory-feedback-fab {
+    right: calc(1.55rem + env(safe-area-inset-right));
+    bottom: calc(5.95rem + env(safe-area-inset-bottom));
+    width: 3.15rem;
+    min-width: 3.15rem;
+    height: 3.15rem;
+    padding: 0;
+    border-radius: 999px;
+    font-size: 0;
+  }
+  .vory-feedback-fab svg { width: 1.25rem; height: 1.25rem; }
+  .vory-rave-create-fab {
+    width: 4.75rem;
+    height: 4.75rem;
+    right: calc(1rem + env(safe-area-inset-right));
+    bottom: calc(10.15rem + env(safe-area-inset-bottom));
+    font-size: 3rem;
+  }
+}
+
+/* Vory 3.1.5 - Video Default Theme */
+:root {
+  --vory-bg: #05030d;
+  --vory-purple: #4b00ff;
+  --vory-violet: #7a1fff;
+  --vory-pink: #a8326e;
+  --vory-blue: #3d6cff;
+  --vory-glass: rgba(255, 255, 255, 0.05);
+}
+
+body {
+  background: var(--vory-bg);
+}
+
+.vory-video-theme-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: radial-gradient(circle at 18% 12%, rgba(122,31,255,0.24), transparent 30%), #05030d;
+}
+
+.vory-video-theme-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.34;
+  filter: saturate(1.12) contrast(1.06) brightness(0.82) blur(0.5px);
+  transform: scale(1.035);
+}
+
+.vory-video-theme-tint {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 8%, rgba(122,31,255,0.26), transparent 34%),
+    radial-gradient(circle at 86% 18%, rgba(61,108,255,0.18), transparent 32%),
+    radial-gradient(circle at 54% 96%, rgba(168,50,110,0.18), transparent 38%),
+    linear-gradient(135deg, rgba(5,3,13,0.78), rgba(10,4,24,0.62) 45%, rgba(2,7,22,0.76));
+}
+
+.vory-video-theme-vignette {
+  position: absolute;
+  inset: -1px;
+  background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.22) 52%, rgba(0,0,0,0.62) 100%);
+}
+
+.vory-video-theme-noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.app-shell {
+  background: transparent !important;
+}
+
+.vory-v5-sidebar,
+.vory-v5-topbar,
+.vory-v5-player-card,
+.vory-v5-right-panel,
+.glass,
+.glass-panel {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.34) !important;
+}
+
+.vory-v5-logo,
+.vory-top-logo {
+  background: rgba(122, 31, 255, 0.24) !important;
+  box-shadow: 0 0 28px rgba(122, 31, 255, 0.22) !important;
+}
+
+@media (max-width: 768px) {
+  .vory-video-theme-media {
+    opacity: 0.24;
+    filter: saturate(1.06) contrast(1.02) brightness(0.78) blur(1px);
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vory-video-theme-media {
+    display: none;
+  }
+}
+
+
+/* Vory 3.1.5.4 - Video Theme Visibility Real Fix */
+.theme-voryapp::before,
+.theme-voryapp::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+}
+
+.app-shell {
+  position: relative !important;
+  isolation: isolate !important;
+  background: #05030d !important;
+}
+
+.app-shell > .vory-video-theme-bg {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.app-shell > *:not(.vory-video-theme-bg) {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.vory-video-theme-media {
+  display: block !important;
+  opacity: 0.82 !important;
+  visibility: visible !important;
+  z-index: 0 !important;
+  filter: saturate(1.18) contrast(1.08) brightness(1.02) blur(0px) !important;
+}
+
+.vory-video-theme-tint {
+  z-index: 1 !important;
+  background: linear-gradient(135deg, rgba(5,3,13,0.18), rgba(10,4,24,0.12), rgba(2,7,22,0.22)) !important;
+}
+
+.vory-video-theme-vignette {
+  z-index: 2 !important;
+  background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.16) 68%, rgba(0,0,0,0.44) 100%) !important;
+}
+
+.vory-video-theme-noise {
+  z-index: 3 !important;
+  opacity: 0.025 !important;
+}
+
+@media (max-width: 768px) {
+  .vory-video-theme-media {
+    opacity: 0.64 !important;
+    filter: saturate(1.12) contrast(1.04) brightness(0.96) blur(0.5px) !important;
+  }
+}
+
+
+/* Vory 5.4.8 Performance Mode */
+.vory-performance-mode .vory-video-theme-media {
+  display: none !important;
+}
+
+.vory-video-theme-bg-lite {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(139, 92, 246, 0.20), transparent 28%),
+    radial-gradient(circle at 82% 16%, rgba(14, 165, 233, 0.16), transparent 28%),
+    linear-gradient(180deg, #080912 0%, #090714 52%, #050509 100%);
+}
+
+.vory-video-theme-lite-glow {
+  position: absolute;
+  inset: auto;
+  width: 42vw;
+  height: 42vw;
+  max-width: 460px;
+  max-height: 460px;
+  border-radius: 999px;
+  filter: blur(80px);
+  opacity: 0.28;
+}
+
+.vory-video-theme-lite-glow-a {
+  top: -8%;
+  left: -8%;
+  background: rgba(139, 92, 246, 0.38);
+}
+
+.vory-video-theme-lite-glow-b {
+  right: -10%;
+  top: 12%;
+  background: rgba(14, 165, 233, 0.28);
+}
+
+.vory-performance-mode .vory-video-theme-noise,
+.vory-performance-mode .vory-video-theme-vignette {
+  display: none !important;
+}
+
+.vory-performance-mode .vory-rave-discovery-shell,
+.vory-performance-mode .vory-rave-search,
+.vory-performance-mode .vory-rave-room-card,
+.vory-performance-mode .vory-rave-empty-public {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+.vory-performance-mode .vory-rave-room-thumb {
+  aspect-ratio: 16 / 9;
+}
+
+.vory-performance-mode .vory-rave-room-thumb-img {
+  image-rendering: auto;
+}
+
+
+/* Vory 5.4.8B Discovery Virtual Render + Background Hard Cut */
+.vory-performance-mode .vory-video-theme-bg,
+.vory-has-home-feed .vory-video-theme-bg-hardcut {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(139, 92, 246, 0.20), transparent 28%),
+    radial-gradient(circle at 82% 18%, rgba(236, 72, 153, 0.14), transparent 26%),
+    linear-gradient(145deg, #06060d 0%, #0b0817 52%, #070a14 100%);
+}
+
+.vory-performance-mode .vory-video-theme-media,
+.vory-has-home-feed .vory-video-theme-bg-hardcut .vory-video-theme-media {
+  display: none !important;
+}
+
+.vory-performance-mode .vory-video-theme-vignette,
+.vory-performance-mode .vory-video-theme-noise,
+.vory-has-home-feed .vory-video-theme-bg-hardcut .vory-video-theme-vignette,
+.vory-has-home-feed .vory-video-theme-bg-hardcut .vory-video-theme-noise {
+  display: none !important;
+}
+
+.vory-rave-load-more {
+  width: 100%;
+  border-radius: 1.4rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.045);
+  padding: 0.95rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.74);
+  transition: background .18s ease, transform .18s ease;
+}
+.vory-rave-load-more:hover {
+  background: rgba(255,255,255,0.08);
+  transform: translateY(-1px);
+}
+
+
+/* Vory 5.4.8M interaction polish */
+button,
+a,
+[role="button"],
+summary,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+select {
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+
+
+/* Vory 5.4.8M-B REAL cursor polish */
+button,
+[role="button"],
+a,
+summary,
+label,
+input[type="button"],
+input[type="submit"],
+input[type="checkbox"],
+input[type="radio"],
+select,
+.vory-v5-nav-button,
+.vory-v5-dock-btn,
+.vory-discovery-card,
+.vory-room-card,
+.vory-youtube-card,
+.vory-fab,
+.card-hover {
+  cursor: pointer;
+}
+
+input,
+textarea {
+  cursor: text;
+}
+
+button:disabled,
+[aria-disabled="true"],
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed !important;
+}
